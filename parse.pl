@@ -9,7 +9,9 @@ sub InitAll {
     $codename = "0";
     $reaction_file = "$codename.reactions";
     $component_file = "$codename.components";
-    @name_list = (); @init_vals = (); %components = ();
+    @name_list = ();
+    @init_vals = ();
+    %components = ();
     $num_eq_blocks = 100;
     $num_prod_blocks = 0;
     $num_steps = 10000;
@@ -99,14 +101,17 @@ EOF
 # previously used or a new one which is initialised appropriately.
 
 sub component_id {
-    local ( $name, $id );
-    $name = $_[0]; $name =~ s/\s//g;
+    local ($name, $id);
+    $name = $_[0];
+    $name =~ s/\s//g;
     if (exists $components{$name}) {
-	$id = $components{$name};
-    } else {
-	$id = scalar(@name_list);
-	$components{$name} = $id;
-	@init_vals[$id] = 0; @name_list[$id] = $name;
+        $id = $components{$name};
+    }
+    else {
+        $id = scalar(@name_list);
+        $components{$name} = $id;
+        @init_vals[$id] = 0;
+        @name_list[$id] = $name;
     }
     return $id;
 }
@@ -114,19 +119,19 @@ sub component_id {
 # Add a list of components, in the order in which they appear.
 
 sub add_components {
-    local ( $name );
-    @names = split(' ',$_[0]);
-    foreach $name (@names) { 
-	component_id($name); 
+    local ($name);
+    @names = split(' ', $_[0]);
+    foreach $name (@names) {
+        component_id($name);
     }
 }
 
 # Set or reset the initial concentration for a given component.
 
 sub set_initial {
-    local ( $name, $expr, $val, $id );
-    ( $name, $expr, $val ) = split(' ',$_[0]);
-    printf STDERR "Initialising component %s to %i\n",$name,$val;
+    local ($name, $expr, $val, $id);
+    ($name, $expr, $val) = split(' ', $_[0]);
+    printf STDERR "Initialising component %s to %i\n", $name, $val;
     $id = component_id($name);
     @init_vals[$id] = $val;
 }
@@ -135,34 +140,40 @@ sub set_initial {
 # writing.
 
 sub add_reaction {
-    local ( $reacts, $prods, $kval, $component, $id, $nreacts, $nprods );
-    printf STDERR "Adding reaction %s --> %s, k = %f\n",$_[0],$_[1],$_[2];
-    ( $reacts, $prods, $kval ) = ( $_[0], $_[1], $_[2] );
+    local ($reacts, $prods, $kval, $component, $id, $nreacts, $nprods);
+    printf STDERR "Adding reaction %s --> %s, k = %f\n", $_[0], $_[1], $_[2];
+    ($reacts, $prods, $kval) = ($_[0], $_[1], $_[2]);
     $kval =~ s/\s//g;
     $line2 = "";
-    @reacts = split(/\+/,$reacts); $nreacts = scalar(@reacts);
+    @reacts = split(/\+/, $reacts);
+    $nreacts = scalar(@reacts);
     $addmore = 0;
     foreach $component (@reacts) {
-	if ($addmore) { $line2 .= "+ "; }
-	$id = component_id($component);
-	$bit = sprintf("X %i ",$id);
-	$line2 .= $bit; $addmore = 1;
+        if ($addmore) {$line2 .= "+ ";}
+        $id = component_id($component);
+        $bit = sprintf("X %i ", $id);
+        $line2 .= $bit;
+        $addmore = 1;
     }
     $line2 .= "->";
     if ($prods =~ /null/ || $prods =~ /NULL/) {
-	$line2 .= " 0"; $nprods = 0;
-    } else {
-	@prods = split(/\+/,$prods); $nprods = scalar(@prods);
-	$addmore = 0;
-	foreach $component (@prods) {
-	    if ($addmore) { $line2 .= " +"; }
-	    $id = component_id($component);
-	    $bit = sprintf(" 1 X %i",$id);
-	    $line2 .= $bit; $addmore = 1;
-	}
+        $line2 .= " 0";
+        $nprods = 0;
+    }
+    else {
+        @prods = split(/\+/, $prods);
+        $nprods = scalar(@prods);
+        $addmore = 0;
+        foreach $component (@prods) {
+            if ($addmore) {$line2 .= " +";}
+            $id = component_id($component);
+            $bit = sprintf(" 1 X %i", $id);
+            $line2 .= $bit;
+            $addmore = 1;
+        }
     }
     $line1 = sprintf("%f\t%i\t%i\tRateConstant_k_Nreactants_Nproducts",
-		     $kval,$nreacts,$nprods);
+        $kval, $nreacts, $nprods);
     push(@react1lines, $line1);
     push(@react2lines, $line2);
 }
@@ -170,83 +181,107 @@ sub add_reaction {
 # Parse a single line from a schematic reaction file.
 
 sub parseline {
-    local ( $line, $front, $back, $reacts, $prods );
+    local ($line, $front, $back, $reacts, $prods);
     $line = $_[0];
     $line =~ s/#.*//;
     if ($line =~ /:/) {
-	( $front, $back ) = split(":",$line,2);
-	if ($back =~ /name/) {
-	    $codename = $front; $codename =~ s/\s//g;
-	    $reaction_file = "$codename.reactions";
-	    $component_file = "$codename.components";
-	    print STDERR "Setting codename to $codename\n";
-	} elsif ($back =~ /file/) {
-	    if ($back =~ /react/) {
-		$reaction_file = $front; $reaction_file =~ s/\s//g;
-		print STDERR "Setting reaction file to $reaction_file\n";
-	    } elsif ($back =~ /comp/) {
-		$component_file = $front; $component_file =~ s/\s//g;
-		print STDERR "Setting component file to $component_file\n";
-	    }
-	} elsif ($back =~ /num/) {
-	    if ($back =~ /eq/) {
-		$num_eq_blocks = $front; $num_eq_blocks =~ s/\s//g;
-		printf STDERR "Setting # equilibration blocks to %i\n",
-		    $num_eq_blocks;
-	    } elsif ($back =~ /prod/) {
-		$num_prod_blocks = $front; $num_prod_blocks =~ s/\s//g;
-		printf STDERR "Setting # production blocks to %i\n",
-		    $num_prod_blocks;
-	    } elsif ($back =~ /step/) {
-		$num_steps = $front; $num_steps =~ s/\s//g;
-		printf STDERR "Setting # steps to %i\n",$num_steps;
-	    }
-	} elsif ($back =~ /freq/) {
-	    $freq_anal = $front; $freq_anal =~ s/\s//g;
-	    printf STDERR "Setting frequency analysis to %i\n",$freq_anal;
-	} elsif ($back =~ /init/) {
-	    set_initial($front);
-	} elsif ($back =~ /comp/) {
-	    add_components($front);
-	} elsif ($front =~ /<-->/) {
-	    ( $optreacts, $optprods ) = split('<-->',$front);
-	    @optreacts = split(/\|/,$optreacts);
-	    @optprods = split(/\|/,$optprods);
-	    if ($back =~ /:/) {
-		( $kforward, $kback ) = split(/:/,$back,2);
-	    } else {
-		$kforward = $back; $kback = $back;
-	    }
-	    $kforward =~ s/.*=\s*//; $kback =~ s/.*=\s*//;
-	    foreach $reacts (@optreacts) {
-		foreach $prods (@optprods) {
-		    add_reaction($reacts,$prods,$kforward);
-		    add_reaction($prods,$reacts,$kback);
-		}
-	    }
-	} elsif ($front =~ /\+-->/) {
-	    ( $optreacts, $optprods ) = split('\+-->',$front);
-	    @optreacts = split(/\|/,$optreacts);
-	    @optprods = split(/\|/,$optprods);
-	    $kval = $back; $kval =~ s/.*=\s*//;
-	    foreach $reacts (@optreacts) {
-		foreach $prods (@optprods) {
-		    add_reaction($reacts,"$reacts + $prods",$kval);
-		}
-	    }
-	} elsif ($front =~ /-->/) {
-	    ( $optreacts, $optprods ) = split('-->',$front);
-	    @optreacts = split(/\|/,$optreacts);
-	    @optprods = split(/\|/,$optprods);
-	    $kval = $back; $kval =~ s/.*=\s*//;
-	    foreach $reacts (@optreacts) {
-		foreach $prods (@optprods) {
-		    add_reaction($reacts,$prods,$kval);
-		}
-	    }
-	} else {
-	    printf STDERR "Didn't recognise %s\n",$line;
-	}
+        ($front, $back) = split(":", $line, 2);
+        if ($back =~ /name/) {
+            $codename = $front;
+            $codename =~ s/\s//g;
+            $reaction_file = "$codename.reactions";
+            $component_file = "$codename.components";
+            print STDERR "Setting codename to $codename\n";
+        }
+        elsif ($back =~ /file/) {
+            if ($back =~ /react/) {
+                $reaction_file = $front;
+                $reaction_file =~ s/\s//g;
+                print STDERR "Setting reaction file to $reaction_file\n";
+            }
+            elsif ($back =~ /comp/) {
+                $component_file = $front;
+                $component_file =~ s/\s//g;
+                print STDERR "Setting component file to $component_file\n";
+            }
+        }
+        elsif ($back =~ /num/) {
+            if ($back =~ /eq/) {
+                $num_eq_blocks = $front;
+                $num_eq_blocks =~ s/\s//g;
+                printf STDERR "Setting # equilibration blocks to %i\n",
+                    $num_eq_blocks;
+            }
+            elsif ($back =~ /prod/) {
+                $num_prod_blocks = $front;
+                $num_prod_blocks =~ s/\s//g;
+                printf STDERR "Setting # production blocks to %i\n",
+                    $num_prod_blocks;
+            }
+            elsif ($back =~ /step/) {
+                $num_steps = $front;
+                $num_steps =~ s/\s//g;
+                printf STDERR "Setting # steps to %i\n", $num_steps;
+            }
+        }
+        elsif ($back =~ /freq/) {
+            $freq_anal = $front;
+            $freq_anal =~ s/\s//g;
+            printf STDERR "Setting frequency analysis to %i\n", $freq_anal;
+        }
+        elsif ($back =~ /init/) {
+            set_initial($front);
+        }
+        elsif ($back =~ /comp/) {
+            add_components($front);
+        }
+        elsif ($front =~ /<-->/) {
+            ($optreacts, $optprods) = split('<-->', $front);
+            @optreacts = split(/\|/, $optreacts);
+            @optprods = split(/\|/, $optprods);
+            if ($back =~ /:/) {
+                ($kforward, $kback) = split(/:/, $back, 2);
+            }
+            else {
+                $kforward = $back;
+                $kback = $back;
+            }
+            $kforward =~ s/.*=\s*//;
+            $kback =~ s/.*=\s*//;
+            foreach $reacts (@optreacts) {
+                foreach $prods (@optprods) {
+                    add_reaction($reacts, $prods, $kforward);
+                    add_reaction($prods, $reacts, $kback);
+                }
+            }
+        }
+        elsif ($front =~ /\+-->/) {
+            ($optreacts, $optprods) = split('\+-->', $front);
+            @optreacts = split(/\|/, $optreacts);
+            @optprods = split(/\|/, $optprods);
+            $kval = $back;
+            $kval =~ s/.*=\s*//;
+            foreach $reacts (@optreacts) {
+                foreach $prods (@optprods) {
+                    add_reaction($reacts, "$reacts + $prods", $kval);
+                }
+            }
+        }
+        elsif ($front =~ /-->/) {
+            ($optreacts, $optprods) = split('-->', $front);
+            @optreacts = split(/\|/, $optreacts);
+            @optprods = split(/\|/, $optprods);
+            $kval = $back;
+            $kval =~ s/.*=\s*//;
+            foreach $reacts (@optreacts) {
+                foreach $prods (@optprods) {
+                    add_reaction($reacts, $prods, $kval);
+                }
+            }
+        }
+        else {
+            printf STDERR "Didn't recognise %s\n", $line;
+        }
     }
 }
 
@@ -257,8 +292,8 @@ sub ParseFile {
     open(FIN, $in_file) || die "Cannot open $in_file: $!";
     printf STDERR "Reading from $in_file\n";
     while ($line = <FIN>) {
-	chop($line);
-	parseline($line);
+        chop($line);
+        parseline($line);
     }
     close(FIN);
 }
@@ -269,29 +304,29 @@ sub WriteReactionFile {
     $out_file = $_[0];
     open(FOUT, "> $out_file") || die "Cannot open $out_file: $!";
     $nreact = scalar(@react1lines);
-    printf FOUT "%i\t\tNumber_of_reaction_channels\n\n",$nreact;
-    for ($i=0; $i<$nreact; $i++) {
-	printf FOUT "%s\n%s\n",@react1lines[$i],@react2lines[$i];
+    printf FOUT "%i\t\tNumber_of_reaction_channels\n\n", $nreact;
+    for ($i = 0; $i < $nreact; $i++) {
+        printf FOUT "%s\n%s\n", @react1lines[$i], @react2lines[$i];
     }
     print FOUT "\n";
     close(FOUT);
-    printf STDERR "Written %i reactions to $out_file\n",$nreact;
+    printf STDERR "Written %i reactions to $out_file\n", $nreact;
 }
 
 # Write a list of current components to a file using PRs format.
 
 sub WriteComponentFile {
-    local ( $ncomp, $id );
+    local ($ncomp, $id);
     $out_file = $_[0];
     open(FOUT, "> $out_file") || die "Cannot open $out_file: $!";
     $ncomp = scalar(@name_list);
-    printf FOUT "%i\n",$ncomp;
-    for ($id=0; $id<$ncomp; $id++) {
-	printf FOUT "%i\t\t%s\n",@init_vals[$id],@name_list[$id];
+    printf FOUT "%i\n", $ncomp;
+    for ($id = 0; $id < $ncomp; $id++) {
+        printf FOUT "%i\t\t%s\n", @init_vals[$id], @name_list[$id];
     }
     print FOUT "\n";
     close(FOUT);
-    printf STDERR "Written %i components to $out_file\n",$ncomp;
+    printf STDERR "Written %i components to $out_file\n", $ncomp;
 }
 
 # Write a control file to stdot using current information, suitable
@@ -299,12 +334,12 @@ sub WriteComponentFile {
 # as appropriate.
 
 sub WriteGillespieInp {
-    printf "%i\t\t\tName\n",$codename;
-    printf "%i\t\t\tNumber_of_components\n",scalar(@name_list);
-    printf "%i\t\t\tNumber_of_reactions\n",scalar(@react1lines);
+    printf "%i\t\t\tName\n", $codename;
+    printf "%i\t\t\tNumber_of_components\n", scalar(@name_list);
+    printf "%i\t\t\tNumber_of_reactions\n", scalar(@react1lines);
     printf "%i\t%i\t%i\tNumber_eq_blocks;_Number_prod_blocks;_Number_steps\n",
-    $num_eq_blocks,$num_prod_blocks,$num_steps;
-    printf "%i\t\t\tFrequency_analysis\n\n",$freq_anal;
+        $num_eq_blocks, $num_prod_blocks, $num_steps;
+    printf "%i\t\t\tFrequency_analysis\n\n", $freq_anal;
 }
 
 # This is where the action starts.

@@ -1,3 +1,4 @@
+#include "propagate.h"
 #include "Gillespie.h"
 #include "stats.h"
 

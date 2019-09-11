@@ -44,16 +44,6 @@ typedef enum {
 
 extern long int seed;
 
-/*#define sqr(x) (sqtmp=(x), sqtmp*sqtmp)*/
-
-#ifdef __GNUC__
-
-__inline__ double sqr(double x);
-
-#else
-double sqr(double x);
-#endif
-
 void *malloc1D(int sizex, size_t sizedata);
 
 /* allocates a dynamic array of size sizex with data

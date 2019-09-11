@@ -1,6 +1,7 @@
 #include "Gillespie.h"
 #include "stats.h"
 #include "numtools/numtools.h"
+#include "propagate.h"
 
 /*------------------------Globally defined variables------------------------*/
 

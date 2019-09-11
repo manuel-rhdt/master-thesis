@@ -19,11 +19,6 @@
 
 #define TRUE        1
 #define FALSE       0
-#define CANCELLED  -1
-#define F_COMP(a, b) (fabs ( a-b ) < 1e-10)
-#define MIN(a, b)    ( a < b ? a : b )
-#define MAX(a, b)    ( a > b ? a : b )
-#define EPSILON     1e-6
 #define PI          3.141592653589793
 
 /*--------------------Algebraic definitions----------------------------------*/
