@@ -1,0 +1,112 @@
+ARCHCC		= cc
+
+ARCHLINKER	= cc
+
+ARCHLIBS	= -lm
+
+ARCHLDFLAGS	= 
+
+ARCHCFLAGS	= -O2 -finline-functions  
+
+ARCHDEBUGFLAGS	= -ggdb -Wall
+
+ARCHOBJS	= 
+
+.c.o:
+	$(CC) $(CFLAGS) -c $*.c -o $*.o
+
+# DO NOT DELETE
+
+main.o: Gillespie.h /usr/include/math.h /usr/include/features.h
+main.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+main.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+main.o: /usr/include/bits/mathcalls.h /usr/include/stdio.h
+main.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stddef.h
+main.o: /usr/include/bits/types.h /usr/include/bits/wordsize.h
+main.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+main.o: /usr/include/_G_config.h /usr/include/wchar.h
+main.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+main.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stdarg.h
+main.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+main.o: /usr/include/string.h /usr/include/stdlib.h stats.h
+main.o: numtools/numtools.h /usr/include/time.h /usr/include/bits/time.h
+main.o: /usr/include/sys/types.h /usr/include/sys/times.h
+main.o: /usr/include/unistd.h /usr/include/bits/posix_opt.h
+main.o: /usr/include/bits/confname.h
+propagate.o: Gillespie.h /usr/include/math.h /usr/include/features.h
+propagate.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+propagate.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+propagate.o: /usr/include/bits/mathcalls.h /usr/include/stdio.h
+propagate.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stddef.h
+propagate.o: /usr/include/bits/types.h /usr/include/bits/wordsize.h
+propagate.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+propagate.o: /usr/include/_G_config.h /usr/include/wchar.h
+propagate.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+propagate.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stdarg.h
+propagate.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+propagate.o: /usr/include/string.h /usr/include/stdlib.h stats.h
+read_comp_react.o: Gillespie.h /usr/include/math.h /usr/include/features.h
+read_comp_react.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+read_comp_react.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+read_comp_react.o: /usr/include/bits/mathcalls.h /usr/include/stdio.h
+read_comp_react.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stddef.h
+read_comp_react.o: /usr/include/bits/types.h /usr/include/bits/wordsize.h
+read_comp_react.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+read_comp_react.o: /usr/include/_G_config.h /usr/include/wchar.h
+read_comp_react.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+read_comp_react.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stdarg.h
+read_comp_react.o: /usr/include/bits/stdio_lim.h
+read_comp_react.o: /usr/include/bits/sys_errlist.h /usr/include/string.h
+read_comp_react.o: /usr/include/stdlib.h stats.h
+stats.o: Gillespie.h /usr/include/math.h /usr/include/features.h
+stats.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+stats.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+stats.o: /usr/include/bits/mathcalls.h /usr/include/stdio.h
+stats.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stddef.h
+stats.o: /usr/include/bits/types.h /usr/include/bits/wordsize.h
+stats.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+stats.o: /usr/include/_G_config.h /usr/include/wchar.h
+stats.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+stats.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stdarg.h
+stats.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+stats.o: /usr/include/string.h /usr/include/stdlib.h stats.h
+stats.o: numtools/numtools.h /usr/include/time.h /usr/include/bits/time.h
+stats.o: /usr/include/sys/types.h /usr/include/sys/times.h
+stats.o: /usr/include/unistd.h /usr/include/bits/posix_opt.h
+stats.o: /usr/include/bits/confname.h
+analyse.o: Gillespie.h /usr/include/math.h /usr/include/features.h
+analyse.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+analyse.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+analyse.o: /usr/include/bits/mathcalls.h /usr/include/stdio.h
+analyse.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stddef.h
+analyse.o: /usr/include/bits/types.h /usr/include/bits/wordsize.h
+analyse.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+analyse.o: /usr/include/_G_config.h /usr/include/wchar.h
+analyse.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+analyse.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stdarg.h
+analyse.o: /usr/include/bits/stdio_lim.h /usr/include/bits/sys_errlist.h
+analyse.o: /usr/include/string.h /usr/include/stdlib.h numtools/numtools.h
+analyse.o: /usr/include/time.h /usr/include/bits/time.h
+analyse.o: /usr/include/sys/types.h /usr/include/sys/times.h
+analyse.o: /usr/include/unistd.h /usr/include/bits/posix_opt.h
+analyse.o: /usr/include/bits/confname.h
+numtools/vectools.o: numtools/vectools.h
+numtools/numtools.o: /usr/include/stdio.h /usr/include/features.h
+numtools/numtools.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+numtools/numtools.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stddef.h
+numtools/numtools.o: /usr/include/bits/types.h /usr/include/bits/wordsize.h
+numtools/numtools.o: /usr/include/bits/typesizes.h /usr/include/libio.h
+numtools/numtools.o: /usr/include/_G_config.h /usr/include/wchar.h
+numtools/numtools.o: /usr/include/bits/wchar.h /usr/include/gconv.h
+numtools/numtools.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/stdarg.h
+numtools/numtools.o: /usr/include/bits/stdio_lim.h
+numtools/numtools.o: /usr/include/bits/sys_errlist.h /usr/include/stdlib.h
+numtools/numtools.o: /usr/include/math.h /usr/include/bits/huge_val.h
+numtools/numtools.o: /usr/include/bits/mathdef.h
+numtools/numtools.o: /usr/include/bits/mathcalls.h /usr/include/limits.h
+numtools/numtools.o: /usr/lib/gcc/i386-redhat-linux/3.4.4/include/limits.h
+numtools/numtools.o: numtools/numtools.h /usr/include/time.h
+numtools/numtools.o: /usr/include/bits/time.h /usr/include/sys/types.h
+numtools/numtools.o: /usr/include/sys/times.h /usr/include/unistd.h
+numtools/numtools.o: /usr/include/bits/posix_opt.h
+numtools/numtools.o: /usr/include/bits/confname.h /usr/include/string.h

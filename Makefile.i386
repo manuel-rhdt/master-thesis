@@ -1,0 +1,192 @@
+ARCHCC		= pgcc
+
+ARCHLINKER	= pgcc
+
+ARCHLIBS	= -lm
+
+ARCHLDFLAGS	= 
+
+ARCHCFLAGS	= -fast
+
+ARCHDEBUGFLAGS	= -ggdb -Wall
+
+ARCHOBJS	= 
+
+.c.o:
+	$(CC) $(CFLAGS) -c $*.c -o $*.o
+
+# DO NOT DELETE
+
+main.o: sys.h /usr/include/math.h /usr/include/features.h
+main.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+main.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+main.o: /usr/include/bits/mathcalls.h
+main.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+main.o: /usr/include/stdio.h
+main.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+main.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+main.o: /usr/include/bits/types.h /usr/include/libio.h
+main.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+main.o: /usr/include/string.h /usr/include/stdlib.h /usr/include/sys/types.h
+main.o: /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h
+main.o: /usr/include/sys/select.h /usr/include/bits/select.h
+main.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+main.o: /usr/include/alloca.h grid.h numtools/numtools.h
+main.o: /usr/include/sys/times.h /usr/include/unistd.h
+main.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+main.o: /usr/include/getopt.h sol.h void.h dmu_V.h analyse.h tps.h equ.h
+sol.o: sys.h /usr/include/math.h /usr/include/features.h
+sol.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+sol.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+sol.o: /usr/include/bits/mathcalls.h
+sol.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+sol.o: /usr/include/stdio.h
+sol.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+sol.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+sol.o: /usr/include/bits/types.h /usr/include/libio.h
+sol.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+sol.o: /usr/include/string.h /usr/include/stdlib.h /usr/include/sys/types.h
+sol.o: /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h
+sol.o: /usr/include/sys/select.h /usr/include/bits/select.h
+sol.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+sol.o: /usr/include/alloca.h grid.h numtools/numtools.h
+sol.o: /usr/include/sys/times.h /usr/include/unistd.h
+sol.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+sol.o: /usr/include/getopt.h sol.h dmu_V.h
+grid.o: sys.h /usr/include/math.h /usr/include/features.h
+grid.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+grid.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+grid.o: /usr/include/bits/mathcalls.h
+grid.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+grid.o: /usr/include/stdio.h
+grid.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+grid.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+grid.o: /usr/include/bits/types.h /usr/include/libio.h
+grid.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+grid.o: /usr/include/string.h /usr/include/stdlib.h /usr/include/sys/types.h
+grid.o: /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h
+grid.o: /usr/include/sys/select.h /usr/include/bits/select.h
+grid.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+grid.o: /usr/include/alloca.h grid.h numtools/numtools.h
+grid.o: /usr/include/sys/times.h /usr/include/unistd.h
+grid.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+grid.o: /usr/include/getopt.h sol.h
+void.o: sys.h /usr/include/math.h /usr/include/features.h
+void.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+void.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+void.o: /usr/include/bits/mathcalls.h
+void.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+void.o: /usr/include/stdio.h
+void.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+void.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+void.o: /usr/include/bits/types.h /usr/include/libio.h
+void.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+void.o: /usr/include/string.h /usr/include/stdlib.h /usr/include/sys/types.h
+void.o: /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h
+void.o: /usr/include/sys/select.h /usr/include/bits/select.h
+void.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+void.o: /usr/include/alloca.h grid.h numtools/numtools.h
+void.o: /usr/include/sys/times.h /usr/include/unistd.h
+void.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+void.o: /usr/include/getopt.h sol.h void.h dmu_V.h
+dmu_V.o: sys.h /usr/include/math.h /usr/include/features.h
+dmu_V.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+dmu_V.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+dmu_V.o: /usr/include/bits/mathcalls.h
+dmu_V.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+dmu_V.o: /usr/include/stdio.h
+dmu_V.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+dmu_V.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+dmu_V.o: /usr/include/bits/types.h /usr/include/libio.h
+dmu_V.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+dmu_V.o: /usr/include/string.h /usr/include/stdlib.h /usr/include/sys/types.h
+dmu_V.o: /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h
+dmu_V.o: /usr/include/sys/select.h /usr/include/bits/select.h
+dmu_V.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+dmu_V.o: /usr/include/alloca.h grid.h numtools/numtools.h
+dmu_V.o: /usr/include/sys/times.h /usr/include/unistd.h
+dmu_V.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+dmu_V.o: /usr/include/getopt.h sol.h void.h dmu_V.h
+equ.o: sys.h /usr/include/math.h /usr/include/features.h
+equ.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+equ.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+equ.o: /usr/include/bits/mathcalls.h
+equ.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+equ.o: /usr/include/stdio.h
+equ.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+equ.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+equ.o: /usr/include/bits/types.h /usr/include/libio.h
+equ.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+equ.o: /usr/include/string.h /usr/include/stdlib.h /usr/include/sys/types.h
+equ.o: /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h
+equ.o: /usr/include/sys/select.h /usr/include/bits/select.h
+equ.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+equ.o: /usr/include/alloca.h grid.h numtools/numtools.h
+equ.o: /usr/include/sys/times.h /usr/include/unistd.h
+equ.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+equ.o: /usr/include/getopt.h sol.h void.h dmu_V.h analyse.h equ.h
+tps.o: sys.h /usr/include/math.h /usr/include/features.h
+tps.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+tps.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+tps.o: /usr/include/bits/mathcalls.h
+tps.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+tps.o: /usr/include/stdio.h
+tps.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+tps.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+tps.o: /usr/include/bits/types.h /usr/include/libio.h
+tps.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+tps.o: /usr/include/string.h /usr/include/stdlib.h /usr/include/sys/types.h
+tps.o: /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h
+tps.o: /usr/include/sys/select.h /usr/include/bits/select.h
+tps.o: /usr/include/bits/sigset.h /usr/include/sys/sysmacros.h
+tps.o: /usr/include/alloca.h grid.h numtools/numtools.h
+tps.o: /usr/include/sys/times.h /usr/include/unistd.h
+tps.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+tps.o: /usr/include/getopt.h sol.h dmu_V.h tps.h
+analyse.o: sys.h /usr/include/math.h /usr/include/features.h
+analyse.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+analyse.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+analyse.o: /usr/include/bits/mathcalls.h
+analyse.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+analyse.o: /usr/include/stdio.h
+analyse.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+analyse.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+analyse.o: /usr/include/bits/types.h /usr/include/libio.h
+analyse.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+analyse.o: /usr/include/string.h /usr/include/stdlib.h
+analyse.o: /usr/include/sys/types.h /usr/include/time.h /usr/include/endian.h
+analyse.o: /usr/include/bits/endian.h /usr/include/sys/select.h
+analyse.o: /usr/include/bits/select.h /usr/include/bits/sigset.h
+analyse.o: /usr/include/sys/sysmacros.h /usr/include/alloca.h grid.h
+analyse.o: numtools/numtools.h /usr/include/sys/times.h /usr/include/unistd.h
+analyse.o: /usr/include/bits/posix_opt.h /usr/include/bits/confname.h
+analyse.o: /usr/include/getopt.h sol.h analyse.h
+gasdev.o: /usr/include/math.h /usr/include/features.h
+gasdev.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+gasdev.o: /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h
+gasdev.o: /usr/include/bits/mathcalls.h
+gasdev.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+numtools/vectools.o: numtools/vectools.h
+numtools/numtools.o: /usr/include/stdio.h /usr/include/features.h
+numtools/numtools.o: /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h
+numtools/numtools.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h
+numtools/numtools.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h
+numtools/numtools.o: /usr/include/bits/types.h /usr/include/libio.h
+numtools/numtools.o: /usr/include/_G_config.h /usr/include/bits/stdio_lim.h
+numtools/numtools.o: /usr/include/stdlib.h /usr/include/sys/types.h
+numtools/numtools.o: /usr/include/time.h /usr/include/endian.h
+numtools/numtools.o: /usr/include/bits/endian.h /usr/include/sys/select.h
+numtools/numtools.o: /usr/include/bits/select.h /usr/include/bits/sigset.h
+numtools/numtools.o: /usr/include/sys/sysmacros.h /usr/include/alloca.h
+numtools/numtools.o: /usr/include/math.h /usr/include/bits/huge_val.h
+numtools/numtools.o: /usr/include/bits/mathdef.h
+numtools/numtools.o: /usr/include/bits/mathcalls.h
+numtools/numtools.o: /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/float.h
+numtools/numtools.o: /usr/include/limits.h /usr/include/bits/posix1_lim.h
+numtools/numtools.o: /usr/include/bits/local_lim.h
+numtools/numtools.o: /usr/include/linux/limits.h
+numtools/numtools.o: /usr/include/bits/posix2_lim.h numtools/numtools.h
+numtools/numtools.o: /usr/include/sys/times.h /usr/include/unistd.h
+numtools/numtools.o: /usr/include/bits/posix_opt.h
+numtools/numtools.o: /usr/include/bits/confname.h /usr/include/getopt.h
+numtools/numtools.o: /usr/include/string.h

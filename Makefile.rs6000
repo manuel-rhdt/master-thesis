@@ -1,0 +1,62 @@
+ARCHCC		= cc
+
+ARCHLINKER	= cc
+
+ARCHLIBS	= -lm
+
+ARCHLDFLAGS	= 
+
+ARCHCFLAGS	= -fullwarn -O2
+
+ARCHDEBUGFLAGS	= -g -fullwarn
+
+ARCHOBJS	= 
+
+.c.o:
+	$(CC) $(CFLAGS) -c $*.c -o $*.o
+
+# DO NOT DELETE
+# DO NOT DELETE THIS LINE -- make depend depends on it.
+
+main.o: /usr/include/math.h /usr/include/standards.h /usr/include/stdio.h
+main.o: /usr/include/string.h /usr/include/sys/types.h /usr/include/stdlib.h
+main.o: /usr/include/time.h lgmd.h
+inoutput.o: /usr/include/math.h /usr/include/standards.h /usr/include/stdio.h
+inoutput.o: /usr/include/string.h /usr/include/sys/types.h
+inoutput.o: /usr/include/stdlib.h /usr/include/time.h lgmd.h
+inoutput.o: numtools/numtools.h /usr/include/sys/times.h
+inoutput.o: /usr/include/unistd.h /usr/include/sys/access.h
+inoutput.o: /usr/include/stdarg.h
+sol_init.o: /usr/include/math.h /usr/include/standards.h /usr/include/stdio.h
+sol_init.o: /usr/include/string.h /usr/include/sys/types.h
+sol_init.o: /usr/include/stdlib.h /usr/include/time.h lgmd.h
+field_init.o: /usr/include/math.h /usr/include/standards.h
+field_init.o: /usr/include/stdio.h /usr/include/string.h
+field_init.o: /usr/include/sys/types.h /usr/include/stdlib.h
+field_init.o: /usr/include/time.h lgmd.h nrutil.h
+force.o: /usr/include/math.h /usr/include/standards.h /usr/include/stdio.h
+force.o: /usr/include/string.h /usr/include/sys/types.h /usr/include/stdlib.h
+force.o: /usr/include/time.h lgmd.h
+propag.o: /usr/include/math.h /usr/include/standards.h /usr/include/stdio.h
+propag.o: /usr/include/string.h /usr/include/sys/types.h
+propag.o: /usr/include/stdlib.h /usr/include/time.h lgmd.h
+analyse.o: /usr/include/math.h /usr/include/standards.h /usr/include/stdio.h
+analyse.o: /usr/include/string.h /usr/include/sys/types.h
+analyse.o: /usr/include/stdlib.h /usr/include/time.h lgmd.h
+nrutil.o: /usr/include/stdio.h
+gasdev.o: /usr/include/math.h /usr/include/standards.h
+c_r.o: /usr/include/math.h /usr/include/standards.h /usr/include/stdio.h
+c_r.o: /usr/include/string.h /usr/include/sys/types.h /usr/include/stdlib.h
+c_r.o: /usr/include/time.h lgmd.h numtools/numtools.h
+c_r.o: /usr/include/sys/times.h /usr/include/unistd.h
+c_r.o: /usr/include/sys/access.h /usr/include/stdarg.h
+drealft.o: /usr/include/math.h /usr/include/standards.h
+dfour1.o: /usr/include/math.h /usr/include/standards.h
+ludcmp.o: /usr/include/math.h /usr/include/standards.h nrutil.h
+vectools.o: numtools/vectools.h
+numtools.o: /usr/include/stdio.h /usr/include/stdlib.h /usr/include/math.h
+numtools.o: /usr/include/standards.h /usr/include/limits.h
+numtools.o: /usr/include/sys/limits.h numtools/numtools.h /usr/include/time.h
+numtools.o: /usr/include/sys/types.h /usr/include/sys/times.h
+numtools.o: /usr/include/unistd.h /usr/include/sys/access.h
+numtools.o: /usr/include/stdarg.h /usr/include/string.h
