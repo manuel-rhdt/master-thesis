@@ -1,6 +1,10 @@
 #ifndef _VECTOOLS_H_
 #define _VECTOOLS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*** TYPEDEF'S ***/
 
 typedef struct _intVector intVec;
@@ -37,5 +41,9 @@ dblVec sub_dbl_vector(dblVec a, dblVec b);
 dblVec add_dbl_vector(dblVec a, dblVec b);
 
 dblVec rot_dbl_vector(dblVec r, double R[3][3]);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

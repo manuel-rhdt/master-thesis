@@ -1,30 +1,17 @@
 cmake_minimum_required(VERSION 3.14)
-project(Gillespie C)
+project(Gillespie CXX)
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 include_directories(.)
 include_directories(numtools)
-
 add_compile_definitions(_BSD_SOURCE)
 
-set(POW_LIBS "")
-include(CheckLibraryExists)
-check_library_exists(m pow "" LIBM)
-if (LIBM)
-    list(APPEND POW_LIBS "m")
-endif ()
+add_subdirectory(numtools)
 
 add_executable(Gillespie
-        numtools/numtools.c
-        numtools/vectools.c
-        analyse.c
-        main.c
-        propagate.c
-        ran.n.c
-        read_comp_react.c
-        stats.c propagate.h)
+        main.cpp Simulation.cpp Simulation.hh)
 
-target_link_libraries(Gillespie PUBLIC ${POW_LIBS})
+target_link_libraries(Gillespie PRIVATE numtools)

@@ -7,6 +7,10 @@
 #ifndef _NUMTOOLS_H_
 #define _NUMTOOLS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -15,6 +19,7 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <string.h>
+#include <stdbool.h>
 
 #ifndef FALSE
 #define FALSE 0
@@ -35,10 +40,6 @@
 #define LOG_SYSTEM_TIME  (1<<2)
 #define LOG_REAL_TIME    (1<<3)
 #define NO_TIME          (1<<4)
-
-typedef enum {
-    false = 0, true = 1
-} boolean;
 
 /*static double sqtmp;*/
 
@@ -153,7 +154,7 @@ void read_data_string(FILE *theFile, char *string);
 
 /* log tools */
 
-int log_init(const char *name, boolean auto_flush);
+int log_init(const char *name, bool auto_flush);
 
 /* opens a log file, with the name "name.log", returns 0 if
    everything went OK, nonzero if an error occurred 
@@ -415,5 +416,8 @@ double gammln(double xx);
 
 /*double sqr(double x);*/
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif

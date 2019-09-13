@@ -1,4 +1,4 @@
-#include "Gillespie.h"
+#include "Gillespie.hh"
 #include "numtools/numtools.h"
 
 /*------------------------Globally defined functions-------------------------*/
@@ -13,7 +13,7 @@ void analyse(int run, int block, int n_steps_per_block, int step) {
 
     ns = block * n_steps_per_block + step;
 
-    for (i = 0; i < sys.Ncomp; i++) {
+    for (i = 0; i < sys.num_components; i++) {
 
         sprintf(filename, "%s.%d.%s", sys.name, run, Xname[i]);
         fp = fopen(filename, "a");

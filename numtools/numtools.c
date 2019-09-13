@@ -24,7 +24,7 @@ char buffer[1024];
 long int seed = -58947482;
 
 static FILE *olog;
-static boolean auto_flush_log;
+static bool auto_flush_log;
 
 /* local functions */
 
@@ -316,7 +316,7 @@ void close_data(FILE *theFile) {
 static struct tms tmsstart, tmsend, tmsprev;/* stores process time */
 static clock_t start, end, prev;
 
-int log_init(const char *name, boolean auto_flush) {
+int log_init(const char *name, bool auto_flush) {
     char filename[FILENAME_SIZE];
     int pid;
     time_t tp;
