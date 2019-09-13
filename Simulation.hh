@@ -11,33 +11,35 @@
 
 class Simulation {
 private:
-    std::mt19937 rn_generator;
+    std::mt19937 rnGenerator;
     std::uniform_real_distribution<double> distribution;
 
     System sys;
-    std::vector<Reaction> reactions;
-    std::vector<double> reaction_rates;
-    std::vector<double> component_counts;
-    std::vector<std::string> component_names;
 
-    void pre_allocate();
+    std::vector<Reaction> reactions;
+    std::vector<double> reactionRates;
+
+    std::vector<double> componentCounts;
+    std::vector<std::string> componentNames;
+
+    void preAllocate();
+
+    void determinePropensityFunctions(double *sumA);
+
+    int selectReaction(double sumA);
+
+    void updateConcentrations(int j);
 
 public:
-    Simulation(System sys);
+    explicit Simulation(System sys);
 
-    void run(int num_blocks, int num_steps);
+    void run(int runType, int numBlocks, int numSteps);
 
-    void determine_propensity_functions(double *sum_a);
+    void readComponents();
 
-    void read_components();
+    void readReactions();
 
-    void read_reactions();
-
-    int select_reaction(double sum_a);
-
-    void update_concentrations(int j);
-
-    void print_reactions();
+    void printReactions();
 };
 
 

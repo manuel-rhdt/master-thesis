@@ -1,0 +1,7 @@
+A : components
+
+A == 1000 : initial
+
+A --> null : k = 1
+
+test : name

@@ -1,6 +1,6 @@
-0			Name
-58			Number_of_components
-186			Number_of_reactions
+test			Name
+1			Number_of_components
+1			Number_of_reactions
 100	0	10000	Number_eq_blocks;_Number_prod_blocks;_Number_steps
 100			Frequency_analysis
 

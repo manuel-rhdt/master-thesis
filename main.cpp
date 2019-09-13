@@ -7,10 +7,6 @@
 
 Simulation start(int *, int *, int *);
 
-void allocate_memory();
-
-void print_reactions();
-
 void finish();
 
 int main(void) {
@@ -18,7 +14,9 @@ int main(void) {
 
     Simulation simulation = start(&n_blk_eq, &n_blk_run, &n_steps);
 
-    simulation.run(n_blk_eq, n_steps);
+    simulation.run(EQUIL, n_blk_eq, n_steps);
+
+    simulation.run(RUN, n_blk_eq, n_steps);
 
     finish();
 
@@ -58,9 +56,9 @@ Simulation start(int *n_blk_eq, int *n_blk_run, int *n_steps) {
     printf("Frequency of analysis             %8d\n", sys.ana);
 
     Simulation simulation(sys);
-    simulation.read_components();
-    simulation.read_reactions();
-    simulation.print_reactions();
+    simulation.readComponents();
+    simulation.readReactions();
+    simulation.printReactions();
 
     printf("===============================================================================\n");
 

@@ -23,13 +23,10 @@
 
 /*-----------------------Structure definitions-------------------------------*/
 
-typedef struct stats_type {
-
+typedef struct statsType {
     int acc;
-
     double sum, sumsq, err, noise;
-
-} Stats;
+} statistics;
 
 typedef struct sys_type {
 

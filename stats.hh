@@ -5,7 +5,7 @@
 
 /*-----------------------Externally declared variables----------------------*/
 
-extern Stats *Xblk, *Xrun;
+extern statistics *Xblk, *Xrun;
 
 /*-----------------------Externally declared functions----------------------*/
 
