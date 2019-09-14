@@ -5,10 +5,9 @@
 #ifndef GILLESPIE_RUN_HH
 #define GILLESPIE_RUN_HH
 
-
-#include <vector>
-#include <string>
 #include "Gillespie.hh"
+#include <string>
+#include <vector>
 
 class Run {
 private:
@@ -22,6 +21,5 @@ public:
 
     ~Run();
 };
-
 
 #endif //GILLESPIE_RUN_HH

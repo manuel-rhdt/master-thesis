@@ -1,15 +1,15 @@
-#include <random>
 #include "Gillespie.hh"
-#include "stats.hh"
-#include "numtools/numtools.h"
 #include "Simulation.hh"
-
+#include "numtools/numtools.h"
+#include "stats.hh"
+#include <random>
 
 Simulation start(int *, int *, int *);
 
 void finish();
 
-int main(void) {
+int main(void)
+{
     int n_blk_eq, n_blk_run, n_steps;
 
     Simulation simulation = start(&n_blk_eq, &n_blk_run, &n_steps);
@@ -23,7 +23,8 @@ int main(void) {
     return 0;
 }
 
-Simulation start(int *n_blk_eq, int *n_blk_run, int *n_steps) {
+Simulation start(int *n_blk_eq, int *n_blk_run, int *n_steps)
+{
     FILE *fp;
     System sys;
 
@@ -31,7 +32,7 @@ Simulation start(int *n_blk_eq, int *n_blk_run, int *n_steps) {
         printf("Cannot open Gillespie.inp.\n");
         abort();
     }
-    sys.name = (char *) calloc(30, sizeof(char));
+    sys.name = (char *)calloc(30, sizeof(char));
     fscanf(fp, "%s%*s", sys.name);
     fscanf(fp, "%d%*s", &sys.num_components);
     fscanf(fp, "%d%*s", &sys.num_reactions);
@@ -65,7 +66,8 @@ Simulation start(int *n_blk_eq, int *n_blk_run, int *n_steps) {
     return simulation;
 }
 
-void finish(void) {
+void finish(void)
+{
     printf("\n\n===============================================================================\n");
     printf("Run completed.\nLog book information.\n");
     log_exit();

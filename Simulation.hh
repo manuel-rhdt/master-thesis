@@ -5,9 +5,8 @@
 #ifndef GILLESPIE_SIMULATION_HH
 #define GILLESPIE_SIMULATION_HH
 
-
-#include <random>
 #include "Gillespie.hh"
+#include <random>
 
 class Simulation {
 private:
@@ -41,6 +40,5 @@ public:
 
     void printReactions();
 };
-
 
 #endif //GILLESPIE_SIMULATION_HH

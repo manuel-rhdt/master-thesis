@@ -1,0 +1,5 @@
+1		Number_of_reaction_channels
+
+1.000000	1	0	RateConstant_k_Nreactants_Nproducts
+X 0 -> 0
+

@@ -16,7 +16,8 @@
  * @param[in] randomUniformValue A random value between 0.0 and 1.0 used to determine the stochastic time step
  * @returns the determined time step
  */
-double propagateTime(double sumA, double randomUniformValue) {
+double propagateTime(double sumA, double randomUniformValue)
+{
     assert(sumA >= 0.0);
     if (sumA == 0.0) {
         throw std::string("Reached steady state");
@@ -29,7 +30,9 @@ double propagateTime(double sumA, double randomUniformValue) {
  *
  * @param sys The system to initialize the simulation with.
  */
-Simulation::Simulation(System sys) : sys(sys) {
+Simulation::Simulation(System sys)
+    : sys(sys)
+{
     rnGenerator = std::mt19937(std::mt19937::default_seed);
     distribution = std::uniform_real_distribution<double>(0.0, 1.0);
     preAllocate();
@@ -40,12 +43,12 @@ Simulation::Simulation(System sys) : sys(sys) {
  *
  * The reaction_rates will get initialized with a value of zero.
  */
-void Simulation::preAllocate() {
+void Simulation::preAllocate()
+{
     reactions.reserve(sys.num_reactions);
     reactionRates = std::vector<double>(sys.num_reactions, 0.0);
     componentCounts.reserve(sys.num_components);
     componentNames.reserve(sys.num_components);
-
 
     //Xblk = (statistics *) calloc(sys.num_components, sizeof(statistics));
     //Xrun = (statistics *) calloc(sys.num_components, sizeof(statistics));
@@ -54,7 +57,8 @@ void Simulation::preAllocate() {
 /**
  * Read components from a file called `sys.name`.components
  */
-void Simulation::readComponents() {
+void Simulation::readComponents()
+{
     std::ifstream file(std::string(sys.name) + ".components");
 
     std::string line;
@@ -80,8 +84,12 @@ void Simulation::readComponents() {
 /**
  * Read reactions from a file called `sys.name`.reactions
  */
-void Simulation::readReactions() {
+void Simulation::readReactions()
+{
     std::ifstream file(std::string(sys.name) + ".reactions");
+    if (!file.is_open()) {
+        abort();
+    }
 
     std::string line;
     std::getline(file, line);
@@ -101,7 +109,7 @@ void Simulation::readReactions() {
         }
 
         Reaction reaction{
-                numReactants, numProducts, k
+            numReactants, numProducts, k
         };
 
         assert(std::getline(file, line));
@@ -141,7 +149,8 @@ void Simulation::readReactions() {
  * @param numBlocks
  * @param numSteps
  */
-void Simulation::run(int runType, int numBlocks, int numSteps) {
+void Simulation::run(int runType, int numBlocks, int numSteps)
+{
     Run run1(runType, &componentNames);
     for (int b = 0; b < numBlocks; b++) {
         for (int s = 0; s < numSteps; s++) {
@@ -160,7 +169,8 @@ void Simulation::run(int runType, int numBlocks, int numSteps) {
  *
  * @param [out] sumA The total rate.
  */
-void Simulation::determinePropensityFunctions(double *sumA) {
+void Simulation::determinePropensityFunctions(double *sumA)
+{
     *sumA = 0.;
     for (int i = 0; i < sys.num_reactions; i++) {
         if (reactions[i].num_reactants == 0)
@@ -168,11 +178,9 @@ void Simulation::determinePropensityFunctions(double *sumA) {
         else if (reactions[i].num_reactants == 1)
             reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index];
         else if (reactions[i].reactant[0].index == reactions[i].reactant[1].index)
-            reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index] *
-                               (componentCounts[reactions[i].reactant[1].index] - 1);
+            reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index] * (componentCounts[reactions[i].reactant[1].index] - 1);
         else
-            reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index] *
-                               componentCounts[reactions[i].reactant[1].index];
+            reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index] * componentCounts[reactions[i].reactant[1].index];
 
         *sumA += reactionRates[i];
     }
@@ -184,7 +192,8 @@ void Simulation::determinePropensityFunctions(double *sumA) {
  * @param sumA the sum of reaction rates for all possible reactions
  * @return The index of the selected reaction.
  */
-int Simulation::selectReaction(double sumA) {
+int Simulation::selectReaction(double sumA)
+{
     double rs, cumulativeRate;
 
     rs = distribution(rnGenerator) * sumA;
@@ -202,7 +211,8 @@ int Simulation::selectReaction(double sumA) {
  *
  * @param j The index of the selected reaction.
  */
-void Simulation::updateConcentrations(int j) {
+void Simulation::updateConcentrations(int j)
+{
     int i;
 
     for (i = 0; i < reactions[j].num_reactants; i++)
@@ -210,10 +220,10 @@ void Simulation::updateConcentrations(int j) {
 
     for (i = 0; i < reactions[j].num_products; i++)
         componentCounts[reactions[j].product[i].index] += reactions[j].product[i].change;
-
 }
 
-void Simulation::printReactions() {
+void Simulation::printReactions()
+{
     int i, j;
 
     printf("\nThe following reactions are simulated:\n\n");
