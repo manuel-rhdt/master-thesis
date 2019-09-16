@@ -11,15 +11,17 @@
 
 class Run {
 private:
-    int runType;
-    double elapsedTime;
-    std::vector<statistics> stat;
-    const std::vector<std::string> *componentNames;
+    const std::vector<std::string> componentNames;
 
 public:
-    Run(int runType, std::vector<std::string> *componentNames);
+    Run(int runType, std::vector<std::string> componentNames);
 
-    ~Run();
+    Run(const Run &) = delete;
+
+    void finish(void);
+
+    std::vector<statistics> stat;
+    double elapsedTime;
 };
 
 #endif //GILLESPIE_RUN_HH

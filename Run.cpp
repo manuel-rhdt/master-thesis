@@ -3,24 +3,15 @@
 //
 
 #include "Run.hh"
+#include <cassert>
 
-Run::Run(int runType, std::vector<std::string> *componentNames)
-    : runType(runType)
-    , componentNames(componentNames)
-    , elapsedTime(0.0)
-{
-    stat = std::vector<statistics>(componentNames->size(), statistics{ 0, 0.0, 0.0, 0.0, 0.0 });
+Run::Run(int numComponents, const std::vector<std::string> componentNames)
+        : componentNames(componentNames), elapsedTime(0.0) {
+    stat = std::vector<statistics>(numComponents, statistics{0, 0.0, 0.0, 0.0, 0.0});
 }
 
-Run::~Run()
-{
-    int i;
-
+void Run::finish(void) {
     printf("\n==============================================================================\n\n");
-    if (runType == EQUIL)
-        printf("The averages of the equilibration run.\n\n");
-    else
-        printf("The average of the production run.\n\n");
 
     printf("Elapsed time         %8.4f\n\n", elapsedTime);
 
@@ -30,11 +21,13 @@ Run::~Run()
     for (auto item = stat.begin(); item != stat.end(); ++item) {
         item->sum /= item->acc;
         item->sumsq /= item->acc;
-        item->err = (item->sumsq - item->sum * item->sum) / (double)item->acc;
+        item->err = (item->sumsq - item->sum * item->sum) / (double) item->acc;
         if (item->err > 0.)
             item->err = sqrt(item->err);
         item->noise /= item->acc;
-        printf("%s\t\t%8.4f\t%8.4f\t%8.4f\t%8d\n", (*componentNames)[item - stat.begin()].c_str(), item->sum, item->err,
-            item->noise, item->acc);
+        printf("%s\t\t%8.4f\t%8.4f\t%8.4f\t%8d\n", componentNames[item - stat.begin()].c_str(), item->sum, item->err,
+               item->noise, item->acc);
     }
+
+    stat.clear();
 }

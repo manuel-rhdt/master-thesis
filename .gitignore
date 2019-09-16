@@ -1,4 +1,8 @@
 /cmake-build-debug/
+/cmake-build-release/
 /.vscode/
 /build
 0.*.*
+*.components
+*.reactions
+*.log

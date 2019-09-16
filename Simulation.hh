@@ -32,7 +32,7 @@ private:
 public:
     explicit Simulation(System sys);
 
-    void run(int runType, int numBlocks, int numSteps);
+    void run(int numBlocks, int numSteps);
 
     void readComponents();
 
