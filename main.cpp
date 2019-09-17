@@ -3,6 +3,7 @@
 #include "numtools/numtools.h"
 #include "stats.hh"
 #include <random>
+#include <fstream>
 
 Simulation start(int *, int *, int *);
 
@@ -13,8 +14,11 @@ int main(void) {
 
     Simulation simulation = start(&n_blk_eq, &n_blk_run, &n_steps);
 
-    simulation.run(n_blk_eq, n_steps);
-    simulation.run(n_blk_eq, n_steps);
+    Trajectory trajectory(simulation.getNumComponents());
+    simulation.run(n_blk_eq, n_steps, trajectory);
+
+    std::ofstream stream("trajectory.txt");
+    stream << trajectory;
 
     finish();
 

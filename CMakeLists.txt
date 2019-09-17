@@ -12,6 +12,6 @@ add_compile_definitions(_BSD_SOURCE)
 add_subdirectory(numtools)
 
 add_executable(Gillespie
-        main.cpp Simulation.cpp Simulation.hh Run.cpp Run.hh Block.cpp Block.hh)
+        main.cpp Simulation.cpp Simulation.hh Run.cpp Run.hh Block.cpp Block.hh Trajectory.cpp Trajectory.hh)
 
 target_link_libraries(Gillespie PRIVATE numtools)

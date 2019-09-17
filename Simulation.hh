@@ -6,6 +6,7 @@
 #define GILLESPIE_SIMULATION_HH
 
 #include "Gillespie.hh"
+#include "Trajectory.hh"
 #include <random>
 #include <memory>
 
@@ -32,13 +33,15 @@ private:
 public:
     explicit Simulation(System sys);
 
-    void run(int numBlocks, int numSteps);
+    void run(int numBlocks, int numSteps, Trajectory &trajectory);
 
     void readComponents();
 
     void readReactions();
 
     void printReactions();
+
+    unsigned long getNumComponents();
 };
 
 #endif //GILLESPIE_SIMULATION_HH

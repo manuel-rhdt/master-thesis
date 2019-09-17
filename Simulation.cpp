@@ -147,7 +147,7 @@ void Simulation::readReactions() {
  * @param numBlocks
  * @param numSteps
  */
-void Simulation::run(int numBlocks, int numSteps) {
+void Simulation::run(int numBlocks, int numSteps, Trajectory &trajectory) {
     Run run(sys.num_components, *componentNames);
     for (int b = 0; b < numBlocks; b++) {
         Block block(sys.num_components, componentNames);
@@ -159,6 +159,11 @@ void Simulation::run(int numBlocks, int numSteps) {
             block.accumulate(dt, componentCounts);
             int j = selectReaction(sumA);
             updateConcentrations(j);
+
+            trajectory.insertTimestamp(dt);
+            for (unsigned long comp = 0; comp < sys.num_components; comp++) {
+                trajectory.componentConcentrations[comp].back() = componentCounts[comp];
+            }
         }
         std::cout << block;
         block.updateRun(run);
@@ -244,4 +249,12 @@ void Simulation::printReactions() {
                    (*componentNames)[reactions[i].product[j].index].c_str());
         printf("\t\tk = %4.5f\n", reactions[i].k);
     }
+}
+
+/**
+ *
+ * @return The number of components used in this simulation.
+ */
+unsigned long Simulation::getNumComponents() {
+    return sys.num_components;
 }
