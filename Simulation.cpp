@@ -35,6 +35,10 @@ Simulation::Simulation(System sys)
         : sys(sys) {
     rnGenerator = std::mt19937(std::mt19937::default_seed);
     distribution = std::uniform_real_distribution<double>(0.0, 1.0);
+    reactions = std::vector<Reaction>();
+    reactionRates = std::vector<double>();
+    componentCounts = std::vector<double>();
+    componentNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>());
     preAllocate();
 }
 
@@ -47,10 +51,7 @@ void Simulation::preAllocate() {
     reactions.reserve(sys.num_reactions);
     reactionRates = std::vector<double>(sys.num_reactions, 0.0);
     componentCounts.reserve(sys.num_components);
-    componentNames.reserve(sys.num_components);
-
-    //Xblk = (statistics *) calloc(sys.num_components, sizeof(statistics));
-    //Xrun = (statistics *) calloc(sys.num_components, sizeof(statistics));
+    componentNames->reserve(sys.num_components);
 }
 
 /**
@@ -72,7 +73,7 @@ void Simulation::readComponents() {
             std::string name;
             lineStream >> count >> name;
             componentCounts.push_back(count);
-            componentNames.push_back(name);
+            componentNames->push_back(name);
         }
         lineNum++;
     }
@@ -99,7 +100,7 @@ void Simulation::readReactions() {
     for (int i = 0; i < sys.num_reactions;) {
         assert(std::getline(file, line));
         std::istringstream stream1(line);
-        double k; //< reaction constant
+        double k = 0.0; //< reaction constant
         int numReactants, numProducts;
         if (!(stream1 >> k >> numReactants >> numProducts)) {
             continue;
@@ -129,7 +130,7 @@ void Simulation::readReactions() {
         } else {
             stream2 >> reaction.product[0].change >> dummy >> reaction.product[0].index;
         }
-        for (int j = 1; j < reaction.num_reactants; j++) {
+        for (int j = 1; j < reaction.num_products; j++) {
             stream2 >> dummy >> reaction.product[j].change >> dummy >> reaction.product[j].index;
         }
 
@@ -147,7 +148,7 @@ void Simulation::readReactions() {
  * @param numSteps
  */
 void Simulation::run(int numBlocks, int numSteps) {
-    Run run(sys.num_components, componentNames);
+    Run run(sys.num_components, *componentNames);
     for (int b = 0; b < numBlocks; b++) {
         Block block(sys.num_components, componentNames);
         for (int s = 0; s < numSteps; s++) {
@@ -230,48 +231,17 @@ void Simulation::printReactions() {
         if (reactions[i].num_reactants == 0)
             printf("0");
         else
-            printf("%s ", componentNames[reactions[i].reactant[0].index].c_str());
+            printf("%s ", (*componentNames)[reactions[i].reactant[0].index].c_str());
         for (j = 1; j < reactions[i].num_reactants; j++)
-            printf("+ %s ", componentNames[reactions[i].reactant[j].index].c_str());
+            printf("+ %s ", (*componentNames)[reactions[i].reactant[j].index].c_str());
         printf(" ->  ");
         if (reactions[i].num_products == 0)
             printf("0 ");
         else
-            printf("%2d %s ", reactions[i].product[0].change, componentNames[reactions[i].product[0].index].c_str());
+            printf("%2d %s ", reactions[i].product[0].change, (*componentNames)[reactions[i].product[0].index].c_str());
         for (j = 1; j < reactions[i].num_products; j++)
-            printf("+ %2d %s ", reactions[i].product[j].change, componentNames[reactions[i].product[j].index].c_str());
-        printf("k = %4.3f\n", reactions[i].k);
+            printf("+ %2d %s ", reactions[i].product[j].change,
+                   (*componentNames)[reactions[i].product[j].index].c_str());
+        printf("\t\tk = %4.5f\n", reactions[i].k);
     }
 }
-
-//void run(int run, int n_blk, int n_steps) {
-//    int b, s, j;
-//    double sum_a, dt;
-//
-//    runzero();
-//
-//    analyse(run, 0, n_steps, 0);
-//
-//    for (b = 0; b < n_blk; b++) {
-//
-//        blkzero();
-//
-//        for (s = 0; s < n_steps; s++) {
-//            determinePropensityFunctions(&sum_a);
-//            propagateTime(sum_a, &dt);
-//            blkacc(dt);
-//            selectReaction(&j, sum_a);
-//            updateConcentrations(j);
-//            if ((s + 1) % sys.ana == 0)
-//                analyse(run, b, n_steps, s + 1);
-//        }
-//
-//        blkout(b);
-//
-//        statsout();
-//    }
-//
-//    runout(run);
-//
-//    return;
-//}

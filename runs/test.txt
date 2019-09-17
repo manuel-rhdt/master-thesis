@@ -1,7 +1,8 @@
-A : components
+test : name
+
+A B : components
 
 A == 1000 : initial
 
-A --> null : k = 1
+A + A <--> B : k = 0.001 : k = 0.0005
 
-test : name

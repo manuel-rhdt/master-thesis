@@ -7,6 +7,7 @@
 
 #include "Gillespie.hh"
 #include <random>
+#include <memory>
 
 class Simulation {
 private:
@@ -17,9 +18,8 @@ private:
 
     std::vector<Reaction> reactions;
     std::vector<double> reactionRates;
-
     std::vector<double> componentCounts;
-    std::vector<std::string> componentNames;
+    std::shared_ptr<std::vector<std::string>> componentNames;
 
     void preAllocate();
 

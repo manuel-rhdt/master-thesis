@@ -14,7 +14,6 @@ int main(void) {
     Simulation simulation = start(&n_blk_eq, &n_blk_run, &n_steps);
 
     simulation.run(n_blk_eq, n_steps);
-
     simulation.run(n_blk_eq, n_steps);
 
     finish();
