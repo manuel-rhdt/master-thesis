@@ -3,6 +3,8 @@
 //
 
 #include <cassert>
+#include <iomanip>
+#include <limits>
 #include "Trajectory.hh"
 
 Trajectory::Trajectory(unsigned long numComponents) : timeStamps(vector<double>()) {
@@ -38,6 +40,9 @@ double Trajectory::getComponentConcentrationAt(double time, unsigned long compon
 }
 
 std::ostream &operator<<(std::ostream &os, const Trajectory &trajectory) {
+    // Save output stream state, so we can reset if at the end of this function
+    std::ios_base::fmtflags flags(os.flags());
+    os << std::setprecision(std::numeric_limits<double>::max_digits10) << std::scientific;
     os << "# Trajectory" << endl;
     os << "# " << trajectory.timeStamps.size() << " timestamps; " << trajectory.componentConcentrations.size()
        << " components." << endl;
@@ -45,12 +50,16 @@ std::ostream &operator<<(std::ostream &os, const Trajectory &trajectory) {
         os << t << " ";
     }
     os << endl;
+    // for the component concentrations we just want to print integers
+    os << std::fixed << std::setprecision(0);
     for (const auto &componentArray : trajectory.componentConcentrations) {
         for (auto c : componentArray) {
             os << c << " ";
         }
         os << endl;
     }
+
+    os.flags(flags);
 
     return os;
 }
