@@ -14,10 +14,12 @@ int main(void) {
 
     Simulation simulation = start(&n_blk_eq, &n_blk_run, &n_steps);
 
-    Trajectory trajectory(simulation.getNumComponents());
-    simulation.run(n_blk_eq, n_steps, trajectory);
+    Trajectory trajectory;
+    std::ifstream inputStream("int_traj.txt");
+    inputStream >> trajectory;
+//    simulation.run(n_blk_eq, n_steps, trajectory);
 
-    std::ofstream stream("trajectory.txt");
+    std::ofstream stream("int2_traj.txt");
     stream << trajectory;
 
     finish();

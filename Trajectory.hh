@@ -24,13 +24,17 @@ public:
      * `componentConcentrations` is a list that contains `numComponents` elements. Every element itself is a list with
      * the same length as `timeStamps` and contains the corresponding component concentration at each time stamp.
      */
-    vector<vector<double>> componentConcentrations{vector<vector<double>>()};
+    vector<vector<double>> componentCounts{vector<vector<double>>()};
 
     void insertTimestamp(double dt);
 
     double getComponentConcentrationAt(double time, unsigned long component);
 
     friend std::ostream &operator<<(std::ostream &os, const Trajectory &trajectory);
+
+    friend std::istream &operator>>(std::istream &is, Trajectory &trajectory);
+
+    Trajectory();
 };
 
 

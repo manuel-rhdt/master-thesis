@@ -69,11 +69,19 @@ void Simulation::readComponents() {
             lineStream >> numComponents;
             assert(numComponents == sys.num_components);
         } else {
+            // decide whether we only know the initial concentration of a component or its whole trajectory
             int count;
+            std::string inputTrajectoryName;
             std::string name;
-            lineStream >> count >> name;
-            componentCounts.push_back(count);
-            componentNames->push_back(name);
+            if (lineStream >> count >> name) {
+                componentCounts.push_back(count);
+                componentNames->push_back(name);
+            }
+            if ((lineStream >> inputTrajectoryName >> name) && inputTrajectoryName[0] == '@') {
+                componentCounts.push_back(0.0);
+                componentNames->push_back(name);
+            }
+
         }
         lineNum++;
     }
@@ -86,23 +94,30 @@ void Simulation::readComponents() {
 void Simulation::readReactions() {
     std::ifstream file(std::string(sys.name) + ".reactions");
     if (!file.is_open()) {
-        abort();
+        std::terminate();
     }
 
     std::string line;
     std::getline(file, line);
     std::istringstream lineStream(line);
 
-    int numReactions;
+    int numReactions = 0;
     lineStream >> numReactions;
     assert(numReactions == sys.num_reactions);
 
     for (int i = 0; i < sys.num_reactions;) {
-        assert(std::getline(file, line));
+        if (!std::getline(file, line)) {
+            std::cerr << "Couldn't read " << sys.num_reactions << " reactions";
+            std::terminate();
+        }
         std::istringstream stream1(line);
         double k = 0.0; //< reaction constant
-        int numReactants, numProducts;
+        int numReactants = 0, numProducts = 0;
         if (!(stream1 >> k >> numReactants >> numProducts)) {
+            if (file.eof()) {
+                std::terminate();
+            }
+            line.clear();
             continue;
         }
 
@@ -110,7 +125,10 @@ void Simulation::readReactions() {
                 numReactants, numProducts, k
         };
 
-        assert(std::getline(file, line));
+        if (!std::getline(file, line)) {
+            std::cerr << "Couldn't read " << sys.num_reactions << " reactions";
+            std::terminate();
+        }
         std::istringstream stream2(line);
 
         std::string dummy;
@@ -162,7 +180,7 @@ void Simulation::run(int numBlocks, int numSteps, Trajectory &trajectory) {
 
             trajectory.insertTimestamp(dt);
             for (unsigned long comp = 0; comp < sys.num_components; comp++) {
-                trajectory.componentConcentrations[comp].back() = componentCounts[comp];
+                trajectory.componentCounts[comp].back() = componentCounts[comp];
             }
         }
         std::cout << block;
