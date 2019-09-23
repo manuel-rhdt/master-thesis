@@ -32,7 +32,7 @@ double propagateTime(double sumA, double randomUniformValue) {
  * @param sys The system to initialize the simulation with.
  */
 Simulation::Simulation(System sys)
-        : sys(sys), trajectoryProgress(0) {
+        : sys(sys), trajectoryProgress(0), timeStamp(0.0) {
     rnGenerator = std::mt19937(std::mt19937::default_seed);
     distribution = std::uniform_real_distribution<double>(0.0, 1.0);
     reactions = std::vector<Reaction>();
@@ -106,6 +106,11 @@ void Simulation::readComponents() {
     file.close();
 }
 
+/**
+ * Determines the stochastic time step by which to advance the simulation.
+ *
+ * @return The chosen time step.
+ */
 double Simulation::propagateTime() {
     double uniformVariate = distribution(rnGenerator);
     double negLogUnifVal = -log(uniformVariate);
@@ -131,13 +136,19 @@ double Simulation::propagateTime() {
             totalPropensity += propensities[i];
         }
 
-        // check if the next reaction time will be after a change to the trajectory. If so, we continue searching.
+        // There is a maximum time step for which `totalPropensity` is valid. After this time we need to recalculate the
+        // propensities to take into account changes in the external trajectory.
         double maxTimeStep;
-        if (associatedTrajectories.size() == 0 || associatedTrajectories[0].timeStamps.size() <= trajectoryProgress) {
+        if (associatedTrajectories.empty() || associatedTrajectories[0].timeStamps.size() <= trajectoryProgress) {
+            // The propensities do not depend on any external trajectory.
             maxTimeStep = std::numeric_limits<double>::infinity();
         } else {
-            maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress + 1] -
-                          associatedTrajectories[0].timeStamps[trajectoryProgress];
+            if (timeStamp > associatedTrajectories[0].timeStamps[trajectoryProgress]) {
+                maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress + 1] - timeStamp;
+            } else {
+                maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress + 1] -
+                              associatedTrajectories[0].timeStamps[trajectoryProgress];
+            }
         }
 
         if (maxTimeStep * totalPropensity < negLogUnifVal) {
@@ -330,6 +341,7 @@ void Simulation::updateConcentrations(int j) {
     int i;
 
     for (i = 0; i < reactions[j].reactants.size(); i++) {
+        // If the component concentration is derived from a trajectory, we just set it to the correct value.
         if (componentHasTrajectory(reactions[j].reactants[i].index)) {
             componentCounts[reactions[j].reactants[i].index] = associatedTrajectories[0].componentCounts[0][trajectoryProgress];
         } else {

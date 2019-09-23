@@ -24,6 +24,8 @@ private:
     std::vector<double> componentCounts;
     std::shared_ptr<std::vector<std::string>> componentNames;
 
+    double timeStamp;
+
     // Some components may have associated trajectories. This means that such a component wont participate in the
     // simulation in the usual way but rather will always act as having the concentration given by the trajectory.
     //

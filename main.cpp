@@ -3,14 +3,14 @@
 #include "numtools/numtools.h"
 #include <fstream>
 
-Simulation start(int *, int *, int *);
+Simulation start(int *, int *, int *, int, char *[]);
 
 void finish();
 
-int main() {
+int main(int argc, char *argv[]) {
     int nBlkEq, nBlkRun, nSteps;
 
-    Simulation simulation = start(&nBlkEq, &nBlkRun, &nSteps);
+    Simulation simulation = start(&nBlkEq, &nBlkRun, &nSteps, argc, argv);
 
     Trajectory trajectory(simulation.getNumComponents());
     simulation.run(nBlkEq, nSteps, trajectory);
@@ -23,12 +23,17 @@ int main() {
     return 0;
 }
 
-Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps) {
+Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[]) {
     FILE *fp;
     System sys;
 
-    if ((fp = fopen("Gillespie.inp", "r")) == NULL) {
-        printf("Cannot open Gillespie.inp.\n");
+    if (argc != 2) {
+        printf("Needs one argument to provide input.\n");
+        abort();
+    }
+
+    if ((fp = fopen(argv[1], "r")) == NULL) {
+        printf("Cannot open %s.inp.\n", argv[1]);
         abort();
     }
     sys.name = (char *) calloc(30, sizeof(char));

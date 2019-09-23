@@ -6,17 +6,17 @@
 # documentation printed when requested.
 
 sub InitAll {
-    $codename = "0";
-    $reaction_file = "$codename.reactions";
-    $component_file = "$codename.components";
-    @name_list = ();
-    @init_vals = ();
-    %components = ();
-    $num_eq_blocks = 100;
-    $num_prod_blocks = 0;
-    $num_steps = 10000;
-    $freq_anal = 100;
-    $help = <<EOF;
+    our $codename = "0";
+    our $reaction_file = "$codename.reactions";
+    our $component_file = "$codename.components";
+    our @name_list = ();
+    our @init_vals = ();
+    our %components = ();
+    our $num_eq_blocks = 100;
+    our $num_prod_blocks = 0;
+    our $num_steps = 10000;
+    our $freq_anal = 100;
+    our $help = <<EOF;
 
 Parses schematic reaction files and generates an input file for Gillespie
 on stdout.  Schematic reaction files are parsed line by line, each line is
@@ -55,7 +55,13 @@ appear in reactions.
 causes <component> name to have a initial value <val> (default 0).  
 The separator <equals> can be anything.
 
-6. Lstly a line of the type 
+6. A line of the type
+ <component> <equals> <filename> : trajectory
+Sets <component>'s concentration to be derived from a trajectory stored
+in <filename>. The separator <equals> can be anything.
+
+
+7. Lastly a line of the type
  <reactants> <transform> <products> : <k_values>
 declares a reaction with the following grammar.
 
@@ -134,6 +140,16 @@ sub set_initial {
     printf STDERR "Initialising component %s to %i\n", $name, $val;
     $id = component_id($name);
     @init_vals[$id] = $val;
+
+}
+
+sub set_trajectory {
+    local ($name, $expr, $val, $id);
+    ($name, $expr, $val) = split(' ', $_[0]);
+    printf STDERR "Initialising component %s with trajectory %s\n", $name, $val;
+    $id = component_id($name);
+    @init_vals[$id] = "\@${val}";
+    $val;
 }
 
 # Add a reaction, specifically compute the output lines for later
@@ -172,7 +188,7 @@ sub add_reaction {
             $addmore = 1;
         }
     }
-    $line1 = sprintf("%f\t%i\t%i\tRateConstant_k_Nreactants_Nproducts",
+    $line1 = sprintf("%f\t%i\t%i\tRateConstant_k Nreactants Nproducts",
         $kval, $nreacts, $nprods);
     push(@react1lines, $line1);
     push(@react2lines, $line2);
@@ -231,6 +247,9 @@ sub parseline {
         }
         elsif ($back =~ /init/) {
             set_initial($front);
+        }
+        elsif ($back =~ /trajectory/) {
+            set_trajectory($front);
         }
         elsif ($back =~ /comp/) {
             add_components($front);
@@ -322,7 +341,7 @@ sub WriteComponentFile {
     $ncomp = scalar(@name_list);
     printf FOUT "%i\n", $ncomp;
     for ($id = 0; $id < $ncomp; $id++) {
-        printf FOUT "%i\t\t%s\n", @init_vals[$id], @name_list[$id];
+        printf FOUT "%s\t\t%s\n", @init_vals[$id], @name_list[$id];
     }
     print FOUT "\n";
     close(FOUT);
