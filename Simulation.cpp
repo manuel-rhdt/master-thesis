@@ -23,7 +23,7 @@ double propagateTime(double sumA, double randomUniformValue) {
     if (sumA == 0.0) {
         throw std::string("Reached steady state");
     }
-    return log(1.0 / randomUniformValue) / sumA;
+    return -log(randomUniformValue) / sumA;
 }
 
 /**
@@ -32,14 +32,16 @@ double propagateTime(double sumA, double randomUniformValue) {
  * @param sys The system to initialize the simulation with.
  */
 Simulation::Simulation(System sys)
-        : sys(sys) {
+        : sys(sys), trajectoryProgress(0) {
     rnGenerator = std::mt19937(std::mt19937::default_seed);
     distribution = std::uniform_real_distribution<double>(0.0, 1.0);
     reactions = std::vector<Reaction>();
-    reactionRates = std::vector<double>();
+    propensities = std::vector<double>();
     componentCounts = std::vector<double>();
     componentNames = std::make_shared<std::vector<std::string>>(std::vector<std::string>());
     preAllocate();
+    componentIndicesWithTrajectories = std::vector<unsigned long>();
+    associatedTrajectories = std::vector<Trajectory>();
 }
 
 /**
@@ -48,10 +50,10 @@ Simulation::Simulation(System sys)
  * The reaction_rates will get initialized with a value of zero.
  */
 void Simulation::preAllocate() {
-    reactions.reserve(sys.num_reactions);
-    reactionRates = std::vector<double>(sys.num_reactions, 0.0);
-    componentCounts.reserve(sys.num_components);
-    componentNames->reserve(sys.num_components);
+    reactions.reserve(sys.numReactions);
+    propensities = std::vector<double>(sys.numReactions, 0.0);
+    componentCounts.reserve(sys.numComponents);
+    componentNames->reserve(sys.numComponents);
 }
 
 /**
@@ -67,7 +69,7 @@ void Simulation::readComponents() {
         if (lineNum == 0) {
             int numComponents;
             lineStream >> numComponents;
-            assert(numComponents == sys.num_components);
+            assert(numComponents == sys.numComponents);
         } else {
             // decide whether we only know the initial concentration of a component or its whole trajectory
             int count;
@@ -77,15 +79,98 @@ void Simulation::readComponents() {
                 componentCounts.push_back(count);
                 componentNames->push_back(name);
             }
+            lineStream.clear();
             if ((lineStream >> inputTrajectoryName >> name) && inputTrajectoryName[0] == '@') {
                 componentCounts.push_back(0.0);
                 componentNames->push_back(name);
+                std::string filename = inputTrajectoryName.substr(1);
+
+                ifstream file(filename);
+                if (!file.is_open()) {
+                    std::cerr << "Could not open file '" << filename << "'." << std::endl;
+                    std::terminate();
+                }
+                Trajectory trajectory;
+                if ((file >> trajectory).fail()) {
+                    std::cerr << "Could not read in trajectory with name '" << filename << "'." << std::endl;
+                    std::terminate();
+                }
+
+                componentIndicesWithTrajectories.push_back(componentCounts.size() - 1);
+                associatedTrajectories.push_back(trajectory);
             }
 
         }
         lineNum++;
     }
     file.close();
+}
+
+double Simulation::propagateTime() {
+    double uniformVariate = distribution(rnGenerator);
+    double negLogUnifVal = -log(uniformVariate);
+    double accumulatedTime = 0.0;
+
+
+    while (true) {
+        double totalPropensity = 0.0;
+
+        // sum up the propensities for the current trajectory state
+        for (int i = 0; i < sys.numReactions; i++) {
+            propensities[i] = reactions[i].reactionConstant;
+
+            // TODO: x * (x - 1) * (x - 2) * ...
+            for (auto reactant : reactions[i].reactants) {
+                if (componentHasTrajectory(reactant.index)) {
+                    propensities[i] *= associatedTrajectories[0].componentCounts[0][trajectoryProgress];
+                } else {
+                    propensities[i] *= componentCounts[reactant.index];
+                }
+            }
+
+            totalPropensity += propensities[i];
+        }
+
+        // check if the next reaction time will be after a change to the trajectory. If so, we continue searching.
+        double maxTimeStep;
+        if (associatedTrajectories.size() == 0 || associatedTrajectories[0].timeStamps.size() <= trajectoryProgress) {
+            maxTimeStep = std::numeric_limits<double>::infinity();
+        } else {
+            maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress + 1] -
+                          associatedTrajectories[0].timeStamps[trajectoryProgress];
+        }
+
+        if (maxTimeStep * totalPropensity < negLogUnifVal) {
+            negLogUnifVal -= maxTimeStep * totalPropensity;
+            trajectoryProgress += 1;
+            accumulatedTime += maxTimeStep;
+            continue;
+        } else {
+            return negLogUnifVal / totalPropensity + accumulatedTime;
+        }
+
+    }
+
+
+}
+
+
+bool Simulation::componentHasTrajectory(unsigned long component) {
+    for (auto compWithTraj : componentIndicesWithTrajectories) {
+        if (component == compWithTraj) {
+            return true;
+        }
+    }
+    return false;
+}
+
+Trajectory &Simulation::componentGetTrajectory(unsigned long component) {
+    for (int i = 0; i < componentIndicesWithTrajectories.size(); ++i) {
+        if (component == componentIndicesWithTrajectories[i]) {
+            return associatedTrajectories[i];
+        }
+    }
+    throw std::invalid_argument("Component has no associated trajectory.");
 }
 
 /**
@@ -103,11 +188,11 @@ void Simulation::readReactions() {
 
     int numReactions = 0;
     lineStream >> numReactions;
-    assert(numReactions == sys.num_reactions);
+    assert(numReactions == sys.numReactions);
 
-    for (int i = 0; i < sys.num_reactions;) {
+    for (int i = 0; i < sys.numReactions;) {
         if (!std::getline(file, line)) {
-            std::cerr << "Couldn't read " << sys.num_reactions << " reactions";
+            std::cerr << "Couldn't read " << sys.numReactions << " reactions";
             std::terminate();
         }
         std::istringstream stream1(line);
@@ -121,35 +206,38 @@ void Simulation::readReactions() {
             continue;
         }
 
-        Reaction reaction{
-                numReactants, numProducts, k
-        };
+        Reaction reaction;
+        reaction.reactionConstant = k;
 
         if (!std::getline(file, line)) {
-            std::cerr << "Couldn't read " << sys.num_reactions << " reactions";
+            std::cerr << "Couldn't read " << sys.numReactions << " reactions";
             std::terminate();
         }
         std::istringstream stream2(line);
 
         std::string dummy;
-        if (reaction.num_reactants == 0) {
+        if (numReactants == 0) {
             stream2 >> dummy;
         } else {
-            stream2 >> dummy >> reaction.reactant[0].index;
+            reaction.reactants.push_back(ReactionComponent{0, 0});
+            stream2 >> dummy >> reaction.reactants[0].index;
         }
-        for (int j = 1; j < reaction.num_reactants; j++) {
-            stream2 >> dummy >> dummy >> reaction.reactant[j].index;
+        for (int j = 1; j < numReactants; j++) {
+            reaction.reactants.push_back(ReactionComponent{0, 0});
+            stream2 >> dummy >> dummy >> reaction.reactants[j].index;
         }
 
         stream2 >> dummy;
 
-        if (reaction.num_products == 0) {
+        if (numProducts == 0) {
             stream2 >> dummy;
         } else {
-            stream2 >> reaction.product[0].change >> dummy >> reaction.product[0].index;
+            reaction.products.push_back(ReactionComponent{0, 0});
+            stream2 >> reaction.products[0].change >> dummy >> reaction.products[0].index;
         }
-        for (int j = 1; j < reaction.num_products; j++) {
-            stream2 >> dummy >> reaction.product[j].change >> dummy >> reaction.product[j].index;
+        for (int j = 1; j < numProducts; j++) {
+            reaction.products.push_back(ReactionComponent{0, 0});
+            stream2 >> dummy >> reaction.products[j].change >> dummy >> reaction.products[j].index;
         }
 
         reactions.push_back(reaction);
@@ -164,22 +252,23 @@ void Simulation::readReactions() {
  *
  * @param numBlocks
  * @param numSteps
+ * @param trajectory The trajectory where the simulated results will be stored. The trajectory must have been initialized
+ * with the correct number of components.
  */
 void Simulation::run(int numBlocks, int numSteps, Trajectory &trajectory) {
-    Run run(sys.num_components, *componentNames);
+    Run run(sys.numComponents, *componentNames);
     for (int b = 0; b < numBlocks; b++) {
-        Block block(sys.num_components, componentNames);
+        Block block(sys.numComponents, componentNames);
         for (int s = 0; s < numSteps; s++) {
-            double sumA = 0.0, rv = distribution(rnGenerator);
-
-            determinePropensityFunctions(&sumA);
-            double dt = propagateTime(sumA, rv);
+            // sumA = 0.0, rv = distribution(rnGenerator);
+            //determinePropensityFunctions(&sumA);
+            double dt = propagateTime();
             block.accumulate(dt, componentCounts);
-            int j = selectReaction(sumA);
+            int j = selectReaction();
             updateConcentrations(j);
 
             trajectory.insertTimestamp(dt);
-            for (unsigned long comp = 0; comp < sys.num_components; comp++) {
+            for (unsigned long comp = 0; comp < sys.numComponents; comp++) {
                 trajectory.componentCounts[comp].back() = componentCounts[comp];
             }
         }
@@ -196,19 +285,15 @@ void Simulation::run(int numBlocks, int numSteps, Trajectory &trajectory) {
  */
 void Simulation::determinePropensityFunctions(double *sumA) {
     *sumA = 0.;
-    for (int i = 0; i < sys.num_reactions; i++) {
-        if (reactions[i].num_reactants == 0)
-            reactionRates[i] = reactions[i].k;
-        else if (reactions[i].num_reactants == 1)
-            reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index];
-        else if (reactions[i].reactant[0].index == reactions[i].reactant[1].index)
-            reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index] *
-                               (componentCounts[reactions[i].reactant[1].index] - 1);
-        else
-            reactionRates[i] = reactions[i].k * componentCounts[reactions[i].reactant[0].index] *
-                               componentCounts[reactions[i].reactant[1].index];
+    for (int i = 0; i < sys.numReactions; i++) {
+        propensities[i] = reactions[i].reactionConstant;
 
-        *sumA += reactionRates[i];
+        // TODO: x * (x - 1) * (x - 2) * ...
+        for (auto reactant : reactions[i].reactants) {
+            propensities[i] *= componentCounts[reactant.index];
+        }
+
+        *sumA += propensities[i];
     }
 }
 
@@ -218,15 +303,20 @@ void Simulation::determinePropensityFunctions(double *sumA) {
  * @param sumA the sum of reaction rates for all possible reactions
  * @return The index of the selected reaction.
  */
-int Simulation::selectReaction(double sumA) {
+int Simulation::selectReaction() {
     double rs, cumulativeRate;
+
+    double sumA = 0.0;
+    for (auto val : propensities) {
+        sumA += val;
+    }
 
     rs = distribution(rnGenerator) * sumA;
     int j = 0;
-    cumulativeRate = reactionRates[j];
+    cumulativeRate = propensities[j];
     while (cumulativeRate < rs) {
         j++;
-        cumulativeRate += reactionRates[j];
+        cumulativeRate += propensities[j];
     }
     return j;
 }
@@ -239,33 +329,42 @@ int Simulation::selectReaction(double sumA) {
 void Simulation::updateConcentrations(int j) {
     int i;
 
-    for (i = 0; i < reactions[j].num_reactants; i++)
-        componentCounts[reactions[j].reactant[i].index]--;
+    for (i = 0; i < reactions[j].reactants.size(); i++) {
+        if (componentHasTrajectory(reactions[j].reactants[i].index)) {
+            componentCounts[reactions[j].reactants[i].index] = associatedTrajectories[0].componentCounts[0][trajectoryProgress];
+        } else {
+            componentCounts[reactions[j].reactants[i].index]--;
+        }
+    }
 
-    for (i = 0; i < reactions[j].num_products; i++)
-        componentCounts[reactions[j].product[i].index] += reactions[j].product[i].change;
+    for (i = 0; i < reactions[j].products.size(); i++) {
+        if (!componentHasTrajectory(reactions[j].products[i].index)) {
+            componentCounts[reactions[j].products[i].index] += reactions[j].products[i].change;
+        }
+    }
 }
 
 void Simulation::printReactions() {
     int i, j;
 
     printf("\nThe following reactions are simulated:\n\n");
-    for (i = 0; i < sys.num_reactions; i++) {
-        if (reactions[i].num_reactants == 0)
+    for (i = 0; i < sys.numReactions; i++) {
+        if (reactions[i].reactants.empty())
             printf("0");
         else
-            printf("%s ", (*componentNames)[reactions[i].reactant[0].index].c_str());
-        for (j = 1; j < reactions[i].num_reactants; j++)
-            printf("+ %s ", (*componentNames)[reactions[i].reactant[j].index].c_str());
+            printf("%s ", (*componentNames)[reactions[i].reactants[0].index].c_str());
+        for (j = 1; j < reactions[i].reactants.size(); j++)
+            printf("+ %s ", (*componentNames)[reactions[i].reactants[j].index].c_str());
         printf(" ->  ");
-        if (reactions[i].num_products == 0)
+        if (reactions[i].products.empty())
             printf("0 ");
         else
-            printf("%2d %s ", reactions[i].product[0].change, (*componentNames)[reactions[i].product[0].index].c_str());
-        for (j = 1; j < reactions[i].num_products; j++)
-            printf("+ %2d %s ", reactions[i].product[j].change,
-                   (*componentNames)[reactions[i].product[j].index].c_str());
-        printf("\t\tk = %4.5f\n", reactions[i].k);
+            printf("%2d %s ", reactions[i].products[0].change,
+                   (*componentNames)[reactions[i].products[0].index].c_str());
+        for (j = 1; j < reactions[i].products.size(); j++)
+            printf("+ %2d %s ", reactions[i].products[j].change,
+                   (*componentNames)[reactions[i].products[j].index].c_str());
+        printf("\t\tk = %4.5f\n", reactions[i].reactionConstant);
     }
 }
 
@@ -274,5 +373,5 @@ void Simulation::printReactions() {
  * @return The number of components used in this simulation.
  */
 unsigned long Simulation::getNumComponents() {
-    return sys.num_components;
+    return sys.numComponents;
 }

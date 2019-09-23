@@ -12,10 +12,9 @@ using namespace std;
 
 
 class Trajectory {
-private:
-
-    vector<double> timeStamps{vector<double>()};
 public:
+    Trajectory();
+
     explicit Trajectory(unsigned long numComponents);
 
     /**
@@ -26,15 +25,28 @@ public:
      */
     vector<vector<double>> componentCounts{vector<vector<double>>()};
 
+    vector<double> timeStamps{vector<double>()};
+
     void insertTimestamp(double dt);
 
     double getComponentConcentrationAt(double time, unsigned long component);
 
+    // read/write trajectories from/to files
+
     friend std::ostream &operator<<(std::ostream &os, const Trajectory &trajectory);
 
     friend std::istream &operator>>(std::istream &is, Trajectory &trajectory);
+};
 
-    Trajectory();
+
+class TrajectoryIterator {
+private:
+    const Trajectory &trajectory;
+
+    unsigned long startPos;
+    unsigned long iteratorPos;
+
+    double next();
 };
 
 

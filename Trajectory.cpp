@@ -84,7 +84,9 @@ std::istream &operator>>(std::istream &is, Trajectory &trajectory) {
                 if (failedChar != '\n') {
                     is.ignore(numeric_limits<streamsize>::max(), '\n');
                 }
-                numArray.emplace_back(vector<double>());
+                if (!numArray.back().empty()) {
+                    numArray.emplace_back(vector<double>());
+                }
                 continue;
             } else {
                 if (is.eof()) {
@@ -106,9 +108,20 @@ std::istream &operator>>(std::istream &is, Trajectory &trajectory) {
     numArray.erase(numArray.begin());
     trajectory.componentCounts = std::move(numArray);
 
+    is.clear();
     return is;
 }
 
+/**
+ * Construct an empty trajectory.
+ *
+ * This is useful if you want to read in a trajectory from a file.
+ */
 Trajectory::Trajectory() {
+
+}
+
+
+double TrajectoryIterator::next() {
 
 }

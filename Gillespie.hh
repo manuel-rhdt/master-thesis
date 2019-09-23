@@ -30,11 +30,9 @@ typedef struct statsType {
 
 typedef struct sys_type {
 
-    int num_components, num_reactions, ana;
+    int numComponents, numReactions, ana;
 
-    double tau_blk, tau_run;
-
-    char* name;
+    char *name;
 
 } System;
 
@@ -44,22 +42,6 @@ typedef struct stoch_type {
 
 } Stoch;
 
-/**
- * A type to describe a single reaction (?)
- */
-typedef struct reaction_type {
-
-    int num_reactants, num_products;
-    double k;
-    Stoch reactant[2], product[MAXPROD];
-
-} Reaction;
-
-/*-----------------------Externally declared functions----------------------*/
-
-extern void read_components(void);
-
-extern void read_reactions(void);
 
 extern void analyse(int, int, int, int);
 
