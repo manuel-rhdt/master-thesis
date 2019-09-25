@@ -11,7 +11,13 @@ add_compile_definitions(_BSD_SOURCE)
 
 add_subdirectory(numtools)
 
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
+add_subdirectory(json)
+
 add_executable(Gillespie
         main.cpp Simulation.cpp Simulation.hh Run.cpp Run.hh Block.cpp Block.hh Trajectory.cpp Trajectory.hh Reaction.cpp Reaction.hh)
 
 target_link_libraries(Gillespie PRIVATE numtools)
+target_link_libraries(
+        Gillespie PRIVATE nlohmann_json::nlohmann_json)

@@ -2,6 +2,7 @@
 #include "Simulation.hh"
 #include "numtools/numtools.h"
 #include <fstream>
+#include <iostream>
 
 Simulation start(int *, int *, int *, int, char *[]);
 
@@ -15,8 +16,28 @@ int main(int argc, char *argv[]) {
     Trajectory trajectory(simulation.getNumComponents());
     simulation.run(nBlkEq, nSteps, trajectory);
 
-    std::ofstream stream("trajectory.txt");
-    stream << trajectory;
+    bool providedOutputFilename = false;
+    for (int arg = 0; arg < argc; arg++) {
+        std::string argument(argv[arg]);
+        if (argument == "-o") {
+            providedOutputFilename = true;
+            if (arg + 1 >= argc) {
+                std::cerr << "Usage: Gillespie INPUT -o OUTPUT\n\n"
+                             "No filename specified after `-o` flag.\n";
+                abort();
+            }
+            std::string filename(argv[arg + 1]);
+            std::ofstream stream(filename);
+            simulation.printTrajectory(stream, trajectory);
+            arg++;
+        }
+    }
+
+    if (!providedOutputFilename) {
+        // we pick a default filename if none is provided on the command line
+        std::ofstream stream(std::string(simulation.sys.name) + ".traj.json");
+        simulation.printTrajectory(stream, trajectory);
+    }
 
     finish();
 
@@ -27,13 +48,35 @@ Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[])
     FILE *fp;
     System sys;
 
-    if (argc != 2) {
-        printf("Needs one argument to provide input.\n");
+    if (argc < 2) {
+        std::cerr << "Usage: Gillespie INPUT -o OUTPUT\n\n"
+                     "Needs at least one argument to provide input.\n";
         abort();
     }
 
-    if ((fp = fopen(argv[1], "r")) == NULL) {
-        printf("Cannot open %s.inp.\n", argv[1]);
+    unsigned seed = std::mt19937::default_seed;
+    std::string filename("Gillespie.inp");
+    for (int arg = 0; arg < argc; arg++) {
+        std::string argument(argv[arg]);
+        if (argument == "-s") {
+            if (arg + 1 >= argc) {
+                std::cerr << "Usage: Gillespie INPUT -o OUTPUT -s SEED\n\n"
+                             "No seed specified after `-s` flag.\n";
+                abort();
+            }
+            std::string seedStr(argv[arg + 1]);
+            seed = std::stoi(seedStr);
+            arg++;
+        } else if (argument == "-o") {
+            // handle that later
+            arg++;
+        } else {
+            filename = argv[arg];
+        }
+    }
+
+    if ((fp = fopen(filename.c_str(), "r")) == NULL) {
+        printf("Cannot open %s.\n", argv[1]);
         abort();
     }
     sys.name = (char *) calloc(30, sizeof(char));
@@ -60,7 +103,7 @@ Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[])
     printf("Number of steps per block         %8d\n", *nSteps);
     printf("Frequency of analysis             %8d\n", sys.ana);
 
-    Simulation simulation(sys);
+    Simulation simulation(sys, seed);
     simulation.readComponents();
     simulation.readReactions();
     simulation.printReactions();
@@ -70,7 +113,7 @@ Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[])
     return simulation;
 }
 
-void finish(void) {
+void finish() {
     printf("\n\n===============================================================================\n");
     printf("Run completed.\nLog book information.\n");
     log_exit();

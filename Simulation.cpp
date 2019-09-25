@@ -31,9 +31,9 @@ double propagateTime(double sumA, double randomUniformValue) {
  *
  * @param sys The system to initialize the simulation with.
  */
-Simulation::Simulation(System sys)
+Simulation::Simulation(System sys, unsigned seed)
         : sys(sys), trajectoryProgress(0), timeStamp(0.0) {
-    rnGenerator = std::mt19937(std::mt19937::default_seed);
+    rnGenerator = std::mt19937(seed);
     distribution = std::uniform_real_distribution<double>(0.0, 1.0);
     reactions = std::vector<Reaction>();
     propensities = std::vector<double>();
@@ -42,6 +42,7 @@ Simulation::Simulation(System sys)
     preAllocate();
     componentIndicesWithTrajectories = std::vector<unsigned long>();
     associatedTrajectories = std::vector<Trajectory>();
+    randomVariates = std::vector<double>();
 }
 
 /**
@@ -116,6 +117,7 @@ double Simulation::propagateTime() {
     double negLogUnifVal = -log(uniformVariate);
     double accumulatedTime = 0.0;
 
+    randomVariates.push_back(uniformVariate);
 
     while (true) {
         double totalPropensity = 0.0;
@@ -136,10 +138,14 @@ double Simulation::propagateTime() {
             totalPropensity += propensities[i];
         }
 
+        if (totalPropensity == 0.0) {
+            throw std::runtime_error("System reached steady state.");
+        }
+
         // There is a maximum time step for which `totalPropensity` is valid. After this time we need to recalculate the
         // propensities to take into account changes in the external trajectory.
         double maxTimeStep;
-        if (associatedTrajectories.empty() || associatedTrajectories[0].timeStamps.size() <= trajectoryProgress) {
+        if (associatedTrajectories.empty() || trajectoryProgress == associatedTrajectories[0].timeStamps.size() - 1) {
             // The propensities do not depend on any external trajectory.
             maxTimeStep = std::numeric_limits<double>::infinity();
         } else {
@@ -153,11 +159,14 @@ double Simulation::propagateTime() {
 
         if (maxTimeStep * totalPropensity < negLogUnifVal) {
             negLogUnifVal -= maxTimeStep * totalPropensity;
-            trajectoryProgress += 1;
+            // ensure that trajectoryProgress always stays in bounds
+            // this should be the only time we change trajectoryProgress
+            trajectoryProgress = std::min(trajectoryProgress + 1, associatedTrajectories[0].timeStamps.size() - 1);
             accumulatedTime += maxTimeStep;
             continue;
         } else {
-            return negLogUnifVal / totalPropensity + accumulatedTime;
+            auto timeStep = negLogUnifVal / totalPropensity + accumulatedTime;
+            return timeStep;
         }
 
     }
@@ -274,11 +283,13 @@ void Simulation::run(int numBlocks, int numSteps, Trajectory &trajectory) {
             // sumA = 0.0, rv = distribution(rnGenerator);
             //determinePropensityFunctions(&sumA);
             double dt = propagateTime();
+            timeStamp += dt;
             block.accumulate(dt, componentCounts);
             int j = selectReaction();
             updateConcentrations(j);
 
             trajectory.insertTimestamp(dt);
+            trajectory.reactions.back() = j;
             for (unsigned long comp = 0; comp < sys.numComponents; comp++) {
                 trajectory.componentCounts[comp].back() = componentCounts[comp];
             }
@@ -378,6 +389,27 @@ void Simulation::printReactions() {
                    (*componentNames)[reactions[i].products[j].index].c_str());
         printf("\t\tk = %4.5f\n", reactions[i].reactionConstant);
     }
+}
+
+void Simulation::printTrajectory(std::ostream &os, Trajectory &trajectory) {
+    auto jsonObj = trajectory.getJson();
+    auto reactionsJson = nlohmann::json();
+    for (auto r : reactions) {
+        auto rJson = nlohmann::json();
+        auto reactants = std::vector<unsigned int>();
+        for (auto react : r.reactants) {
+            reactants.push_back(react.index);
+        }
+        rJson["reactants"] = reactants;
+        rJson["k"] = r.reactionConstant;
+        reactionsJson.push_back(rJson);
+    }
+    jsonObj["reactions"] = reactionsJson;
+
+    jsonObj["names"] = *componentNames;
+    jsonObj["random_variates"] = randomVariates;
+
+    os << jsonObj;
 }
 
 /**

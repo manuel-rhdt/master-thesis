@@ -17,12 +17,14 @@ private:
     std::mt19937 rnGenerator;
     std::uniform_real_distribution<double> distribution;
 
-    System sys;
-
     std::vector<Reaction> reactions;
     std::vector<double> propensities;
     std::vector<double> componentCounts;
     std::shared_ptr<std::vector<std::string>> componentNames;
+
+    // TODO: document this
+    // this is needed to calculate the likelihood p(x|s)
+    std::vector<double> randomVariates;
 
     double timeStamp;
 
@@ -47,7 +49,7 @@ private:
     void updateConcentrations(int j);
 
 public:
-    explicit Simulation(System sys);
+    explicit Simulation(System sys, unsigned seed);
 
     void run(int numBlocks, int numSteps, Trajectory &trajectory);
 
@@ -65,6 +67,10 @@ public:
     Trajectory &componentGetTrajectory(unsigned long component);
 
     double propagateTime();
+
+    System sys;
+
+    void printTrajectory(ostream &os, Trajectory &trajectory);
 };
 
 #endif //GILLESPIE_SIMULATION_HH

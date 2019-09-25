@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <ostream>
+#include <json/single_include/nlohmann/json.hpp>
 
 using namespace std;
 
@@ -27,26 +28,17 @@ public:
 
     vector<double> timeStamps{vector<double>()};
 
+    vector<unsigned int> reactions{vector<unsigned int>()};
+
     void insertTimestamp(double dt);
 
-    double getComponentConcentrationAt(double time, unsigned long component);
-
-    // read/write trajectories from/to files
+    // read/write trajectories from/to streams in an ASCII format (e.g. files)
 
     friend std::ostream &operator<<(std::ostream &os, const Trajectory &trajectory);
 
     friend std::istream &operator>>(std::istream &is, Trajectory &trajectory);
-};
 
-
-class TrajectoryIterator {
-private:
-    const Trajectory &trajectory;
-
-    unsigned long startPos;
-    unsigned long iteratorPos;
-
-    double next();
+    [[nodiscard]] nlohmann::json getJson() const;
 };
 
 
