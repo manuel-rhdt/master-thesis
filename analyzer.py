@@ -1,3 +1,6 @@
+import json
+import multiprocessing
+import os
 import pathlib
 import subprocess
 import sys
@@ -5,6 +8,8 @@ import sys
 import numpy as np
 import scipy
 import scipy.stats
+
+executable = pathlib.Path(os.getenv("GILLESPIE"))
 
 
 def ornstein_uhlenbeck_path(x0, t, mean_rev_speed, mean_rev_level, vola):
@@ -35,17 +40,57 @@ def mean(x0, t, mean_rev_speed, mean_rev_level):
     return x0 * np.exp(-mean_rev_speed * t) + (1.0 - np.exp(- mean_rev_speed * t)) * mean_rev_level
 
 
+def log_likelihood(trajectory):
+    reaction_events = np.array(trajectory['reaction_events'])
+    concentrations = np.array(trajectory['components'])
+
+    assert reaction_events.shape[0] == concentrations.shape[1]
+
+    # for every reaction create an array that contains the propensity at every event
+    reaction_propensities = []
+    for reaction in trajectory['reactions']:
+        # multiply reaction constant by the concentrations of the reactants
+        propensity = reaction['k'] * np.prod([concentrations[x] for x in reaction['reactants']], axis=0)
+        reaction_propensities.append(propensity)
+
+    chosen_reaction_propensity = np.choose(reaction_events, reaction_propensities)
+
+    # since the random variates are sampled according to the survival probability the following association is correct
+    survival_probabilities = np.array(trajectory['random_variates'])
+
+    piecewise_probabilities = chosen_reaction_propensity * survival_probabilities
+
+    return np.sum(np.log(piecewise_probabilities))
+
+
+def simulate_trajectory(input_name, output_name=None, seed=4252):
+    cmd = [str(executable), input_name + '.inp', '-s', str(seed)]
+    trajectory_path = input_name + '.traj.json'
+    if output_name is not None:
+        trajectory_path = output_name + '.traj.json'
+        cmd.extend(['-o', output_name + '.traj.json'])
+    print(' '.join(cmd), file=sys.stderr)
+    subprocess.run(cmd, stdout=subprocess.DEVNULL)
+    with open(trajectory_path) as trajectory_json:
+        trajectory = json.load(trajectory_json)
+
+    return trajectory
+
+
+def calculate(trajectory_num):
+    trajectory = simulate_trajectory('response', output_name='/data/response' + str(trajectory_num),
+                                     seed=trajectory_num)
+    return log_likelihood(trajectory)
+
+
 if __name__ == '__main__':
-    signal_path = pathlib.Path('signal')
-    response_path = pathlib.Path('response')
-    signal_path.mkdir(exist_ok=True)
-    response_path.mkdir(exist_ok=True)
+    likelihoods = []
 
-    executable = pathlib.Path('../cmake-build-debug/Gillespie')
+    count = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(processes=count)
 
-    for trajNum in range(10):
-        command = [str(executable), 'signal.inp',
-                   '-o', str(signal_path / (str(trajNum) + '.traj.txt')),
-                   '-s', str(trajNum)]
-        print(' '.join(command), file=sys.stderr)
-        subprocess.run(command, stdout=subprocess.PIPE)
+    results = pool.map(calculate, range(50))
+
+    print("save to likelihoods.txt")
+    np.savetxt('likelihoods.txt', np.array(results))
+    print(results)
