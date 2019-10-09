@@ -10,7 +10,7 @@ import numpy as np
 import scipy
 import scipy.stats
 
-executable = pathlib.Path(os.getenv("GILLESPIE"))
+EXECUTABLE = pathlib.Path(os.getenv("GILLESPIE"))
 
 
 def ornstein_uhlenbeck_path(x0, t, mean_rev_speed, mean_rev_level, vola):
@@ -51,10 +51,12 @@ def log_likelihood(trajectory):
     reaction_propensities = []
     for reaction in trajectory['reactions']:
         # multiply reaction constant by the concentrations of the reactants
-        propensity = reaction['k'] * np.prod([concentrations[x] for x in reaction['reactants']], axis=0)
+        propensity = reaction['k'] * np.prod([concentrations[x]
+                                              for x in reaction['reactants']], axis=0)
         reaction_propensities.append(propensity)
 
-    chosen_reaction_propensity = np.choose(reaction_events, reaction_propensities)
+    chosen_reaction_propensity = np.choose(
+        reaction_events, reaction_propensities)
 
     # since the random variates are sampled according to the survival probability the following association is correct
     survival_probabilities = np.array(trajectory['random_variates'])
@@ -69,7 +71,7 @@ def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
 
 
 def simulate_trajectory(input_name, output_name=None, seed=4252):
-    cmd = [str(executable), input_name + '.inp', '-s', str(seed)]
+    cmd = [str(EXECUTABLE), input_name + '.inp', '-s', str(seed)]
     trajectory_path = input_name + '.traj'
     if output_name is not None:
         trajectory_path = output_name + '.traj'
@@ -111,7 +113,8 @@ def get_histogram(path, glob, equil_time):
         print('processing ' + str(file))
         with file.open() as f:
             trajectory = json.load(f)
-            cutoff_index = np.searchsorted(trajectory['timestamps'], equil_time)
+            cutoff_index = np.searchsorted(
+                trajectory['timestamps'], equil_time)
             for k, comp in enumerate(trajectory['components']):
                 if len(datapoints) == k:
                     datapoints.append([])
