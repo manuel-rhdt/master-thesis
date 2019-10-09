@@ -28,7 +28,7 @@ public:
 
     vector<double> timeStamps{vector<double>()};
 
-    vector<unsigned int> reactions{vector<unsigned int>()};
+    vector<uint8_t> reactions{vector<uint8_t>()};
 
     void insertTimestamp(double dt);
 
@@ -38,7 +38,7 @@ public:
 
     friend std::istream &operator>>(std::istream &is, Trajectory &trajectory);
 
-    [[nodiscard]] nlohmann::json getJson() const;
+    nlohmann::json getJson() const;
 };
 
 

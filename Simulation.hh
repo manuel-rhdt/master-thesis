@@ -53,7 +53,6 @@ public:
 
     void run(int numBlocks, int numSteps, Trajectory &trajectory);
 
-    void readComponents();
 
     void readReactions();
 
@@ -71,6 +70,8 @@ public:
     System sys;
 
     void printTrajectory(ostream &os, Trajectory &trajectory);
+
+    void readComponents(const vector<std::pair<std::string, std::string>> &overwrite);
 };
 
 #endif //GILLESPIE_SIMULATION_HH

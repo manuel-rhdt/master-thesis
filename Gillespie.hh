@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include <string>
+
 /*----------------------Some useful definitions------------------------------*/
 
 #define EQUIL 0
@@ -28,13 +30,11 @@ typedef struct statsType {
     double sum, sumsq, err, noise;
 } statistics;
 
-typedef struct sys_type {
-
-    int numComponents, numReactions, ana;
-
-    char *name;
-
-} System;
+class System {
+public:
+    int numComponents{0}, numReactions{0}, ana{0};
+    std::string name;
+};
 
 typedef struct stoch_type {
 

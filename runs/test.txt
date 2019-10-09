@@ -2,7 +2,8 @@ test : name
 
 A B : components
 
-A == 1000 : initial
+A == tr2.txt : trajectory
+B == 100 : initial
 
 A + A <--> B : k = 0.001 : k = 0.0005
 

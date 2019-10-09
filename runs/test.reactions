@@ -1,7 +1,9 @@
-2		Number_of_reaction_channels
+3		Number_of_reaction_channels
 
-0.001000	2	1	RateConstant_k_Nreactants_Nproducts
-X 0 + X 0 -> 1 X 1
-0.000500	1	2	RateConstant_k_Nreactants_Nproducts
-X 1 -> 1 X 0 + 1 X 0
+0.010000	1	1	RateConstant_k Nreactants Nproducts
+X 0 -> 1 X 1
+0.100000	1	1	RateConstant_k Nreactants Nproducts
+X 1 -> 1 X 2
+0.000100	1	1	RateConstant_k Nreactants Nproducts
+X 2 -> 1 X 1
 

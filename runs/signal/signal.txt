@@ -1,0 +1,9 @@
+signal : name
+100 : num_steps
+
+A : components
+
+A = 10000 : initial
+
+A --> NULL : k = 0.001
+

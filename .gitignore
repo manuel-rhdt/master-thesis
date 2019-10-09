@@ -1,5 +1,10 @@
 /cmake-build-debug/
 /cmake-build-release/
+/cmake-build-minsizerel/
+/cmake-build-relwithdebinfo/
+Gillespie_all.tar.gz
+/venv/
+*.pyc
 /.vscode/
 /build
 0.*.*

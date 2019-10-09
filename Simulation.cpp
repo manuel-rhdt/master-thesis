@@ -60,7 +60,7 @@ void Simulation::preAllocate() {
 /**
  * Read components from a file called `sys.name`.components
  */
-void Simulation::readComponents() {
+void Simulation::readComponents(const std::vector<std::pair<std::string, std::string>> &overwrite) {
     std::ifstream file(std::string(sys.name) + ".components");
 
     std::string line;
@@ -73,34 +73,39 @@ void Simulation::readComponents() {
             assert(numComponents == sys.numComponents);
         } else {
             // decide whether we only know the initial concentration of a component or its whole trajectory
-            int count;
-            std::string inputTrajectoryName;
+            std::string initialValue;
             std::string name;
-            if (lineStream >> count >> name) {
-                componentCounts.push_back(count);
-                componentNames->push_back(name);
-            }
-            lineStream.clear();
-            if ((lineStream >> inputTrajectoryName >> name) && inputTrajectoryName[0] == '@') {
-                componentCounts.push_back(0.0);
-                componentNames->push_back(name);
-                std::string filename = inputTrajectoryName.substr(1);
-
-                ifstream file(filename);
-                if (!file.is_open()) {
-                    std::cerr << "Could not open file '" << filename << "'." << std::endl;
-                    std::terminate();
-                }
-                Trajectory trajectory;
-                if ((file >> trajectory).fail()) {
-                    std::cerr << "Could not read in trajectory with name '" << filename << "'." << std::endl;
-                    std::terminate();
+            if (lineStream >> initialValue >> name) {
+                for (auto override : overwrite) {
+                    if (override.first == name) {
+                        initialValue = override.second;
+                    }
                 }
 
-                componentIndicesWithTrajectories.push_back(componentCounts.size() - 1);
-                associatedTrajectories.push_back(trajectory);
-            }
+                if (initialValue[0] == '@') {
+                    componentCounts.push_back(0.0);
+                    componentNames->push_back(name);
+                    std::string filename = initialValue.substr(1);
 
+                    ifstream file(filename);
+                    if (!file.is_open()) {
+                        std::cerr << "Could not open file '" << filename << "'." << std::endl;
+                        std::terminate();
+                    }
+                    Trajectory trajectory;
+                    if ((file >> trajectory).fail()) {
+                        std::cerr << "Could not read in trajectory with name '" << filename << "'." << std::endl;
+                        std::terminate();
+                    }
+
+                    componentIndicesWithTrajectories.push_back(componentCounts.size() - 1);
+                    associatedTrajectories.push_back(trajectory);
+                } else {
+                    auto count = std::stoi(initialValue);
+                    componentCounts.push_back(count);
+                    componentNames->push_back(name);
+                }
+            }
         }
         lineNum++;
     }
@@ -199,7 +204,7 @@ Trajectory &Simulation::componentGetTrajectory(unsigned long component) {
 void Simulation::readReactions() {
     std::ifstream file(std::string(sys.name) + ".reactions");
     if (!file.is_open()) {
-        std::terminate();
+        throw std::runtime_error("Could not open '" + std::string(sys.name) + ".reactions" + "'");
     }
 
     std::string line;
@@ -409,7 +414,7 @@ void Simulation::printTrajectory(std::ostream &os, Trajectory &trajectory) {
     jsonObj["names"] = *componentNames;
     jsonObj["random_variates"] = randomVariates;
 
-    os << jsonObj;
+    nlohmann::json::to_msgpack(jsonObj, os);
 }
 
 /**
