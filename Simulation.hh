@@ -72,6 +72,8 @@ public:
     void printTrajectory(ostream &os, Trajectory &trajectory);
 
     void readComponents(const vector<std::pair<std::string, std::string>> &overwrite);
+
+    void associateTrajectory(Trajectory trajectory);
 };
 
 #endif //GILLESPIE_SIMULATION_HH

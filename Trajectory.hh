@@ -30,6 +30,8 @@ public:
 
     vector<uint8_t> reactions{vector<uint8_t>()};
 
+    std::shared_ptr<std::vector<std::string>> componentNames;
+
     void insertTimestamp(double dt);
 
     // read/write trajectories from/to streams in an ASCII format (e.g. files)
@@ -39,6 +41,8 @@ public:
     friend std::istream &operator>>(std::istream &is, Trajectory &trajectory);
 
     nlohmann::json getJson() const;
+
+    vector<double> &getComponent(string &name);
 };
 
 

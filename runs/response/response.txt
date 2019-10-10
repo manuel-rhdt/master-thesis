@@ -2,7 +2,6 @@ response : name
 
 S X: components
 
-S == ouproc.txt : trajectory
 X == 20000 : initial
 
 S --> X : k = 1.0

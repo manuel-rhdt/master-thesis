@@ -64,6 +64,7 @@ Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[])
     auto filename = std::string();
 
     auto overwritten = std::vector<std::pair<std::string, std::string>>();
+    auto trajectories = std::vector<std::string>();
 
     for (int arg = 1; arg < argc; arg++) {
         std::string argument(argv[arg]);
@@ -92,6 +93,22 @@ Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[])
             auto componentValue = argument.substr(index + 1);
 
             overwritten.emplace_back(componentName, componentValue);
+        } else if (argument == "-t") {
+            arg++;
+            if (arg >= argc) {
+                std::cerr << "No trajectory specified after `-t`\n";
+                abort();
+            }
+            argument = std::string(argv[arg]);
+            trajectories.push_back(argument);
+        } else if (argument == "-h") {
+            std::cerr << "Usage: Gillespie [options] INPUT\n\n";
+            std::cerr << "Options:\n"
+                         "\t-o FILE\t\tSet the output trajectory file\n"
+                         "\t--overwrite X=Y\tOverwrite the initial value of component X with Y\n"
+                         "\t-s SEED\t\tSpecify which seed to use\n"
+                         "\t-t TRAJECTORY\tLoad a trajectory to use for the simulation\n";
+            std::exit(0);
         } else {
             filename = argv[arg];
         }
@@ -138,6 +155,20 @@ Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[])
     simulation.readComponents(overwritten);
     simulation.readReactions();
     simulation.printReactions();
+
+    for (auto &filename : trajectories) {
+        ifstream file(filename);
+        if (!file.is_open()) {
+            std::cerr << "Could not open file '" << filename << "'." << std::endl;
+            std::terminate();
+        }
+        Trajectory trajectory;
+        if ((file >> trajectory).fail()) {
+            std::cerr << "Could not read in trajectory with name '" << filename << "'." << std::endl;
+            std::terminate();
+        }
+        simulation.associateTrajectory(trajectory);
+    }
 
     printf("===============================================================================\n");
 

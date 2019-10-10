@@ -61,7 +61,7 @@ trajectory.
 
 ### Trajectory files
 
-The trajectories are stored using (msgpack)[https://msgpack.org/] binary format. The file structure is depicted in the
+The trajectories are stored using [msgpack](https://msgpack.org/) binary format. The file structure is depicted in the
 following example:
 
 ```json
@@ -73,3 +73,6 @@ following example:
   }
 }
 ```
+
+*Note that this is not how a msgpack file actually looks on disk!* To read a msgpack file you can use e.g. the
+msgpack package for python.

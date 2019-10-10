@@ -59,6 +59,8 @@ void Simulation::preAllocate() {
 
 /**
  * Read components from a file called `sys.name`.components
+ *
+ * Allows overriding initial values for specific components from the command line through the `overwrite` parameter.
  */
 void Simulation::readComponents(const std::vector<std::pair<std::string, std::string>> &overwrite) {
     std::ifstream file(std::string(sys.name) + ".components");
@@ -98,8 +100,7 @@ void Simulation::readComponents(const std::vector<std::pair<std::string, std::st
                         std::terminate();
                     }
 
-                    componentIndicesWithTrajectories.push_back(componentCounts.size() - 1);
-                    associatedTrajectories.push_back(trajectory);
+                    associateTrajectory(trajectory);
                 } else {
                     auto count = std::stoi(initialValue);
                     componentCounts.push_back(count);
@@ -110,6 +111,19 @@ void Simulation::readComponents(const std::vector<std::pair<std::string, std::st
         lineNum++;
     }
     file.close();
+}
+
+void Simulation::associateTrajectory(Trajectory trajectory) {
+    for (long component = 0; component < componentNames->size(); component++) {
+        auto &tn = *trajectory.componentNames;
+
+        if (std::find(tn.begin(), tn.end(), (*componentNames)[component]) != tn.end()) {
+            // trajectory contains a component which is also contained in the simulation
+            std::cerr << "\nAssociating component '" << (*componentNames)[component] << "' with a trajectory\n\n";
+            componentIndicesWithTrajectories.push_back(component);
+            associatedTrajectories.push_back(trajectory);
+        }
+    }
 }
 
 /**
@@ -282,6 +296,7 @@ void Simulation::readReactions() {
  */
 void Simulation::run(int numBlocks, int numSteps, Trajectory &trajectory) {
     Run run(sys.numComponents, *componentNames);
+    trajectory.componentNames = componentNames;
     for (int b = 0; b < numBlocks; b++) {
         Block block(sys.numComponents, componentNames);
         for (int s = 0; s < numSteps; s++) {
@@ -357,11 +372,13 @@ void Simulation::updateConcentrations(int j) {
     int i;
 
     for (i = 0; i < reactions[j].reactants.size(); i++) {
+        auto reactant = reactions[j].reactants[i].index;
         // If the component concentration is derived from a trajectory, we just set it to the correct value.
-        if (componentHasTrajectory(reactions[j].reactants[i].index)) {
-            componentCounts[reactions[j].reactants[i].index] = associatedTrajectories[0].componentCounts[0][trajectoryProgress];
+        if (componentHasTrajectory(reactant)) {
+            auto &name = (*componentNames)[reactant];
+            componentCounts[reactant] = componentGetTrajectory(reactant).getComponent(name)[trajectoryProgress];
         } else {
-            componentCounts[reactions[j].reactants[i].index]--;
+            componentCounts[reactant]--;
         }
     }
 
@@ -401,17 +418,15 @@ void Simulation::printTrajectory(std::ostream &os, Trajectory &trajectory) {
     auto reactionsJson = nlohmann::json();
     for (auto r : reactions) {
         auto rJson = nlohmann::json();
-        auto reactants = std::vector<unsigned int>();
+        auto reactants = std::vector<std::string>();
         for (auto react : r.reactants) {
-            reactants.push_back(react.index);
+            reactants.push_back((*componentNames)[react.index]);
         }
-        rJson["reactants"] = reactants;
-        rJson["k"] = r.reactionConstant;
+        rJson["reactants"] = nlohmann::json(reactants);
+        rJson["k"] = nlohmann::json(r.reactionConstant);
         reactionsJson.push_back(rJson);
     }
     jsonObj["reactions"] = reactionsJson;
-
-    jsonObj["names"] = *componentNames;
     jsonObj["random_variates"] = randomVariates;
 
     nlohmann::json::to_msgpack(jsonObj, os);
