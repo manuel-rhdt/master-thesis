@@ -56,4 +56,20 @@ provided as the input file name, `Gillespie` will read the input from standard i
 to exist a `[name].reactions` and a `[name].components` files to exist in the working directory where `[name]` refers
 to the name specified in the input file.
 
-If `-o` is not used to override it, the program will write a file `[name].traj` containing the simulated trajectory.
+If `-o` is not used to override its name, the program will write a file `[name].traj` containing the simulated
+trajectory.
+
+### Trajectory files
+
+The trajectories are stored using (msgpack)[https://msgpack.org/] binary format. The file structure is depicted in the
+following example:
+
+```json
+{
+  "timestamps": [0.1, 0.2, 0.4, 0.4],
+  "components": {
+    "X" : [2.0, 3.0, 4.0, 5.0],
+    "S" : [500.1, 499.14, 413.45, 523.23]
+  }
+}
+```
