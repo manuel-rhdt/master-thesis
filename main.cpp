@@ -116,12 +116,12 @@ Simulation start(int *nBlkEq, int *nBlkRun, int *nSteps, int argc, char *argv[])
 
     if (filename.empty()) {
         fp = stdin;
-        cerr << "Reading from STDIN" << std::endl;
+        cout << "Reading from STDIN" << std::endl;
     } else if ((fp = fopen(filename.c_str(), "r")) == NULL) {
         printf("Cannot open %s.\n", filename.c_str());
         abort();
     } else {
-        cerr << "Reading input " << filename << std::endl;
+        cout << "Reading input " << filename << std::endl;
     }
 
     char name[4096] = {0};

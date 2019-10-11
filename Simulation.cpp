@@ -119,7 +119,7 @@ void Simulation::associateTrajectory(Trajectory trajectory) {
 
         if (std::find(tn.begin(), tn.end(), (*componentNames)[component]) != tn.end()) {
             // trajectory contains a component which is also contained in the simulation
-            std::cerr << "\nAssociating component '" << (*componentNames)[component] << "' with a trajectory\n\n";
+            std::cout << "\nAssociating component '" << (*componentNames)[component] << "' with a trajectory\n\n";
             componentIndicesWithTrajectories.push_back(component);
             associatedTrajectories.push_back(trajectory);
         }
@@ -152,6 +152,10 @@ double Simulation::propagateTime() {
                 } else {
                     propensities[i] *= componentCounts[reactant.index];
                 }
+            }
+
+            if (propensities[i] < 0.0) {
+                throw std::runtime_error("Error: trajectory contains negative values.");
             }
 
             totalPropensity += propensities[i];

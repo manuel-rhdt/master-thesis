@@ -24,7 +24,7 @@ def ornstein_uhlenbeck_path(x0, t, mean_rev_speed, mean_rev_level, vola):
     x[1:] = x[1:] * scale
     for i in range(1, len(x)):
         x[i] += mean(x[i - 1], dt[i - 1], mean_rev_speed, mean_rev_level)
-    return x
+    return np.abs(x)
 
 
 def std(t, mean_rev_speed, vola):
@@ -69,82 +69,65 @@ def calculate_reaction_propensities(reaction_events, reactions, components):
 #
 # In the future we probably want to separate the signal from the responses
 def likelihoods_of_reaction_events(signal, response):
-    reaction_events = np.array(response['reaction_events'])
-    concentrations = np.array(response['components'])
-    timestamps = np.array(response['timestamps'])
+    components = response['components']
+    time_deltas = np.diff(response['timestamps'], prepend=0.0)
 
-    # integrate the signal trajectory and evaluate (interpolate) it at the timestamps of the response events
-    signal_concentrations = np.array(signal['components'][0])
-    signal_timestamps = np.array(signal['timestamps'])
-    interpolated_signal = interpolate.interp1d(signal_timestamps, signal_concentrations, kind='previous',
-                                               assume_sorted=True)[timestamps]
-    assert len(signal_timestamps) == len(timestamps)
-    integrated_signal = np.cumsum(signal_concentrations * np.diff(signal_timestamps, prepend=0.0))
-    integrated_signal = np.interp(timestamps, signal_timestamps, integrated_signal)
+    # resample the signal concentration
+    for comp, values in signal['components'].items():
+        interpolation = interpolate.interp1d(signal['timestamps'], values, kind='previous',
+                                             fill_value=(values[0], values[-1]), bounds_error=False, assume_sorted=True)
+        components[comp] = interpolation(response['timestamps'])
 
-    # for every reaction create an array that contains the propensity at every event
-    reaction_propensities = []
-    total_integrated_propensities = np.zeros_like(reaction_events, dtype='f8')
+    propensities = calculate_reaction_propensities(response['reaction_events'], response['reactions'], components)
+
+    # to calculate the survival probability for each time delta we need to integrate the signal and then interpolate
+    # it.
+    integrated_signal = np.cumsum(signal['components']['S'] * np.diff(signal['timestamps'], prepend=0.0))
+    integrated_signal = np.interp(response['timestamps'], signal['timestamps'], integrated_signal) / time_deltas
+    components['S'] = integrated_signal
+
+    total_integrated_propensities = np.zeros_like(response['reaction_events'], dtype='f8')
     for reaction in response['reactions']:
         # multiply reaction constant by the concentrations of the reactants
-        propensity = reaction['k'] * np.prod([(concentrations[x] if x != 0 else interpolated_signal)
-                                              for x in reaction['reactants']], axis=0)
-        reaction_propensities.append(propensity)
+        propensity = reaction['k'] * np.prod([components[x] for x in reaction['reactants']], axis=0)
+        total_integrated_propensities += propensity
 
-        if 0 in reaction['reactants']:
-            total_integrated_propensities += reaction['k'] * np.prod(
-                [(concentrations[x] if x != 0 else integrated_signal)
-                 for x in reaction['reactants']], axis=0)
-        else:
-            total_integrated_propensities += reaction['k'] * np.diff(timestamps, prepend=0.0) * np.prod(
-                [concentrations[x]
-                 for x in reaction['reactants']], axis=0)
-
-    assert len(reaction_propensities) == len(response['reactions'])
-
-    survival_probabilities = np.choose(reaction_events, reaction_propensities) * np.exp(-total_integrated_propensities)
+    return propensities * np.exp(-total_integrated_propensities * time_deltas)
 
 
-def log_likelihood(trajectory):
+def single_trajectory_piecewise_likelihoods(trajectory):
     reaction_events = np.array(trajectory['reaction_events'])
     concentrations = np.array(trajectory['components'])
 
     assert reaction_events.shape[0] == concentrations.shape[1]
 
-    # for every reaction create an array that contains the propensity at every event
-    reaction_propensities = []
-    for reaction in trajectory['reactions']:
-        # multiply reaction constant by the concentrations of the reactants
-        propensity = reaction['k'] * np.prod([concentrations[x]
-                                              for x in reaction['reactants']], axis=0)
-        reaction_propensities.append(propensity)
-
-    chosen_reaction_propensity = np.choose(
-        reaction_events, reaction_propensities)
+    chosen_reaction_propensity = calculate_reaction_propensities(reaction_events, trajectory['reactions'],
+                                                                 concentrations)
 
     # since the random variates are sampled according to the survival probability the following association is correct
     survival_probabilities = np.array(trajectory['random_variates'])
 
     piecewise_probabilities = chosen_reaction_propensity * survival_probabilities
 
-    return np.sum(np.log(piecewise_probabilities))
+    return piecewise_probabilities
 
 
 def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
     return '{}\n{}\n{}\n{} {} {}\n{}\n'.format(name, num_components, num_reactions, num_blocks, 0, num_steps, 100)
 
 
-def simulate_trajectory(input_name, output_name=None, seed=4252):
+def simulate_trajectory(input_name, output_name=None, trajectories=None, seed=4252):
     cmd = [str(EXECUTABLE), input_name + '.inp', '-s', str(seed)]
-    trajectory_path = input_name + '.traj'
     if output_name is not None:
-        trajectory_path = output_name + '.traj'
-        cmd.extend(['-o', trajectory_path])
-    print(' '.join(cmd), file=sys.stderr)
-    subprocess.run(cmd, stdout=subprocess.DEVNULL)
-    trajectory = load_trajectory(pathlib.Path(trajectory_path))
+        cmd.extend(['-o', output_name])
 
-    return trajectory
+    if trajectories is not None:
+        assert len(trajectories) >= 1
+        for t in trajectories:
+            cmd.extend(['-t', t])
+
+    print(' '.join(cmd), file=sys.stderr)
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, timeout=10.0).check_returncode()
 
 
 def calculate(trajectory_num):
@@ -219,17 +202,5 @@ def simulation1():
         signal_name = "/data/signal/sig{}.traj".format(i_signal)
         save_signal("S", signal_name)
         for i_response in range(num_responses_per_signal):
-            pass
-
-
-simulation = {
-    "command": "repeat",
-    "times": 50,
-    "foreach": {
-        "command": save_signal,
-        "output": "/data/signal/sig{}.traj",
-        "after": {
-
-        }
-    }
-}
+            simulate_trajectory('response', '/data/response/res{}-{}.traj'.format(i_signal, i_response), [signal_name],
+                                seed=i_response)
