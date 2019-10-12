@@ -59,7 +59,8 @@ def calculate_reaction_propensities(reaction_events, reactions, components):
     reaction_propensities = []
     for reaction in reactions:
         # multiply reaction constant by the concentrations of the reactants
-        propensity = reaction['k'] * np.prod([components[x] for x in reaction['reactants']], axis=0)
+        propensity = reaction['k'] * np.prod([components[x]
+                                              for x in reaction['reactants']], axis=0)
         reaction_propensities.append(propensity)
 
     return np.choose(reaction_events, reaction_propensities)
@@ -78,18 +79,23 @@ def likelihoods_of_reaction_events(signal, response):
                                              fill_value=(values[0], values[-1]), bounds_error=False, assume_sorted=True)
         components[comp] = interpolation(response['timestamps'])
 
-    propensities = calculate_reaction_propensities(response['reaction_events'], response['reactions'], components)
+    propensities = calculate_reaction_propensities(
+        response['reaction_events'], response['reactions'], components)
 
     # to calculate the survival probability for each time delta we need to integrate the signal and then interpolate
     # it.
-    integrated_signal = np.cumsum(signal['components']['S'] * np.diff(signal['timestamps'], prepend=0.0))
-    integrated_signal = np.interp(response['timestamps'], signal['timestamps'], integrated_signal) / time_deltas
+    integrated_signal = np.cumsum(
+        signal['components']['S'] * np.diff(signal['timestamps'], prepend=0.0))
+    integrated_signal = np.interp(
+        response['timestamps'], signal['timestamps'], integrated_signal) / time_deltas
     components['S'] = integrated_signal
 
-    total_integrated_propensities = np.zeros_like(response['reaction_events'], dtype='f8')
+    total_integrated_propensities = np.zeros_like(
+        response['reaction_events'], dtype='f8')
     for reaction in response['reactions']:
         # multiply reaction constant by the concentrations of the reactants
-        propensity = reaction['k'] * np.prod([components[x] for x in reaction['reactants']], axis=0)
+        propensity = reaction['k'] * np.prod([components[x]
+                                              for x in reaction['reactants']], axis=0)
         total_integrated_propensities += propensity
 
     return propensities * np.exp(-total_integrated_propensities * time_deltas)
@@ -127,7 +133,8 @@ def simulate_trajectory(input_name, output_name=None, trajectories=None, seed=42
             cmd.extend(['-t', t])
 
     print(' '.join(cmd), file=sys.stderr)
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, timeout=10.0).check_returncode()
+    subprocess.run(cmd, stdout=subprocess.DEVNULL,
+                   timeout=10.0).check_returncode()
 
 
 def calculate(trajectory_num):
@@ -149,13 +156,16 @@ def load_trajectory(path):
         trajectory = msgpack.unpack(f, raw=False)
         trajectory['timestamps'] = np.array(trajectory['timestamps'])
         for component in trajectory['components']:
-            trajectory['components'][component] = np.array(trajectory['components'][component])
+            trajectory['components'][component] = np.array(
+                trajectory['components'][component])
 
         if 'random_variates' in trajectory:
-            trajectory['random_variates'] = np.array(trajectory['random_variates'])
+            trajectory['random_variates'] = np.array(
+                trajectory['random_variates'])
 
         if 'reaction_events' in trajectory:
-            trajectory['reaction_events'] = np.array(trajectory['reaction_events'])
+            trajectory['reaction_events'] = np.array(
+                trajectory['reaction_events'])
     return trajectory
 
 
