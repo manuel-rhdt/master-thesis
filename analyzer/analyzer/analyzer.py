@@ -244,19 +244,6 @@ def load_trajectory(path):
     return trajectory
 
 
-def simulate():
-    likelihoods = []
-
-    count = multiprocessing.cpu_count()
-    pool = multiprocessing.Pool(processes=count)
-
-    results = pool.map(calculate, range(50))
-
-    print("save to likelihoods.txt")
-    np.savetxt('likelihoods.txt', np.array(results))
-    print(results)
-
-
 def simulation1():
     num_signals = 10
     num_responses_per_signal = 10
