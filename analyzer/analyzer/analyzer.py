@@ -10,8 +10,9 @@ import numpy as np
 import scipy
 import scipy.stats
 from scipy import interpolate
+from numba import jit
 
-EXECUTABLE = pathlib.Path(os.getenv("GILLESPIE"))
+EXECUTABLE = os.getenv("GILLESPIE")
 
 
 def ornstein_uhlenbeck_path(x0, t, mean_rev_speed, mean_rev_level, vola):
@@ -53,8 +54,8 @@ def save_signal(name, path):
         msgpack.pack(generate_signal(name), file)
 
 
-def calculate_reaction_propensities(reaction_events, reactions, components):
-    """ Uses the provided information about reaction_events, reactions and the component counts at each time step to
+def calculate_reaction_propensities(reactions, components):
+    """ Uses the provided information about reactions and the component counts at each time step to
     calculate an array of reaction propensities at each timestamp."""
     reaction_propensities = []
     for reaction in reactions:
@@ -63,59 +64,140 @@ def calculate_reaction_propensities(reaction_events, reactions, components):
                                               for x in reaction['reactants']], axis=0)
         reaction_propensities.append(propensity)
 
-    return np.choose(reaction_events, reaction_propensities)
+    return reaction_propensities
 
 
-# This function currently assumes that the first component of response is the original signal
-#
-# In the future we probably want to separate the signal from the responses
-def likelihoods_of_reaction_events(signal, response):
+@jit(nopython=True)
+def resample_trajectory(trajectory, old_timestamps, new_timestamps):
+    """ Resample trajectory with `old_timestamp` at the times in `new_timestamps`.
+
+    This function assumes that `new_timestamps` is ordered.
+
+    Arguments:
+        trajectory {[type]} -- [description]
+        old_timestamps {[type]} -- [description]
+        new_timestamps {[type]} -- [description]
+
+    Returns:
+        [type] -- an array of values
+    """
+    trajectory = np.asarray(trajectory)
+
+    resampled_trajectory = np.zeros_like(
+        new_timestamps, dtype=trajectory.dtype)
+
+    new_idx = 0
+    for old_idx, ts in enumerate(old_timestamps):
+        while new_timestamps[new_idx] < ts and new_idx < len(resampled_trajectory):
+            resampled_trajectory[new_idx] = trajectory[max(old_idx - 1, 0)]
+            new_idx += 1
+        if new_idx >= len(resampled_trajectory):
+            break
+
+    while new_idx < len(resampled_trajectory):
+        resampled_trajectory[new_idx] = trajectory[-1]
+        new_idx += 1
+
+    return resampled_trajectory
+
+
+def reaction_rates_given_signal(response, signal):
+    """Calculate the reaction rates at every timestamp of a response trajectory given a specified signal trajectory.
+
+    Arguments:
+        response {[type]} -- [description]
+        signal {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
     components = response['components']
-    time_deltas = np.diff(response['timestamps'], prepend=0.0)
 
-    # resample the signal concentration
+    # resample the signal concentration and set the corresponding dictionary entries in components
     for comp, values in signal['components'].items():
-        interpolation = interpolate.interp1d(signal['timestamps'], values, kind='previous',
-                                             fill_value=(values[0], values[-1]), bounds_error=False, assume_sorted=True)
-        components[comp] = interpolation(response['timestamps'])
+        components[comp] = resample_trajectory(
+            values, signal['timestamps'], response['timestamps'])
 
-    propensities = calculate_reaction_propensities(
-        response['reaction_events'], response['reactions'], components)
-
-    # to calculate the survival probability for each time delta we need to integrate the signal and then interpolate
-    # it.
-    integrated_signal = np.cumsum(
-        signal['components']['S'] * np.diff(signal['timestamps'], prepend=0.0))
-    integrated_signal = np.interp(
-        response['timestamps'], signal['timestamps'], integrated_signal) / time_deltas
-    components['S'] = integrated_signal
-
-    total_integrated_propensities = np.zeros_like(
-        response['reaction_events'], dtype='f8')
-    for reaction in response['reactions']:
-        # multiply reaction constant by the concentrations of the reactants
-        propensity = reaction['k'] * np.prod([components[x]
-                                              for x in reaction['reactants']], axis=0)
-        total_integrated_propensities += propensity
-
-    return propensities * np.exp(-total_integrated_propensities * time_deltas)
+    return calculate_reaction_propensities(response['reactions'], components)
 
 
-def single_trajectory_piecewise_likelihoods(trajectory):
-    reaction_events = np.array(trajectory['reaction_events'])
-    concentrations = np.array(trajectory['components'])
+@jit(nopython=True)
+def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps):
+    """ Resample and averagte trajectory with `old_timestamp` at the times in `new_timestamps`.
 
-    assert reaction_events.shape[0] == concentrations.shape[1]
+    This function assumes that `new_timestamps` is ordered.
 
-    chosen_reaction_propensity = calculate_reaction_propensities(reaction_events, trajectory['reactions'],
-                                                                 concentrations)
+    Arguments:
+        trajectory {[type]} -- [description]
+        old_timestamps {[type]} -- [description]
+        new_timestamps {[type]} -- [description]
 
-    # since the random variates are sampled according to the survival probability the following association is correct
-    survival_probabilities = np.array(trajectory['random_variates'])
+    Returns:
+        [type] -- an array of values
+    """
+    trajectory = np.asarray(trajectory)
 
-    piecewise_probabilities = chosen_reaction_propensity * survival_probabilities
+    resampled_trajectory = np.zeros_like(
+        new_timestamps, dtype=trajectory.dtype)
 
-    return piecewise_probabilities
+    old_idx = 0
+    old_ts = old_timestamps[0]
+    trajectory_value = trajectory[0]
+    for new_idx in range(len(new_timestamps) - 1):
+        low = new_timestamps[new_idx]
+        high = new_timestamps[new_idx + 1]
+        delta_t = high - low
+        acc = 0.0
+        while low < high:
+            while old_ts <= low:
+                old_idx += 1
+                if old_idx == len(old_timestamps):
+                    old_ts = np.inf
+                    trajectory_value = trajectory[-1]
+                else:
+                    old_ts = old_timestamps[old_idx]
+                    trajectory_value = trajectory[old_idx - 1]
+
+            acc += trajectory_value * (min(old_ts, high) - low)
+            low = old_ts
+
+        resampled_trajectory[new_idx + 1] = acc / delta_t
+
+    return resampled_trajectory
+
+
+def mean_reaction_rates_given_signal(response, signal):
+    """Similar to the function above. However here we don't calculate the immediate rates at every timestamp but
+    rather the averaged reaction rates between two timestamps.
+
+    Arguments:
+        response {[type]} -- [description]
+        signal {[type]} -- [description]
+    """
+    components = response['components']
+
+    for comp, values in signal['components'].items():
+        components[comp] = resample_averaged_trajectory(
+            values, signal['timestamps'], response['timestamps'])
+
+    return calculate_reaction_propensities(response['reactions'], components)
+
+
+def likelihoods_given_signal(response, signal):
+    """ Calculates the individual transition probabilities for a response trajectory given a signal.
+
+    Returns an array of transition probabilities which when multiplied together result in the likelihood
+    $p(X|S)$ where X is the response trajectory and S is the signal trajectory.
+    """
+    instantaneous_rates = reaction_rates_given_signal(response, signal)
+    rate_of_chosen_reaction = np.choose(
+        response['reaction_events'], instantaneous_rates)
+
+    time_deltas = np.diff(response['timestamps'], prepend=0.0)
+    averaged_rates = mean_reaction_rates_given_signal(response, signal)
+    total_averaged_rate = np.sum(averaged_rates, axis=0)
+
+    return rate_of_chosen_reaction * np.exp(-total_averaged_rate * time_deltas)
 
 
 def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
@@ -137,12 +219,6 @@ def simulate_trajectory(input_name, output_name=None, trajectories=None, seed=42
                    timeout=10.0).check_returncode()
 
 
-def calculate(trajectory_num):
-    trajectory = simulate_trajectory('response', output_name='/data/response' + str(trajectory_num),
-                                     seed=trajectory_num)
-    return log_likelihood(trajectory)
-
-
 def load_trajectories(path, glob):
     trajectories = []
     for file_path in pathlib.Path(path).glob(glob):
@@ -151,7 +227,6 @@ def load_trajectories(path, glob):
 
 
 def load_trajectory(path):
-    print('loading ' + str(path))
     with path.open('rb') as f:
         trajectory = msgpack.unpack(f, raw=False)
         trajectory['timestamps'] = np.array(trajectory['timestamps'])
@@ -167,28 +242,6 @@ def load_trajectory(path):
             trajectory['reaction_events'] = np.array(
                 trajectory['reaction_events'])
     return trajectory
-
-
-def get_histogram(path, glob, equil_time):
-    """
-    DELETE THHIS
-    :param path:
-    :param glob:
-    :param equil_time:
-    :return:
-    """
-    datapoints = []
-    for file in path.glob(glob):
-        print('processing ' + str(file))
-        with file.open() as f:
-            trajectory = json.load(f)
-            cutoff_index = np.searchsorted(
-                trajectory['timestamps'], equil_time)
-            for k, comp in enumerate(trajectory['components']):
-                if len(datapoints) == k:
-                    datapoints.append([])
-                datapoints[k].append(comp[cutoff_index])
-    return np.array(datapoints)
 
 
 def simulate():
