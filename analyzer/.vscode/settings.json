@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "/dev/shm/Git/Gillespie/analyzer/venv/bin/python3.5",
+    "python.pythonPath": "venv/bin/python",
     "python.testing.unittestArgs": [
         "-v",
         "-s",
