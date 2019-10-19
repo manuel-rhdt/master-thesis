@@ -1,6 +1,8 @@
 import unittest
-from analyzer import analyzer
+
 import numpy as np
+
+from analyzer import analyzer
 
 
 class TestAnalyzer(unittest.TestCase):
@@ -15,7 +17,8 @@ class TestAnalyzer(unittest.TestCase):
         reactions = [{'k': 2, 'reactants': ['C1']}, {'k': 5, 'reactants': []}]
         result = analyzer.calculate_reaction_propensities(
             reactions, {'C1': [1, 2]})
-        # broadcasting is necessary since the second array in `result` will actually be just a number (namely 5.0)
+        # broadcasting is necessary since the second array in `result` will actually
+        # be just a number (namely 5.0)
         result = np.array(np.broadcast_arrays(*result))
         self.assertListEqual(result.tolist(), [[2, 4], [5, 5]])
 
