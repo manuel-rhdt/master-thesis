@@ -418,7 +418,15 @@ void Simulation::printReactions() {
 }
 
 void Simulation::printTrajectory(std::ostream &os, Trajectory &trajectory) {
-    auto jsonObj = trajectory.getJson();
+    // first we remove the components of associated signals from the trajectory
+    auto skip = std::vector<int>();
+    for (unsigned long i = 0; i < trajectory.componentCounts.size(); i++) {
+        if (componentHasTrajectory(i)) {
+            skip.push_back(i);
+        }
+    }
+
+    auto jsonObj = trajectory.getJson(skip);
     auto reactionsJson = nlohmann::json();
     for (auto r : reactions) {
         auto rJson = nlohmann::json();
@@ -431,7 +439,6 @@ void Simulation::printTrajectory(std::ostream &os, Trajectory &trajectory) {
         reactionsJson.push_back(rJson);
     }
     jsonObj["reactions"] = reactionsJson;
-    jsonObj["random_variates"] = randomVariates;
 
     nlohmann::json::to_msgpack(jsonObj, os);
 }

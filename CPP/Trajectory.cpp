@@ -42,6 +42,10 @@ std::vector<double> &Trajectory::getComponent(std::string &name) {
 }
 
 nlohmann::json Trajectory::getJson() const {
+    return getJson(std::vector<int>());
+}
+
+nlohmann::json Trajectory::getJson(std::vector<int> skip) const {
     if (!componentNames || componentNames->empty()) {
         throw std::runtime_error("The trajectory does not know the names of its components");
     }
@@ -49,6 +53,13 @@ nlohmann::json Trajectory::getJson() const {
     output["timestamps"] = timeStamps;
     output["reaction_events"] = reactions;
     for (int compNum = 0; compNum < componentCounts.size(); compNum++) {
+        bool should_skip = false;
+        for (auto sk : skip) {
+            if (compNum == sk) {
+                should_skip = true;
+            }
+        }
+        if (should_skip) continue;
         auto name = (*componentNames)[compNum];
         output["components"][name] = nlohmann::json(componentCounts[compNum]);
     }

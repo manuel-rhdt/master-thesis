@@ -10,65 +10,93 @@ import numpy as np
 import scipy
 import scipy.stats
 from scipy import interpolate
-from numba import jit
+from numba import jit, guvectorize, float64, int32
+from numba.typed import List as TypedList
 
-EXECUTABLE = os.getenv("GILLESPIE")
+import settings
 
-
-def ornstein_uhlenbeck_path(x0, t, mean_rev_speed, mean_rev_level, vola):
-    """ Simulates a sample path for an Ornstein-Uhlenbeck process."""
-    assert len(t) > 1
-    x = scipy.stats.norm.rvs(size=len(t))
-    x[0] = x0
-    dt = np.diff(t)
-    scale = std(dt, mean_rev_speed, vola)
-    x[1:] = x[1:] * scale
-    for i in range(1, len(x)):
-        x[i] += mean(x[i - 1], dt[i - 1], mean_rev_speed, mean_rev_level)
-    return np.abs(x)
+from . import ornstein_uhlenbeck
 
 
-def std(t, mean_rev_speed, vola):
-    return np.sqrt(variance(t, mean_rev_speed, vola))
+def generate_signal(name, max_time=1000, length=100000, x0=500, mean=500, correlation_time=10, diffusion=10):
+    timestamps = np.linspace(0, max_time, length)
+    x = np.clip(ornstein_uhlenbeck.generate(
+        timestamps, x0, correlation_time, diffusion, mean=mean), 0.0, None)
+    return {'timestamps': timestamps, 'components': {name: x}}
 
 
-def variance(t, mean_rev_speed, vola):
-    assert mean_rev_speed >= 0
-    assert vola >= 0
-    return vola * vola * (1.0 - np.exp(- 2.0 * mean_rev_speed * t)) / (2 * mean_rev_speed)
-
-
-def mean(x0, t, mean_rev_speed, mean_rev_level):
-    assert mean_rev_speed >= 0
-    return x0 * np.exp(-mean_rev_speed * t) + (1.0 - np.exp(- mean_rev_speed * t)) * mean_rev_level
-
-
-def generate_signal(name):
-    timestamps = np.linspace(0, 100, 100000)
-    x = ornstein_uhlenbeck_path(10000, timestamps, 0.001, 10000, 900)
-    return {'timestamps': timestamps.tolist(), 'components': {name: x.tolist()}}
-
-
-def save_signal(name, path):
+def save_signal(name, path, max_time=1000, length=100000, x0=500, mean=500, correlation_time=10, diffusion=10):
     with open(str(path), 'wb') as file:
-        msgpack.pack(generate_signal(name), file)
+        signal = generate_signal(name, max_time, length, x0,
+                                 mean, correlation_time, diffusion)
+        signal['timestamps'] = signal['timestamps'].tolist()
+        signal['components'][name] = signal['components'][name].tolist()
+        msgpack.pack(signal, file)
+
+
+@guvectorize([(float64[:, :], float64[:], int32[:, :], float64[:, :])], '(c,n),(r),(r,l)->(r,n)', nopython=True)
+def _calculate_reaction_propensities(components, reaction_k, reaction_reactants, result=None):
+    """ Accelerated reaction propensity calculation
+
+    Arguments:
+        components {np.ndarray} -- an array of shape (num_components, num_trajectories, num_events_per_trajectory)
+        reaction_k {np.ndarray} -- [description]
+        reaction_reactants {np.ndarray} -- a two-dimensional array (num_reactions, num_reactants)
+
+    Returns:
+        [type] -- [description]
+    """
+    # iterate over all reactions
+    for i_reaction in range(reaction_k.shape[0]):
+        result[i_reaction] = reaction_k[i_reaction]
+        # iterate over all reactants
+        for j_reactant in reaction_reactants[i_reaction]:
+            if j_reactant >= 0:
+                result[i_reaction] *= components[j_reactant]
 
 
 def calculate_reaction_propensities(reactions, components):
     """ Uses the provided information about reactions and the component counts at each time step to
-    calculate an array of reaction propensities at each timestamp."""
-    reaction_propensities = []
-    for reaction in reactions:
-        # multiply reaction constant by the concentrations of the reactants
-        propensity = reaction['k'] * np.prod([components[x]
-                                              for x in reaction['reactants']], axis=0)
-        reaction_propensities.append(propensity)
+    calculate an array of reaction propensities at each timestamp.
 
-    return reaction_propensities
+    The outermost dimension corresponds to the number of reactions. The second outermost dimension
+    corresponds to the number of observations
+    """
+    reaction_k = np.array([reaction['k'] for reaction in reactions])
+
+    # turn a dictionary into an array
+    keys = list(components.keys())
+    component_array = None
+    br = np.broadcast(*components.values())
+    for i, x in enumerate(keys):
+        x = np.asanyarray(components[x])
+        if component_array is None:
+            component_array = np.zeros((len(keys),) + br.shape, dtype=x.dtype)
+        component_array[i] = x
+
+    max_num_reactants = max(len(r['reactants']) for r in reactions)
+    reaction_reactants = np.full(
+        (len(reactions), max_num_reactants), -1, dtype=np.int32)
+    for i, reaction in enumerate(reactions):
+        for j, reactant in enumerate(reaction['reactants']):
+            reaction_reactants[i, j] = keys.index(reactant)
+
+    # we have to move dimensions
+    # (components, responses, signals, timestamps) -> (responses, signals, components, timestamps)
+    #
+    # such that after we calculate the reaction propensities we get
+    # (responses, signals, reactions, propensities)
+    component_array = np.moveaxis(component_array, 0, 2)
+    tmp = _calculate_reaction_propensities(
+        component_array, reaction_k, reaction_reactants)
+
+    # what we ultimately want is
+    # (reactions, signals, responses, propensities)
+    return np.swapaxes(tmp, 0, 2)
 
 
-@jit(nopython=True)
-def resample_trajectory(trajectory, old_timestamps, new_timestamps):
+@guvectorize([(float64[:], float64[:], float64[:], float64[:])], '(o),(o),(n)->(n)', nopython=True)
+def resample_trajectory(trajectory, old_timestamps, new_timestamps, resampled_trajectory=None):
     """ Resample trajectory with `old_timestamp` at the times in `new_timestamps`.
 
     This function assumes that `new_timestamps` is ordered.
@@ -81,11 +109,6 @@ def resample_trajectory(trajectory, old_timestamps, new_timestamps):
     Returns:
         [type] -- an array of values
     """
-    trajectory = np.asarray(trajectory)
-
-    resampled_trajectory = np.zeros_like(
-        new_timestamps, dtype=trajectory.dtype)
-
     new_idx = 0
     for old_idx, ts in enumerate(old_timestamps):
         while new_timestamps[new_idx] < ts and new_idx < len(resampled_trajectory):
@@ -98,31 +121,9 @@ def resample_trajectory(trajectory, old_timestamps, new_timestamps):
         resampled_trajectory[new_idx] = trajectory[-1]
         new_idx += 1
 
-    return resampled_trajectory
 
-
-def reaction_rates_given_signal(response, signal):
-    """Calculate the reaction rates at every timestamp of a response trajectory given a specified signal trajectory.
-
-    Arguments:
-        response {[type]} -- [description]
-        signal {[type]} -- [description]
-
-    Returns:
-        [type] -- [description]
-    """
-    components = response['components']
-
-    # resample the signal concentration and set the corresponding dictionary entries in components
-    for comp, values in signal['components'].items():
-        components[comp] = resample_trajectory(
-            values, signal['timestamps'], response['timestamps'])
-
-    return calculate_reaction_propensities(response['reactions'], components)
-
-
-@jit(nopython=True)
-def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps):
+@guvectorize([(float64[:], float64[:], float64[:], float64[:])], '(o),(o),(n)->(n)', nopython=True)
+def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, output=None):
     """ Resample and averagte trajectory with `old_timestamp` at the times in `new_timestamps`.
 
     This function assumes that `new_timestamps` is ordered.
@@ -135,11 +136,6 @@ def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps):
     Returns:
         [type] -- an array of values
     """
-    trajectory = np.asarray(trajectory)
-
-    resampled_trajectory = np.zeros_like(
-        new_timestamps, dtype=trajectory.dtype)
-
     old_idx = 0
     old_ts = old_timestamps[0]
     trajectory_value = trajectory[0]
@@ -161,24 +157,52 @@ def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps):
             acc += trajectory_value * (min(old_ts, high) - low)
             low = old_ts
 
-        resampled_trajectory[new_idx + 1] = acc / delta_t
-
-    return resampled_trajectory
+        output[new_idx + 1] = acc / delta_t
 
 
-def mean_reaction_rates_given_signal(response, signal):
-    """Similar to the function above. However here we don't calculate the immediate rates at every timestamp but
-    rather the averaged reaction rates between two timestamps.
+def resample_trajectory_outer(trajectory, old_timestamps, new_timestamps, output=None, averaged=False):
+    if len(trajectory.shape) == 1:
+        t = np.expand_dims(trajectory, axis=0)
+        ots = np.expand_dims(old_timestamps, axis=0)
+    else:
+        t = trajectory
+        ots = old_timestamps
+    nts = new_timestamps
+
+    if output is None:
+        output = np.empty((nts.shape[0], ots.shape[0], nts.shape[1]))
+
+    for i in range(ots.shape[0]):
+        for j in range(nts.shape[0]):
+            if averaged:
+                output[j, i] = resample_averaged_trajectory(
+                    t[i], ots[i], nts[j])
+            else:
+                output[j, i] = resample_trajectory(t[i], ots[i], nts[j])
+    return output
+
+
+def reaction_rates_given_signal(response, signal, averaged=False):
+    """Calculate the reaction rates at every timestamp of a response trajectory given a specified signal trajectory.
 
     Arguments:
         response {[type]} -- [description]
         signal {[type]} -- [description]
-    """
-    components = response['components']
 
-    for comp, values in signal['components'].items():
-        components[comp] = resample_averaged_trajectory(
-            values, signal['timestamps'], response['timestamps'])
+    Returns:
+        [type] -- [description]
+    """
+    components = {}
+    for name, comp in response['components'].items():
+        # we want every component to have the shape (responses, signals, trajectory)
+        components[name] = np.expand_dims(comp, axis=1)
+
+    # resample the signal concentration and set the corresponding dictionary entries in components
+    for name, straj in signal['components'].items():
+        stime = signal['timestamps']
+        rtime = response['timestamps']
+        components[name] = resample_trajectory_outer(
+            straj, stime, rtime, averaged=averaged)
 
     return calculate_reaction_propensities(response['reactions'], components)
 
@@ -190,14 +214,16 @@ def likelihoods_given_signal(response, signal):
     $p(X|S)$ where X is the response trajectory and S is the signal trajectory.
     """
     instantaneous_rates = reaction_rates_given_signal(response, signal)
+
     rate_of_chosen_reaction = np.choose(
         response['reaction_events'], instantaneous_rates)
 
     time_deltas = np.diff(response['timestamps'], prepend=0.0)
-    averaged_rates = mean_reaction_rates_given_signal(response, signal)
+    averaged_rates = reaction_rates_given_signal(
+        response, signal, averaged=True)
     total_averaged_rate = np.sum(averaged_rates, axis=0)
 
-    return rate_of_chosen_reaction * np.exp(-total_averaged_rate * time_deltas)
+    return np.swapaxes(rate_of_chosen_reaction * np.exp(-total_averaged_rate * time_deltas), 0, 1)
 
 
 def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
@@ -205,7 +231,8 @@ def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
 
 
 def simulate_trajectory(input_name, output_name=None, trajectories=None, seed=4252):
-    cmd = [str(EXECUTABLE), input_name + '.inp', '-s', str(seed)]
+    cmd = [str(settings.configuration['executable']),
+           input_name + '.inp', '-s', str(seed)]
     if output_name is not None:
         cmd.extend(['-o', output_name])
 
@@ -215,7 +242,7 @@ def simulate_trajectory(input_name, output_name=None, trajectories=None, seed=42
             cmd.extend(['-t', t])
 
     print(' '.join(cmd), file=sys.stderr)
-    subprocess.run(cmd, stdout=subprocess.DEVNULL,
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, cwd='/dev/shm/Git/Gillespie/runs/response',
                    timeout=10.0).check_returncode()
 
 
@@ -244,13 +271,43 @@ def load_trajectory(path):
     return trajectory
 
 
+def empty_trajectory(components, observations, length, events=False):
+    """Create an empty trajectory with preallocated arrays
+
+    Arguments:
+        components {[type]} -- [description]
+        observations {[type]} -- [description]
+        length {[type]} -- [description]
+
+    Keyword Arguments:
+        events {bool} -- [description] (default: {False})
+
+    Returns:
+        [type] -- [description]
+    """
+    obs = observations
+    l = length
+    trajectory = {
+        'timestamps': np.zeros((obs, l)),
+        'components': {}
+    }
+    for c in components:
+        trajectory['components'][c] = np.zeros((obs, l))
+
+    if events:
+        trajectory['reaction_events'] = np.zeros((obs, l), dtype=np.int32)
+
+    return trajectory
+
+
 def simulation1():
-    num_signals = 10
-    num_responses_per_signal = 10
+    num_signals = 100
+    num_responses_per_signal = 100
 
     for i_signal in range(num_signals):
         signal_name = "/data/signal/sig{}.traj".format(i_signal)
         save_signal("S", signal_name)
+        print("FINISHED SIGNAL {}".format(signal_name))
         for i_response in range(num_responses_per_signal):
             simulate_trajectory('response', '/data/response/res{}-{}.traj'.format(i_signal, i_response), [signal_name],
                                 seed=i_response)

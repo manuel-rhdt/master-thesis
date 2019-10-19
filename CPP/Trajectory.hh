@@ -40,9 +40,11 @@ public:
 
     friend std::istream &operator>>(std::istream &is, Trajectory &trajectory);
 
-    nlohmann::json getJson() const;
+    nlohmann::json getJson(std::vector<int> skip) const;
 
     vector<double> &getComponent(string &name);
+
+    nlohmann::json getJson() const;
 };
 
 

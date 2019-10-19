@@ -12,7 +12,7 @@ sub InitAll {
     our @name_list = ();
     our @init_vals = ();
     our %components = ();
-    our $num_eq_blocks = 100;
+    our $num_eq_blocks = 1;
     our $num_prod_blocks = 0;
     our $num_steps = 10000;
     our $freq_anal = 100;
@@ -33,9 +33,9 @@ resets default values.  The <identifier> is from the following table
 -------------------------------------------------------------------------
  <identifier>          minimum components in <identifier>  default
 -------------------------------------------------------------------------
- number of equilibrium block   "num" "eq"                   50
+ number of equilibrium block   "num" "eq"                   1
  number of production blocks   "num" "prod"                 0
- number of steps               "num" "steps"                500
+ number of steps               "num" "steps"                10000
  frequency analysis            "freq"                       10 
  code name                     "name"                       0
  reaction file                 "react" "file"               0.reactions
