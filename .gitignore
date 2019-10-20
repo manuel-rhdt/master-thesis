@@ -11,3 +11,5 @@ Gillespie_all.tar.gz
 *.components
 *.reactions
 *.log
+data
+CPP/build

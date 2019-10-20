@@ -1,6 +1,6 @@
 response			Name
 2			Number_of_components
 2			Number_of_reactions
-100	0	10000	Number_eq_blocks;_Number_prod_blocks;_Number_steps
+1	0	60000	Number_eq_blocks;_Number_prod_blocks;_Number_steps
 100			Frequency_analysis
 

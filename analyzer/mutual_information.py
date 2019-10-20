@@ -17,12 +17,12 @@ diffusion = CONFIGURATION['signal_diffusion']
 def write_signal(i_signal):
     signal_name = CONFIGURATION['signals'].format(sig=i_signal)
     analyzer.save_signal(CONFIGURATION['signal_component_name'], signal_name,
-                         x0=mean, mean=mean, correlation_time=corr_time, diffusion=diffusion)
+                         x0=mean, mean=mean, correlation_time=corr_time, diffusion=diffusion, duration = CONFIGURATION['signal_duration'])
 
 
 def write_response(i_signal, i_response):
     signal_name = CONFIGURATION['signals'].format(sig=i_signal)
-    analyzer.simulate_trajectory('response', CONFIGURATION['responses'].format(sig=i_signal, res=i_response), [signal_name],
+    analyzer.simulate_trajectory(CONFIGURATION['input_name'], CONFIGURATION['responses'].format(sig=i_signal, res=i_response), [signal_name],
                                  seed=i_response)
 
 
@@ -47,15 +47,16 @@ def calculate(s):
     num_responses = CONFIGURATION['num_responses']
 
     combined_response = None
+    response_len = None
     for r in range(num_responses):
         write_response(s, r)
         response = load_response(s, r)
         delete_response(s, r)
+        response_len = response['timestamps'].shape[0]
 
         if combined_response is None:
-            length = len(response['timestamps'])
             combined_response = analyzer.empty_trajectory(
-                response['components'].keys(), num_responses, length, events=True)
+                response['components'].keys(), num_responses, response_len, events=True)
             combined_response['reactions'] = response['reactions']
 
         for name, val in response['components'].items():
@@ -64,11 +65,11 @@ def calculate(s):
         combined_response['reaction_events'][r] = response['reaction_events']
 
     this_signal = {'components': {},
-                   'timestamps': combined_signal['timestamps'][s]}
+                   'timestamps': np.expand_dims(combined_signal['timestamps'][s], axis=0)}
     for name, val in combined_signal['components'].items():
-        this_signal['components'][name] = val[s]
+        this_signal['components'][name] = np.expand_dims(val[s], axis=0)
 
-    r_given_s = analyzer.likelihoods_given_signal(
+    r_given_s = analyzer.log_likelihoods_given_signal(
         combined_response, this_signal)
 
     signals_without_this = {'components': {}, 'timestamps': None}
@@ -77,7 +78,7 @@ def calculate(s):
     signals_without_this['timestamps'] = np.delete(
         combined_signal['timestamps'], s, axis=0)
 
-    mean_product = []
+    mutual_information = np.zeros((num_responses, response_len))
     for r in range(num_responses):
         response = {'components': {},
                     'timestamps': None, 'reaction_events': None}
@@ -89,16 +90,35 @@ def calculate(s):
             combined_response['reaction_events'][r], axis=0)
         response['reactions'] = combined_response['reactions']
 
-        r_given_s_prime = analyzer.likelihoods_given_signal(
+        r_given_s_prime = analyzer.log_likelihoods_given_signal(
             response, signals_without_this)
 
-        cumulative_product = np.cumprod(
-            r_given_s_prime / r_given_s[r], axis=-1)
+        cumulative_sum = np.cumsum(r_given_s_prime - r_given_s[r], axis=-1)
+        mutual_information[r] = -np.log(np.mean(np.exp(cumulative_sum), axis=-2))
 
-        mean_product.append(np.mean(cumulative_product, axis=-2))
+    return mutual_information
 
-    return -np.log(np.array(mean_product))
 
+def test_run():
+    global combined_signal
+    num_signals = CONFIGURATION['num_signals']
+
+    for s in range(num_signals):
+        write_signal(s)
+
+    for s in range(num_signals):
+        signal = load_signal(s)
+        if combined_signal is None:
+            length = len(signal['timestamps'])
+            names = signal['components'].keys()
+            combined_signal = analyzer.empty_trajectory(
+                names, num_signals, length)
+
+        for name, values in signal['components'].items():
+            combined_signal['components'][name][s] = values
+        combined_signal['timestamps'][s] = signal['timestamps']
+
+    calculate(0)
 
 def main():
     global combined_signal

@@ -2,7 +2,9 @@ response : name
 
 S X: components
 
-X == 20000 : initial
+60000 : num steps
 
-S --> X : k = 1.0
-X --> NULL : k = 0.5
+X == 400 : initial
+
+S --> X : k = 0.02
+X --> NULL : k = 0.1

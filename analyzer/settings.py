@@ -1,16 +1,19 @@
 configuration = {
     # Path to the Gillespie executable
-    'executable': '/dev/shm/Git/Gillespie/CPP/cmake-build-release/Gillespie'
+    'executable': '../CPP/build/Gillespie',
+    'gillespie_cwd': '../runs/response'
 }
 
 configuration['mutual_information'] = {
-    'signals': '/data/signal/sig{sig}.traj',
-    'responses': '/dev/shm/res{sig}-{res}.traj',
-    'num_signals': 50,
-    'num_responses': 50,
+    'input_name': 'response.inp',
+    'signals': '../data/signal/sig{sig}.traj',
+    'responses': '../data/res{sig}-{res}.traj',
+    'num_signals': 100,
+    'num_responses': 30,
+    'signal_duration': 1000, # in seconds
     'signal_component_name': 'S',
-    'signal_mean': 199,
+    'signal_mean': 1990,
     'signal_correlation_time': 10,
     'signal_diffusion': 10,
-    'output': '/data/mutual_information.npz'
+    'output': '../data/mutual_information.npz'
 }
