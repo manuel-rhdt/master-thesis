@@ -10,7 +10,7 @@ import numpy as np
 import scipy
 import scipy.stats
 from scipy import interpolate
-from numba import jit, guvectorize, float64, int32
+from numba import jit, guvectorize, float64, int32, prange
 from numba.typed import List as TypedList
 
 import settings
@@ -34,8 +34,8 @@ def save_signal(name, path, duration=1000, step_size=0.01, x0=500, mean=500, cor
         msgpack.pack(signal, file)
 
 
-@guvectorize([(float64[:, :], float64[:], int32[:, :], float64[:, :])], '(c,n),(r),(r,l)->(r,n)', nopython=True)
-def _calculate_reaction_propensities(components, reaction_k, reaction_reactants, result=None):
+@jit(nopython=True, fastmath=True)
+def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants, result=None):
     """ Accelerated reaction propensity calculation
 
     Arguments:
@@ -46,49 +46,54 @@ def _calculate_reaction_propensities(components, reaction_k, reaction_reactants,
     Returns:
         [type] -- [description]
     """
-    # iterate over all reactions
-    for i_reaction in range(reaction_k.shape[0]):
-        result[i_reaction] = reaction_k[i_reaction]
-        # iterate over all reactants
-        for j_reactant in reaction_reactants[i_reaction]:
-            if j_reactant >= 0:
-                result[i_reaction] *= components[j_reactant]
+    traj_length = components[0].shape[-1]
+
+    if result is None:
+        result = np.zeros_like(components[0])
+
+    for i in prange(traj_length):
+        for n_reaction in range(len(reaction_k)):
+            tmp = reaction_k[n_reaction]
+
+            for j_reactant in reaction_reactants[n_reaction]:
+                if j_reactant >= 0:
+                    tmp *= components[j_reactant][i]
+
+            result[i] += tmp
+
+    return result
 
 
-def calculate_reaction_propensities(reactions, components):
-    """ Uses the provided information about reactions and the component counts at each time step to
-    calculate an array of reaction propensities at each timestamp.
+@jit(nopython=True, fastmath=True)
+def _calculate_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events, result=None):
+    """ Accelerated reaction propensity calculation
+
+    Arguments:
+        components {np.ndarray} -- an array of shape (num_components, num_trajectories, num_events_per_trajectory)
+        reaction_k {np.ndarray} -- [description]
+        reaction_reactants {np.ndarray} -- a two-dimensional array (num_reactions, num_reactants)
+
+    Returns:
+        [type] -- [description]
     """
-    reaction_k = np.array([reaction['k'] for reaction in reactions])
+    if result is None:
+        result = np.zeros_like(components[0])
 
-    # turn a dictionary into an array
-    keys = list(components.keys())
-    component_array = None
-    br = np.broadcast(*components.values())
-    for i, x in enumerate(keys):
-        x = np.asanyarray(components[x])
-        if component_array is None:
-            component_array = np.zeros((len(keys),) + br.shape, dtype=x.dtype)
-        component_array[i] = x
+    traj_length = components[0].shape[-1]
 
-    # we have to move the new axis
-    # (components, responses, signals, timestamps) -> (responses, signals, components, timestamps)
-    component_array = np.moveaxis(component_array, 0, 2)
+    assert reaction_events.shape == components[0].shape
 
-    max_num_reactants = max(len(r['reactants']) for r in reactions)
-    reaction_reactants = np.full(
-        (len(reactions), max_num_reactants), -1, dtype=np.int32)
-    for i, reaction in enumerate(reactions):
-        for j, reactant in enumerate(reaction['reactants']):
-            reaction_reactants[i, j] = keys.index(reactant)
+    for i in range(traj_length):
+        event = reaction_events[i]
+        result[i] = reaction_k[event]
+        for j_reactant in reaction_reactants[event]:
+            if j_reactant >= 0:
+                result[i] *= components[j_reactant][i]
 
-    # return value has shape
-    # (responses, signals, reactions, propensities)
-    return _calculate_reaction_propensities(
-        component_array, reaction_k, reaction_reactants)
+    return result
 
 
-@jit(nopython=True)
+@jit(nopython=True, fastmath=True)
 def resample_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
     """ Resample trajectory with `old_timestamp` at the times in `new_timestamps`.
 
@@ -118,7 +123,7 @@ def resample_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
     return out
 
 
-@jit(nopython=True)
+@jit(nopython=True, fastmath=True)
 def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
     """ Resample and averagte trajectory with `old_timestamp` at the times in `new_timestamps`.
 
@@ -160,50 +165,69 @@ def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out
     return out
 
 
-@jit(nopython=True)
-def resample_trajectory_outer(trajectory, old_timestamps, new_timestamps, output=None, averaged=False):
-    assert len(trajectory.shape) == 2
-    t = trajectory
-    ots = old_timestamps
-    nts = new_timestamps
+@jit(nopython=True, parallel=True)
+def propensities(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
+    num_r, length = response_components[0].shape
+    num_s, _ = signal_components[0].shape
 
-    if output is None:
-        output = np.empty((nts.shape[0], ots.shape[0], nts.shape[1]))
+    result = np.zeros((num_s, num_r, length))
+    for s in prange(num_s):
+        for r in prange(num_r):
+            components = TypedList()
+            for comp in signal_components:
+                resampled = np.zeros(length)
+                if reaction_events is None:
+                    resample_averaged_trajectory(
+                        comp[s], signal_timestamps[s], response_timestamps[r], resampled)
+                else:
+                    resample_trajectory(
+                        comp[s], signal_timestamps[s], response_timestamps[r], resampled)
+                components.append(resampled)
+            for comp in response_components:
+                components.append(comp[r])
 
-    for i in range(ots.shape[0]):
-        for j in range(nts.shape[0]):
-            if averaged:
-                resample_averaged_trajectory(
-                    t[i], ots[i], nts[j], output[j, i])
+            if reaction_events is None:
+                result[s, r] = _calculate_sum_of_reaction_propensities(
+                    components, reaction_k, reaction_reactants)
             else:
-                resample_trajectory(t[i], ots[i], nts[j], output[j, i])
-    return output
+                result[s, r] = _calculate_selected_reaction_propensities(
+                    components, reaction_k, reaction_reactants, reaction_events[r])
+
+    return result
 
 
-def reaction_rates_given_signal(response, signal, averaged=False):
-    """Calculate the reaction rates at every timestamp of a response trajectory given a specified signal trajectory.
+def compile_reactions(response, signal):
+    name_idx_map = {}
 
-    Arguments:
-        response {[type]} -- [description]
-        signal {[type]} -- [description]
+    signal_names = list(signal['components'].keys())
+    response_names = list(response['components'].keys())
 
-    Returns:
-        [type] -- [description]
-    """
-    components = {}
-    for name, comp in response['components'].items():
-        # we want every component to have the shape (responses, signals, trajectory)
-        components[name] = np.expand_dims(comp, axis=1)
+    for idx, name in enumerate(signal_names):
+        name_idx_map[name] = idx
 
-    # resample the signal concentration and set the corresponding dictionary entries in components
-    for name, straj in signal['components'].items():
-        stime = signal['timestamps']
-        rtime = response['timestamps']
-        # shape (responses, signals, trajectories)
-        components[name] = resample_trajectory_outer(
-            straj, stime, rtime, averaged=averaged)
+    for idx, name in enumerate(response_names):
+        name_idx_map[name] = idx + len(signal_names)
 
-    return calculate_reaction_propensities(response['reactions'], components)
+    reactions = response['reactions']
+
+    max_num_reactants = max(len(r['reactants']) for r in reactions)
+    reaction_reactants = np.full(
+        (len(reactions), max_num_reactants), -1, dtype=np.int32)
+    for i, reaction in enumerate(reactions):
+        for j, reactant in enumerate(reaction['reactants']):
+            reaction_reactants[i, j] = name_idx_map[reactant]
+
+    signal_components = TypedList()
+    for name in signal_names:
+        signal_components.append(signal['components'][name])
+
+    response_components = TypedList()
+    for name in response_names:
+        response_components.append(response['components'][name])
+
+    reaction_k = np.array([r['k'] for r in reactions])
+
+    return (signal_components, response_components, reaction_k, reaction_reactants)
 
 
 def log_likelihoods_given_signal(response, signal):
@@ -212,30 +236,26 @@ def log_likelihoods_given_signal(response, signal):
     Returns an array of transition probabilities which when multiplied together result in the likelihood
     $p(X|S)$ where X is the response trajectory and S is the signal trajectory.
     """
-    instantaneous_rates = reaction_rates_given_signal(response, signal)
 
-    # since the chosen reaction depends on the response we swap the signal and response axes
-    # we now have (signals, responses, reactions, rates)
-    instantaneous_rates = np.swapaxes(instantaneous_rates, 0, 1)
+    signal_comps, response_comps, reaction_k, reaction_reactants = compile_reactions(
+        response, signal)
+    signal_ts = signal['timestamps']
+    response_ts = response['timestamps']
+    events = response['reaction_events']
 
-    # do some very clever indexing to create an array which conains the rates of the chose
-    # reactions at each timestep
-    num_responses = instantaneous_rates.shape[1]
-    length = instantaneous_rates.shape[-1]
-    idx = np.ix_(range(num_responses), range(length))
-    rate_of_chosen_reaction = instantaneous_rates[:,
-                                                  idx[0], response['reaction_events'], idx[1]]
+    instantaneous_rates = propensities(
+        signal_comps, signal_ts, response_comps, response_ts, reaction_k, reaction_reactants, events)
+
+    averaged_rates = propensities(
+        signal_comps, signal_ts, response_comps, response_ts, reaction_k, reaction_reactants, None)
 
     time_delta = np.diff(response['timestamps'], prepend=0.0)
-    averaged_rates = reaction_rates_given_signal(
-        response, signal, averaged=True)
-    total_averaged_rate = np.swapaxes(np.sum(averaged_rates, axis=-2), 0, 1)
 
     # shape (signals, responses, log_likelihoods)
-    assert len(total_averaged_rate.shape) == 3
+    assert len(averaged_rates.shape) == 3
 
-    # return the logarithm of `rate_of_chosen_reaction * np.exp(-total_averaged_rate * time_delta)`
-    return np.log(rate_of_chosen_reaction) - total_averaged_rate * time_delta
+    # return the logarithm of `instantaneous_rates * np.exp(-averaged_rates * time_delta)`
+    return np.log(instantaneous_rates) - averaged_rates * time_delta
 
 
 def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
