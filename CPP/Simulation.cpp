@@ -148,7 +148,8 @@ double Simulation::propagateTime() {
             // TODO: x * (x - 1) * (x - 2) * ...
             for (auto reactant : reactions[i].reactants) {
                 if (componentHasTrajectory(reactant.index)) {
-                    propensities[i] *= associatedTrajectories[0].componentCounts[0][trajectoryProgress];
+                    auto &trajectory = componentGetTrajectory(reactant.index);
+                    propensities[i] *= trajectory.componentCounts[0][trajectoryProgress];
                 } else {
                     propensities[i] *= componentCounts[reactant.index];
                 }
@@ -172,19 +173,20 @@ double Simulation::propagateTime() {
             // The propensities do not depend on any external trajectory.
             maxTimeStep = std::numeric_limits<double>::infinity();
         } else {
-            if (timeStamp > associatedTrajectories[0].timeStamps[trajectoryProgress]) {
-                maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress + 1] - timeStamp;
-            } else {
-                maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress + 1] -
-                              associatedTrajectories[0].timeStamps[trajectoryProgress];
+            if ((timeStamp + accumulatedTime) >= associatedTrajectories[0].timeStamps[trajectoryProgress]) {
+                // ensure that trajectoryProgress always stays in bounds
+                // this should be the only time we change trajectoryProgress
+                trajectoryProgress = std::min(trajectoryProgress + 1, associatedTrajectories[0].timeStamps.size() - 1);
+            }
+            maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress] - timeStamp - accumulatedTime;
+            if (maxTimeStep < 1e-5) {
+                trajectoryProgress = std::min(trajectoryProgress + 1, associatedTrajectories[0].timeStamps.size() - 1);
+                maxTimeStep = associatedTrajectories[0].timeStamps[trajectoryProgress] - timeStamp - accumulatedTime;
             }
         }
 
         if (maxTimeStep * totalPropensity < negLogUnifVal) {
             negLogUnifVal -= maxTimeStep * totalPropensity;
-            // ensure that trajectoryProgress always stays in bounds
-            // this should be the only time we change trajectoryProgress
-            trajectoryProgress = std::min(trajectoryProgress + 1, associatedTrajectories[0].timeStamps.size() - 1);
             accumulatedTime += maxTimeStep;
             continue;
         } else {

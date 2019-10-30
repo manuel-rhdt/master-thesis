@@ -32,18 +32,18 @@ class TestAnalyzer(unittest.TestCase):
 
     def test_resample_trajectory2(self):
         old_ts = np.array([1.0, 2.0, 3.0])
-        traj = np.array([[10.0, 15.0, 10.0], [10.0, 20.0, 10.0]])
+        traj = np.array([10.0, 15.0, 10.0])
         new_ts = np.array([0.0, 1.5, 2.5, 4.0])
 
         result = analyzer.resample_trajectory(traj, old_ts, new_ts)
         self.assertListEqual(
-            result.tolist(), [[10.0, 10.0, 15.0, 10.0], [10.0, 10.0, 20.0, 10.0]])
+            result.tolist(), [10.0, 10.0, 15.0, 10.0])
 
     def test_resample_averaged_trajectory_trivial(self):
         old_ts = np.array([1.0, 2.0, 3.0])
         traj = np.array([10.0, 15.0, 10.0])
         result = analyzer.resample_averaged_trajectory(traj, old_ts, old_ts)
-        self.assertListEqual(result.tolist(), [0.0, 10.0, 15.0])
+        self.assertListEqual(result.tolist(), [10.0, 15.0, 10.0])
 
     def test_resample_averaged_trajectory(self):
         old_ts = np.array([1.0, 2.0, 3.0])
@@ -51,11 +51,11 @@ class TestAnalyzer(unittest.TestCase):
         new_ts = np.array([0.0, 1.5, 2.5, 3.5])
 
         result = analyzer.resample_averaged_trajectory(traj, old_ts, new_ts)
-        self.assertListEqual(result.tolist(), [0.0, 10.0, 12.5, 12.5])
+        self.assertListEqual(result.tolist(), [10.0, 12.5, 12.5, 10.0])
 
         new_ts = np.array([2.0, 2.5, 3.5, 4.0])
         result = analyzer.resample_averaged_trajectory(traj, old_ts, new_ts)
-        self.assertListEqual(result.tolist(), [0.0, 15.0, 12.5, 10.0])
+        self.assertListEqual(result.tolist(), [15.0, 12.5, 10.0, 10.0])
 
 
 if __name__ == '__main__':

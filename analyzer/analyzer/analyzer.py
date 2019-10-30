@@ -18,16 +18,16 @@ import settings
 from . import ornstein_uhlenbeck
 
 
-def generate_signal(name, max_time=1000, length=100000, x0=500, mean=500, correlation_time=10, diffusion=10):
-    timestamps = np.linspace(0, max_time, length)
+def generate_signal(name, max_time=1000, step_size=0.01, x0=500, mean=500, correlation_time=10, diffusion=10):
+    timestamps = np.arange(0, max_time, step_size)
     x = np.clip(ornstein_uhlenbeck.generate(
         timestamps, x0, correlation_time, diffusion, mean=mean), 0.0, None)
     return {'timestamps': timestamps, 'components': {name: x}}
 
 
-def save_signal(name, path, duration=1000, length=100000, x0=500, mean=500, correlation_time=10, diffusion=10):
+def save_signal(name, path, duration=1000, step_size=0.01, x0=500, mean=500, correlation_time=10, diffusion=10):
     with open(str(path), 'wb') as file:
-        signal = generate_signal(name, duration, length, x0,
+        signal = generate_signal(name, duration, step_size, x0,
                                  mean, correlation_time, diffusion)
         signal['timestamps'] = signal['timestamps'].tolist()
         signal['components'][name] = signal['components'][name].tolist()
@@ -58,9 +58,6 @@ def _calculate_reaction_propensities(components, reaction_k, reaction_reactants,
 def calculate_reaction_propensities(reactions, components):
     """ Uses the provided information about reactions and the component counts at each time step to
     calculate an array of reaction propensities at each timestamp.
-
-    The outermost dimension corresponds to the number of reactions. The second outermost dimension
-    corresponds to the number of observations
     """
     reaction_k = np.array([reaction['k'] for reaction in reactions])
 
@@ -91,7 +88,6 @@ def calculate_reaction_propensities(reactions, components):
         component_array, reaction_k, reaction_reactants)
 
 
-# @guvectorize([(float64[:], float64[:], float64[:], float64[:])], '(o),(o),(n)->(n)', nopython=True)
 @jit(nopython=True)
 def resample_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
     """ Resample trajectory with `old_timestamp` at the times in `new_timestamps`.
@@ -119,9 +115,9 @@ def resample_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
     while new_idx < len(out):
         out[new_idx] = trajectory[-1]
         new_idx += 1
+    return out
 
 
-# @guvectorize([(float64[:], float64[:], float64[:], float64[:])], '(o),(o),(n)->(n)', nopython=True)
 @jit(nopython=True)
 def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
     """ Resample and averagte trajectory with `old_timestamp` at the times in `new_timestamps`.
@@ -159,7 +155,10 @@ def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out
             acc += trajectory_value * (min(old_ts, high) - low)
             low = old_ts
 
-        out[new_idx + 1] = acc / delta_t
+        out[new_idx] = acc / delta_t
+    out[-1] = trajectory[min(old_idx, len(old_timestamps)-1)]
+    return out
+
 
 @jit(nopython=True)
 def resample_trajectory_outer(trajectory, old_timestamps, new_timestamps, output=None, averaged=False):
@@ -174,9 +173,10 @@ def resample_trajectory_outer(trajectory, old_timestamps, new_timestamps, output
     for i in range(ots.shape[0]):
         for j in range(nts.shape[0]):
             if averaged:
-                resample_averaged_trajectory(t[i], ots[i], nts[j], output[j, i])
+                resample_averaged_trajectory(
+                    t[i], ots[i], nts[j], output[j, i])
             else:
-                resample_trajectory(t[i], ots[i], nts[j], output[j,i])
+                resample_trajectory(t[i], ots[i], nts[j], output[j, i])
     return output
 
 
@@ -215,13 +215,16 @@ def log_likelihoods_given_signal(response, signal):
     instantaneous_rates = reaction_rates_given_signal(response, signal)
 
     # since the chosen reaction depends on the response we swap the signal and response axes
+    # we now have (signals, responses, reactions, rates)
     instantaneous_rates = np.swapaxes(instantaneous_rates, 0, 1)
 
-    # do some very clever indexing
+    # do some very clever indexing to create an array which conains the rates of the chose
+    # reactions at each timestep
     num_responses = instantaneous_rates.shape[1]
     length = instantaneous_rates.shape[-1]
     idx = np.ix_(range(num_responses), range(length))
-    rate_of_chosen_reaction = instantaneous_rates[:, idx[0], response['reaction_events'], idx[1]]
+    rate_of_chosen_reaction = instantaneous_rates[:,
+                                                  idx[0], response['reaction_events'], idx[1]]
 
     time_delta = np.diff(response['timestamps'], prepend=0.0)
     averaged_rates = reaction_rates_given_signal(
@@ -232,16 +235,16 @@ def log_likelihoods_given_signal(response, signal):
     assert len(total_averaged_rate.shape) == 3
 
     # return the logarithm of `rate_of_chosen_reaction * np.exp(-total_averaged_rate * time_delta)`
-    # also swap the axes back so that the shape is (responses, signals, trajectory)
-    return np.swapaxes(np.log(rate_of_chosen_reaction) - total_averaged_rate * time_delta, 0, 1)
+    return np.log(rate_of_chosen_reaction) - total_averaged_rate * time_delta
 
 
 def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
     return '{}\n{}\n{}\n{} {} {}\n{}\n'.format(name, num_components, num_reactions, num_blocks, 0, num_steps, 100)
 
 
-def simulate_trajectory(input_name, output_name=None, trajectories=None, seed=4252):
-    cmd = [os.path.abspath(str(settings.configuration['executable'])), input_name, '-s', str(seed)]
+def simulate_trajectory(input_name, output_name=None, trajectories=None, cwd=settings.configuration['gillespie_cwd'], seed=4252):
+    cmd = [os.path.abspath(
+        str(settings.configuration['executable'])), input_name, '-s', str(seed)]
     if output_name is not None:
         cmd.extend(['-o', os.path.abspath(output_name)])
 
@@ -250,8 +253,7 @@ def simulate_trajectory(input_name, output_name=None, trajectories=None, seed=42
         for t in trajectories:
             cmd.extend(['-t', os.path.abspath(t)])
 
-    print(' '.join(cmd), file=sys.stderr)
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, cwd=os.path.abspath(settings.configuration['gillespie_cwd']),
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, cwd=os.path.abspath(cwd),
                    timeout=10.0, check=True)
 
 
@@ -307,16 +309,3 @@ def empty_trajectory(components, observations, length, events=False):
         trajectory['reaction_events'] = np.zeros((obs, l), dtype=np.int32)
 
     return trajectory
-
-
-def simulation1():
-    num_signals = 100
-    num_responses_per_signal = 100
-
-    for i_signal in range(num_signals):
-        signal_name = "/data/signal/sig{}.traj".format(i_signal)
-        save_signal("S", signal_name)
-        print("FINISHED SIGNAL {}".format(signal_name))
-        for i_response in range(num_responses_per_signal):
-            simulate_trajectory('response', '/data/response/res{}-{}.traj'.format(i_signal, i_response), [signal_name],
-                                seed=i_response)

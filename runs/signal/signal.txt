@@ -1,9 +1,11 @@
 signal : name
-100 : num_steps
+100000 : num steps
 
-A : components
+S Env : components
 
-A = 10000 : initial
+S = 4000 : initial
+Env = 1 : initial
 
-A --> NULL : k = 0.001
-
+Env --> Env + S : k = 20
+S --> NULL : k = 0.005
+	
