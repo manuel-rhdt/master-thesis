@@ -85,10 +85,9 @@ def calculate(s, combined_signal):
 
     r_given_s_prime = analyzer.log_likelihoods_given_signal(
         combined_response, signals_without_this)
-    cumulative_sum = np.cumsum(r_given_s_prime - r_given_s[0], axis=-1)
-    information_gain = np.mean(np.exp(cumulative_sum), axis=0)
+
     mutual_information[:, 0] = combined_response['timestamps']
-    mutual_information[:, 1] = -np.log(information_gain)
+    mutual_information[:, 1] = r_given_s - r_given_s_prime
 
     name = CONFIGURATION['output']
     np.savez('{}.{}'.format(name, s), mutual_information)
@@ -113,11 +112,6 @@ def generate_signals():
         combined_signal['timestamps'][s] = signal['timestamps']
 
     return combined_signal
-
-
-def process_init(q, s):
-    calculate.queue = q
-    calculate.combined_signal = s
 
 
 def main():

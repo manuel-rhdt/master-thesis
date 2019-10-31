@@ -34,6 +34,19 @@ def save_signal(name, path, duration=1000, step_size=0.01, x0=500, mean=500, cor
         msgpack.pack(signal, file)
 
 
+# inspired by scipy.misc.logsumexp
+@jit(nopython=True, fastmath=True)
+def logsumexp(x, scale=1):
+    x = np.asarray(x)
+    x_max = np.amax(x)
+    tmp = scale * np.exp(x - x_max)
+
+    s = np.sum(tmp)
+    out = np.log(s)
+    
+    return out + x_max
+
+
 @jit(nopython=True, fastmath=True)
 def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants, result=None):
     """ Accelerated reaction propensity calculation
@@ -65,7 +78,7 @@ def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_rea
 
 
 @jit(nopython=True, fastmath=True)
-def _calculate_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events, result=None):
+def _calculate_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events):
     """ Accelerated reaction propensity calculation
 
     Arguments:
@@ -76,8 +89,7 @@ def _calculate_selected_reaction_propensities(components, reaction_k, reaction_r
     Returns:
         [type] -- [description]
     """
-    if result is None:
-        result = np.zeros_like(components[0])
+    result = np.zeros_like(components[0])
 
     traj_length = components[0].shape[-1]
 
@@ -165,35 +177,63 @@ def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out
     return out
 
 
+@jit(nopython=True)
+def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
+    length, = response_components[0].shape
+
+    components = TypedList()
+    for comp in signal_components:
+        resampled = np.zeros(length)
+        resample_averaged_trajectory(
+            comp, signal_timestamps, response_timestamps, resampled)
+        components.append(resampled)
+    for comp in response_components:
+        components.append(comp)
+
+    averaged_rates = _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants)
+
+    for i, comp in enumerate(signal_components):
+        resampled = np.zeros(length)
+        resample_trajectory(comp, signal_timestamps, response_timestamps, resampled)
+        components[i] = resampled
+
+    instantaneous_rates = _calculate_selected_reaction_propensities(
+        components, reaction_k, reaction_reactants, reaction_events)
+
+    # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
+    result = np.zeros(length)
+    for i in range(1, length):
+        result[i] = result[i - 1] + np.log(instantaneous_rates[i]) - averaged_rates[i] * (response_timestamps[i] - response_timestamps[i-1])
+    return result
+
+
 @jit(nopython=True, parallel=True)
-def propensities(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
+def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
     num_r, length = response_components[0].shape
     num_s, _ = signal_components[0].shape
 
-    result = np.zeros((num_s, num_r, length))
-    for s in prange(num_s):
-        for r in prange(num_r):
-            components = TypedList()
+    result = np.zeros((num_r, length))
+    for r in prange(num_r):
+        log_p = np.zeros((num_s, length))
+        for s in range(num_s):
+            sc = TypedList()
             for comp in signal_components:
-                resampled = np.zeros(length)
-                if reaction_events is None:
-                    resample_averaged_trajectory(
-                        comp[s], signal_timestamps[s], response_timestamps[r], resampled)
-                else:
-                    resample_trajectory(
-                        comp[s], signal_timestamps[s], response_timestamps[r], resampled)
-                components.append(resampled)
+                sc.append(comp[s])
+            rc = TypedList()
             for comp in response_components:
-                components.append(comp[r])
-
-            if reaction_events is None:
-                result[s, r] = _calculate_sum_of_reaction_propensities(
-                    components, reaction_k, reaction_reactants)
-            else:
-                result[s, r] = _calculate_selected_reaction_propensities(
-                    components, reaction_k, reaction_reactants, reaction_events[r])
+                rc.append(comp[r])
+            log_p[s] = log_likelihood(sc, signal_timestamps[s], rc, response_timestamps[r], reaction_k, reaction_reactants, reaction_events[r])
+        
+        if num_s > 1:
+            for i in range(length):
+                result[r, i] = logsumexp(log_p[:, i], scale=1/num_s)
+        else:
+            result[r] = log_p[0]
 
     return result
+
+
+
 
 
 def compile_reactions(response, signal):
@@ -233,8 +273,8 @@ def compile_reactions(response, signal):
 def log_likelihoods_given_signal(response, signal):
     """ Calculates the individual transition probabilities for a response trajectory given a signal.
 
-    Returns an array of transition probabilities which when multiplied together result in the likelihood
-    $p(X|S)$ where X is the response trajectory and S is the signal trajectory.
+    Returns an array of transition probabilities which when added together result in the log likelihood
+    $log p(X|S)$ where X is the response trajectory and S is the signal trajectory.
     """
 
     signal_comps, response_comps, reaction_k, reaction_reactants = compile_reactions(
@@ -243,19 +283,7 @@ def log_likelihoods_given_signal(response, signal):
     response_ts = response['timestamps']
     events = response['reaction_events']
 
-    instantaneous_rates = propensities(
-        signal_comps, signal_ts, response_comps, response_ts, reaction_k, reaction_reactants, events)
-
-    averaged_rates = propensities(
-        signal_comps, signal_ts, response_comps, response_ts, reaction_k, reaction_reactants, None)
-
-    time_delta = np.diff(response['timestamps'], prepend=0.0)
-
-    # shape (signals, responses, log_likelihoods)
-    assert len(averaged_rates.shape) == 3
-
-    # return the logarithm of `instantaneous_rates * np.exp(-averaged_rates * time_delta)`
-    return np.log(instantaneous_rates) - averaged_rates * time_delta
+    return log_averaged_likelihood(signal_comps, signal_ts, response_comps, response_ts, reaction_k, reaction_reactants, events)
 
 
 def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
