@@ -43,7 +43,7 @@ def logsumexp(x, scale=1):
 
     s = np.sum(tmp)
     out = np.log(s)
-    
+
     return out + x_max
 
 
@@ -190,11 +190,13 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
     for comp in response_components:
         components.append(comp)
 
-    averaged_rates = _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants)
+    averaged_rates = _calculate_sum_of_reaction_propensities(
+        components, reaction_k, reaction_reactants)
 
     for i, comp in enumerate(signal_components):
         resampled = np.zeros(length)
-        resample_trajectory(comp, signal_timestamps, response_timestamps, resampled)
+        resample_trajectory(comp, signal_timestamps,
+                            response_timestamps, resampled)
         components[i] = resampled
 
     instantaneous_rates = _calculate_selected_reaction_propensities(
@@ -203,32 +205,39 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
     result = np.zeros(length)
     for i in range(1, length):
-        result[i] = result[i - 1] + np.log(instantaneous_rates[i]) - averaged_rates[i] * (response_timestamps[i] - response_timestamps[i-1])
+        result[i] = result[i - 1] + np.log(instantaneous_rates[i]) - averaged_rates[i] * (
+            response_timestamps[i] - response_timestamps[i-1])
     return result
 
 
-@jit(nopython=True, parallel=True)
+@jit(nopython=True, parallel=False, fastmath=True, debug=True)
 def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
     num_r, length = response_components[0].shape
     num_s, _ = signal_components[0].shape
 
-    result = np.zeros((num_r, length))
-    for r in prange(num_r):
-        log_p = np.zeros((num_s, length))
-        for s in range(num_s):
-            sc = TypedList()
-            for comp in signal_components:
-                sc.append(comp[s])
-            rc = TypedList()
-            for comp in response_components:
-                rc.append(comp[r])
-            log_p[s] = log_likelihood(sc, signal_timestamps[s], rc, response_timestamps[r], reaction_k, reaction_reactants, reaction_events[r])
-        
-        if num_s > 1:
-            for i in range(length):
-                result[r, i] = logsumexp(log_p[:, i], scale=1/num_s)
+    result = np.empty((num_r, length))
+    for j in prange(num_r * num_s):
+        r = j // num_s
+        s = j % num_s
+
+        sc = TypedList()
+        for comp in signal_components:
+            sc.append(comp[s])
+        rc = TypedList()
+        for comp in response_components:
+            rc.append(comp[r])
+
+        log_p = log_likelihood(sc, signal_timestamps[s], rc, response_timestamps[r],
+                               reaction_k, reaction_reactants, reaction_events[r])
+
+        if s > 0:
+            # We correctly average the likelihood over multiple signals if requested.
+            #
+            # Note that since we computed the log likelihoods we have to use the
+            # logaddexp operation to correctly perform the averaging
+            result[r] = np.logaddexp(result[r], log_p - np.log(num_s))
         else:
-            result[r] = log_p[0]
+            result[r] = log_p - np.log(num_s)
 
     return result
 
