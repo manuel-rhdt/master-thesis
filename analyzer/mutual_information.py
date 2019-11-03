@@ -70,27 +70,22 @@ def calculate(s, combined_signal):
     for name, val in combined_signal['components'].items():
         this_signal['components'][name] = val[[s]]
 
-    r_given_s = analyzer.log_likelihoods_given_signal(
-        combined_response, this_signal)
-
     signals_without_this = {'components': {}, 'timestamps': None}
     for name, comp in combined_signal['components'].items():
         signals_without_this['components'][name] = np.delete(comp, s, axis=0)
     signals_without_this['timestamps'] = np.delete(
         combined_signal['timestamps'], s, axis=0)
 
-    # ignore underflow in exponentials small numbers
-    np.seterr(all='warn', under='ignore')
-    mutual_information = np.zeros((num_responses, 2, response_len))
+    mutual_information = np.empty((2, num_responses, response_len))
+    mutual_information[0] = combined_response['timestamps']
 
-    r_given_s_prime = analyzer.log_likelihoods_given_signal(
+    mutual_information[1] = analyzer.log_likelihoods_given_signal(
+        combined_response, this_signal)
+    mutual_information[1] -= analyzer.log_likelihoods_given_signal(
         combined_response, signals_without_this)
 
-    mutual_information[:, 0] = combined_response['timestamps']
-    mutual_information[:, 1] = r_given_s - r_given_s_prime
-
     name = CONFIGURATION['output']
-    np.savez('{}.{}'.format(name, s), mutual_information)
+    np.save('{}.{}'.format(name, s), np.swapaxes(mutual_information, 0, 1))
 
 
 def generate_signals():

@@ -233,9 +233,6 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
     return result
 
 
-
-
-
 def compile_reactions(response, signal):
     name_idx_map = {}
 
