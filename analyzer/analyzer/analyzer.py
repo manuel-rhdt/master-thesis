@@ -48,7 +48,7 @@ def logsumexp(x, scale=1):
 
 
 @jit(nopython=True, fastmath=True)
-def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants, result=None):
+def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants):
     """ Accelerated reaction propensity calculation
 
     Arguments:
@@ -59,20 +59,16 @@ def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_rea
     Returns:
         [type] -- [description]
     """
-    traj_length = components[0].shape[-1]
+    result = np.zeros_like(components[0])
 
-    if result is None:
-        result = np.zeros_like(components[0])
+    for n_reaction in range(len(reaction_k)):
+        tmp = np.full_like(components[0], reaction_k[n_reaction])
 
-    for i in prange(traj_length):
-        for n_reaction in range(len(reaction_k)):
-            tmp = reaction_k[n_reaction]
+        for j_reactant in reaction_reactants[n_reaction]:
+            if j_reactant >= 0:
+                tmp *= components[j_reactant]
 
-            for j_reactant in reaction_reactants[n_reaction]:
-                if j_reactant >= 0:
-                    tmp *= components[j_reactant][i]
-
-            result[i] += tmp
+        result += tmp
 
     return result
 
@@ -89,18 +85,21 @@ def _calculate_selected_reaction_propensities(components, reaction_k, reaction_r
     Returns:
         [type] -- [description]
     """
-    result = np.zeros_like(components[0])
-
-    traj_length = components[0].shape[-1]
-
     assert reaction_events.shape == components[0].shape
 
-    for i in range(traj_length):
-        event = reaction_events[i]
-        result[i] = reaction_k[event]
-        for j_reactant in reaction_reactants[event]:
+    propensities = np.empty(reaction_k.shape + components[0].shape)
+    for n_reaction in range(len(reaction_k)):
+        propensities[n_reaction] = np.full_like(
+            components[0], reaction_k[n_reaction])
+
+        for j_reactant in reaction_reactants[n_reaction]:
             if j_reactant >= 0:
-                result[i] *= components[j_reactant][i]
+                propensities[n_reaction] *= components[j_reactant]
+
+    result = np.empty_like(components[0])
+    for i in range(components[0].shape[-1]):
+        event = reaction_events[i]
+        result[i] = propensities[event, i]
 
     return result
 
@@ -177,7 +176,7 @@ def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out
     return out
 
 
-@jit(nopython=True)
+@jit(nopython=True, fastmath=True)
 def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
     length, = response_components[0].shape
 
@@ -203,14 +202,15 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
         components, reaction_k, reaction_reactants, reaction_events)
 
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
-    result = np.zeros(length)
+    result = np.empty(length)
+    result[0] = 0.0
     for i in range(1, length):
         result[i] = result[i - 1] + np.log(instantaneous_rates[i]) - averaged_rates[i] * (
             response_timestamps[i] - response_timestamps[i-1])
     return result
 
 
-@jit(nopython=True, parallel=False, fastmath=True, debug=True)
+@jit(nopython=True, parallel=True, fastmath=True)
 def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
     num_r, length = response_components[0].shape
     num_s, _ = signal_components[0].shape
@@ -235,6 +235,9 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
             #
             # Note that since we computed the log likelihoods we have to use the
             # logaddexp operation to correctly perform the averaging
+            #
+            # The next line of code performs the following computation:
+            # result <- log(exp(result) + exp(log_p) / num_s)
             result[r] = np.logaddexp(result[r], log_p - np.log(num_s))
         else:
             result[r] = log_p - np.log(num_s)
