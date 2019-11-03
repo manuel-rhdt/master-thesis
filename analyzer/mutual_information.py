@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import settings
 from analyzer import analyzer
 import pathlib
@@ -43,12 +44,8 @@ def load_response(sig, res):
     return analyzer.load_trajectory(pathlib.Path(CONFIGURATION['responses'].format(sig=sig, res=res)))
 
 
-def calculate(s, combined_signal):
-    num_signals = CONFIGURATION['num_signals']
-    num_responses = CONFIGURATION['num_responses']
-
+def generate_responses(s, num_responses):
     combined_response = None
-    response_len = None
     for r in range(num_responses):
         write_response(s, r)
         response = load_response(s, r)
@@ -64,6 +61,18 @@ def calculate(s, combined_signal):
             combined_response['components'][name][r] = val
         combined_response['timestamps'][r] = response['timestamps']
         combined_response['reaction_events'][r] = response['reaction_events']
+    return combined_response
+
+
+
+def calculate(s, combined_signal):
+    num_signals = CONFIGURATION['num_signals']
+    num_responses = CONFIGURATION['num_responses']
+
+    print(s, ': generate responses')
+    combined_response = generate_responses(s, num_responses)
+    response_len = combined_response['timestamps'][0].shape[-1]
+    print(s, ': generate responses: Done')
 
     this_signal = {'components': {},
                    'timestamps': combined_signal['timestamps'][[s]]}
@@ -79,13 +88,17 @@ def calculate(s, combined_signal):
     mutual_information = np.empty((2, num_responses, response_len))
     mutual_information[0] = combined_response['timestamps']
 
+    print(s, ': generate this likelihood')
     mutual_information[1] = analyzer.log_likelihoods_given_signal(
         combined_response, this_signal)
+    print(s, ': generate other likelihood')
     mutual_information[1] -= analyzer.log_likelihoods_given_signal(
         combined_response, signals_without_this)
+    print(s, ': Save file')
 
     name = CONFIGURATION['output']
     np.save('{}.{}'.format(name, s), np.swapaxes(mutual_information, 0, 1))
+    print(s, ': DONE')
 
 
 def generate_signals():
@@ -116,10 +129,10 @@ def main():
 
     combined_signal = generate_signals()
 
-    pbar = tqdm(total=num_signals)
+    # pbar = tqdm(total=num_signals)
     for s in range(num_signals):
         calculate(s, combined_signal)
-        pbar.update()
+        # pbar.update()
 
 
 def profile():
