@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import settings
 from analyzer import analyzer
 import pathlib
@@ -43,12 +44,8 @@ def load_response(sig, res):
     return analyzer.load_trajectory(pathlib.Path(CONFIGURATION['responses'].format(sig=sig, res=res)))
 
 
-def calculate(s, combined_signal):
-    num_signals = CONFIGURATION['num_signals']
-    num_responses = CONFIGURATION['num_responses']
-
+def generate_responses(s, num_responses):
     combined_response = None
-    response_len = None
     for r in range(num_responses):
         write_response(s, r)
         response = load_response(s, r)
@@ -64,14 +61,23 @@ def calculate(s, combined_signal):
             combined_response['components'][name][r] = val
         combined_response['timestamps'][r] = response['timestamps']
         combined_response['reaction_events'][r] = response['reaction_events']
+    return combined_response
+
+
+
+def calculate(s, combined_signal):
+    num_signals = CONFIGURATION['num_signals']
+    num_responses = CONFIGURATION['num_responses']
+
+    print(s, ': generate responses')
+    combined_response = generate_responses(s, num_responses)
+    response_len = combined_response['timestamps'][0].shape[-1]
+    print(s, ': generate responses: Done')
 
     this_signal = {'components': {},
                    'timestamps': combined_signal['timestamps'][[s]]}
     for name, val in combined_signal['components'].items():
         this_signal['components'][name] = val[[s]]
-
-    r_given_s = analyzer.log_likelihoods_given_signal(
-        combined_response, this_signal)
 
     signals_without_this = {'components': {}, 'timestamps': None}
     for name, comp in combined_signal['components'].items():
@@ -79,19 +85,20 @@ def calculate(s, combined_signal):
     signals_without_this['timestamps'] = np.delete(
         combined_signal['timestamps'], s, axis=0)
 
-    # ignore underflow in exponentials small numbers
-    np.seterr(all='warn', under='ignore')
-    mutual_information = np.zeros((num_responses, 2, response_len))
+    mutual_information = np.empty((2, num_responses, response_len))
+    mutual_information[0] = combined_response['timestamps']
 
-    r_given_s_prime = analyzer.log_likelihoods_given_signal(
+    print(s, ': generate this likelihood')
+    mutual_information[1] = analyzer.log_likelihoods_given_signal(
+        combined_response, this_signal)
+    print(s, ': generate other likelihood')
+    mutual_information[1] -= analyzer.log_likelihoods_given_signal(
         combined_response, signals_without_this)
-    cumulative_sum = np.cumsum(r_given_s_prime - r_given_s[0], axis=-1)
-    information_gain = np.mean(np.exp(cumulative_sum), axis=0)
-    mutual_information[:, 0] = combined_response['timestamps']
-    mutual_information[:, 1] = -np.log(information_gain)
+    print(s, ': Save file')
 
     name = CONFIGURATION['output']
-    np.savez('{}.{}'.format(name, s), mutual_information)
+    np.save('{}.{}'.format(name, s), np.swapaxes(mutual_information, 0, 1))
+    print(s, ': DONE')
 
 
 def generate_signals():
@@ -115,11 +122,6 @@ def generate_signals():
     return combined_signal
 
 
-def process_init(q, s):
-    calculate.queue = q
-    calculate.combined_signal = s
-
-
 def main():
     num_signals = CONFIGURATION['num_signals']
 
@@ -127,10 +129,10 @@ def main():
 
     combined_signal = generate_signals()
 
-    pbar = tqdm(total=num_signals)
+    # pbar = tqdm(total=num_signals)
     for s in range(num_signals):
         calculate(s, combined_signal)
-        pbar.update()
+        # pbar.update()
 
 
 def profile():
