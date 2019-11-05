@@ -13,3 +13,4 @@ Gillespie_all.tar.gz
 *.log
 data
 CPP/build
+**.prof
