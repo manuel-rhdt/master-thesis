@@ -5,12 +5,11 @@ import pathlib
 import subprocess
 import sys
 
-import msgpack
 import numpy as np
 import scipy
 import scipy.stats
 from scipy import interpolate
-from numba import jit, guvectorize, float64, int32, prange
+from numba import jit, guvectorize, float64, int32, prange, cuda
 from numba.typed import List as TypedList
 
 import settings
@@ -25,30 +24,8 @@ def generate_signal(name, max_time=1000, step_size=0.01, x0=500, mean=500, corre
     return {'timestamps': timestamps, 'components': {name: x}}
 
 
-def save_signal(name, path, duration=1000, step_size=0.01, x0=500, mean=500, correlation_time=10, diffusion=10):
-    with open(str(path), 'wb') as file:
-        signal = generate_signal(name, duration, step_size, x0,
-                                 mean, correlation_time, diffusion)
-        signal['timestamps'] = signal['timestamps'].tolist()
-        signal['components'][name] = signal['components'][name].tolist()
-        msgpack.pack(signal, file)
-
-
-# inspired by scipy.misc.logsumexp
 @jit(nopython=True, fastmath=True)
-def logsumexp(x, scale=1):
-    x = np.asarray(x)
-    x_max = np.amax(x)
-    tmp = scale * np.exp(x - x_max)
-
-    s = np.sum(tmp)
-    out = np.log(s)
-
-    return out + x_max
-
-
-@jit(nopython=True, fastmath=True)
-def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants):
+def calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants):
     """ Accelerated reaction propensity calculation
 
     Arguments:
@@ -59,7 +36,7 @@ def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_rea
     Returns:
         [type] -- [description]
     """
-    result = np.zeros_like(components[0])
+    result = np.empty_like(components[0])
 
     for n_reaction in range(len(reaction_k)):
         tmp = np.full_like(components[0], reaction_k[n_reaction])
@@ -68,13 +45,16 @@ def _calculate_sum_of_reaction_propensities(components, reaction_k, reaction_rea
             if j_reactant >= 0:
                 tmp *= components[j_reactant]
 
-        result += tmp
+        if n_reaction == 0:
+            result = tmp
+        else:
+            result += tmp
 
     return result
 
 
 @jit(nopython=True, fastmath=True)
-def _calculate_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events):
+def calculate_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events):
     """ Accelerated reaction propensity calculation
 
     Arguments:
@@ -89,8 +69,7 @@ def _calculate_selected_reaction_propensities(components, reaction_k, reaction_r
 
     propensities = np.empty(reaction_k.shape + components[0].shape)
     for n_reaction in range(len(reaction_k)):
-        propensities[n_reaction] = np.full_like(
-            components[0], reaction_k[n_reaction])
+        propensities[n_reaction] = reaction_k[n_reaction]
 
         for j_reactant in reaction_reactants[n_reaction]:
             if j_reactant >= 0:
@@ -104,19 +83,22 @@ def _calculate_selected_reaction_propensities(components, reaction_k, reaction_r
     return result
 
 
+@cuda.jit
+def gpu_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events, propensities):
+    pos = cuda.grid(1)
+    if pos < reaction_events.size:
+        event = reaction_events[pos]
+        propensities[pos] = reaction_k[event]
+        for j_reactant in reaction_reactants[event]:
+            if j_reactant >= 0:
+                propensities[pos] *= components[j_reactant][pos]
+
+
 @jit(nopython=True, fastmath=True)
-def resample_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
-    """ Resample trajectory with `old_timestamp` at the times in `new_timestamps`.
+def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None):
+    """ Evaluate trajectory with events at `old_timestamps` at the times in `new_timestamps`.
 
-    This function assumes that `new_timestamps` is ordered.
-
-    Arguments:
-        trajectory {[type]} -- [description]
-        old_timestamps {[type]} -- [description]
-        new_timestamps {[type]} -- [description]
-
-    Returns:
-        [type] -- an array of values
+    Note: This function assumes that both `old_timestamps` and `new_timestamps` are ordered.
     """
     if out is None:
         out = np.empty(new_timestamps.shape, trajectory.dtype)
@@ -135,21 +117,37 @@ def resample_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
 
 
 @jit(nopython=True, fastmath=True)
-def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out=None):
-    """ Resample and averagte trajectory with `old_timestamp` at the times in `new_timestamps`.
+def weighted_time_average(trajectory, old_timestamps, new_timestamps, out=None):
+    """ Average of `trajectory` with `old_timestamp` in the time-intervals specified by `new_timestamps`.
 
-    This function assumes that `new_timestamps` is ordered.
+    Note: This function assumes that both `old_timestamps` and `new_timestamps` are ordered.
 
-    Arguments:
-        trajectory {[type]} -- [description]
-        old_timestamps {[type]} -- [description]
-        new_timestamps {[type]} -- [description]
+    # Discussion
 
-    Returns:
-        [type] -- an array of values
+    This function is used for the calculation of the mean propensity over a timestep in the
+    response trajectory. Since the propensity for a reaction is variable, the survival probability
+    depends on the time-integrated value of the total propensity. Since the signal trajectory is
+    assumed to be piecewise constant we can calculate the average signal between every
+    pair of response timestamps. If we use this average signal to compute the total propensity,
+    we don't require the calculation of the time integral anymore.
+
+    This function computes the average of a trajectory given by the values `trajectory`
+    at the timestamps `old_timestamps` where the averaging happens for the intervals between pairs
+    of timestamps in `new_timestamps`.
+
+    Returns a list of averages of size `len(new_timestamps) - 1`.
+
+              |                                    |
+              |        +---------------------------|
+              |========|===========================| <== average
+              |        |                           |
+              |--------+                           |
+              |                                    |
+              +------------------------------------+---> time
+        old_timestamps[i]                  old_timestamps[i+1]
     """
     if out is None:
-        out = np.empty(new_timestamps.shape, trajectory.dtype)
+        out = np.empty(len(new_timestamps) - 1, trajectory.dtype)
     old_idx = 0
     old_ts = old_timestamps[0]
     trajectory_value = trajectory[0]
@@ -172,63 +170,67 @@ def resample_averaged_trajectory(trajectory, old_timestamps, new_timestamps, out
             low = old_ts
 
         out[new_idx] = acc / delta_t
-    out[-1] = trajectory[min(old_idx, len(old_timestamps)-1)]
     return out
 
 
 @jit(nopython=True, fastmath=True)
-def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
-    length, = response_components[0].shape
+def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, granularity=1):
+    num_signals, _ = signal_components.shape
+    num_responses, length = response_components.shape
 
-    components = TypedList()
-    for comp in signal_components:
-        resampled = np.zeros(length)
-        resample_averaged_trajectory(
-            comp, signal_timestamps, response_timestamps, resampled)
-        components.append(resampled)
-    for comp in response_components:
-        components.append(comp)
+    components = np.empty((num_signals + num_responses, length-1))
+    for i in range(num_signals):
+        weighted_time_average(
+            signal_components[i], signal_timestamps, response_timestamps, out=components[i])
+    for i in range(num_responses):
+        components[num_signals + i] = response_components[i][1:]
 
-    averaged_rates = _calculate_sum_of_reaction_propensities(
+    averaged_rates = calculate_sum_of_reaction_propensities(
         components, reaction_k, reaction_reactants)
 
-    for i, comp in enumerate(signal_components):
-        resampled = np.zeros(length)
-        resample_trajectory(comp, signal_timestamps,
-                            response_timestamps, resampled)
-        components[i] = resampled
+    for i in range(num_signals):
+        # we don't evaluate the trajectory at the first timestamp since it only specifies the
+        # initial value (no reaction occurecd)
+        evaluate_trajectory_at(signal_components[i], signal_timestamps,
+                               response_timestamps[1:], components[i])
 
-    instantaneous_rates = _calculate_selected_reaction_propensities(
+    instantaneous_rates = calculate_selected_reaction_propensities(
         components, reaction_k, reaction_reactants, reaction_events)
 
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
-    result = np.empty(length)
-    result[0] = 0.0
-    for i in range(1, length):
-        result[i] = result[i - 1] + np.log(instantaneous_rates[i]) - averaged_rates[i] * (
-            response_timestamps[i] - response_timestamps[i-1])
+
+    # perform the operations in-place
+    dt = np.zeros(length-1)
+    for i in range(length-1):
+        dt[i] = response_timestamps[i+1] - response_timestamps[i]
+    likelihoods = np.log(instantaneous_rates)
+    likelihoods -= averaged_rates * dt
+
+    result = np.empty(-(-(length - 1) // granularity))
+    accumulator = 0.0
+    for i in range(length-1):
+        accumulator += likelihoods[i]
+        if i % granularity == 0:
+            result[i // granularity] = accumulator
+
     return result
 
 
-@jit(nopython=True, parallel=True, fastmath=True)
-def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events):
-    num_r, length = response_components[0].shape
-    num_s, _ = signal_components[0].shape
+@jit(nopython=True, fastmath=True, parallel=True)
+def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, granularity=1):
+    num_r, _, length = response_components.shape
+    num_s, _, _ = signal_components.shape
 
-    result = np.empty((num_r, length))
+    result = np.empty((num_r, length // granularity))
     for j in prange(num_r * num_s):
         r = j // num_s
         s = j % num_s
 
-        sc = TypedList()
-        for comp in signal_components:
-            sc.append(comp[s])
-        rc = TypedList()
-        for comp in response_components:
-            rc.append(comp[r])
+        sc = signal_components[s]
+        rc = response_components[r]
 
         log_p = log_likelihood(sc, signal_timestamps[s], rc, response_timestamps[r],
-                               reaction_k, reaction_reactants, reaction_events[r])
+                               reaction_k, reaction_reactants, reaction_events[r], granularity=granularity)
 
         if s > 0:
             # We correctly average the likelihood over multiple signals if requested.
@@ -297,46 +299,6 @@ def log_likelihoods_given_signal(response, signal):
 
 def generate_input(name, num_components, num_reactions, num_blocks, num_steps):
     return '{}\n{}\n{}\n{} {} {}\n{}\n'.format(name, num_components, num_reactions, num_blocks, 0, num_steps, 100)
-
-
-def simulate_trajectory(input_name, output_name=None, trajectories=None, cwd=settings.configuration['gillespie_cwd'], seed=4252):
-    cmd = [os.path.abspath(
-        str(settings.configuration['executable'])), input_name, '-s', str(seed)]
-    if output_name is not None:
-        cmd.extend(['-o', os.path.abspath(output_name)])
-
-    if trajectories is not None:
-        assert len(trajectories) >= 1
-        for t in trajectories:
-            cmd.extend(['-t', os.path.abspath(t)])
-
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, cwd=os.path.abspath(cwd),
-                   timeout=10.0, check=True)
-
-
-def load_trajectories(path, glob):
-    trajectories = []
-    for file_path in pathlib.Path(path).glob(glob):
-        trajectories.append(load_trajectory(file_path))
-    return trajectories
-
-
-def load_trajectory(path):
-    with path.open('rb') as f:
-        trajectory = msgpack.unpack(f, raw=False)
-        trajectory['timestamps'] = np.array(trajectory['timestamps'])
-        for component in trajectory['components']:
-            trajectory['components'][component] = np.array(
-                trajectory['components'][component])
-
-        if 'random_variates' in trajectory:
-            trajectory['random_variates'] = np.array(
-                trajectory['random_variates'])
-
-        if 'reaction_events' in trajectory:
-            trajectory['reaction_events'] = np.array(
-                trajectory['reaction_events'])
-    return trajectory
 
 
 def empty_trajectory(components, observations, length, events=False):

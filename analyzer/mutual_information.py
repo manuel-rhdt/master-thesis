@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import settings
-from analyzer import analyzer
+from analyzer import analyzer, stochastic_sim
 import pathlib
 import numpy as np
 import os
@@ -13,103 +13,82 @@ from tqdm import tqdm
 
 CONFIGURATION = settings.configuration['mutual_information']
 mean = CONFIGURATION['signal_mean']
+duration = CONFIGURATION['signal_duration']
 corr_time = CONFIGURATION['signal_correlation_time']
 diffusion = CONFIGURATION['signal_diffusion']
 resolution = CONFIGURATION['signal_resolution']
 
-
-def write_signal(i_signal):
-    signal_name = CONFIGURATION['signals'].format(sig=i_signal)
-    analyzer.save_signal(CONFIGURATION['signal_component_name'], signal_name,
-                         x0=mean, mean=mean, step_size=1/resolution, correlation_time=corr_time, diffusion=diffusion, duration=CONFIGURATION['signal_duration'])
-    # analyzer.simulate_trajectory(
-    #    'signal.inp', signal_name, cwd = '../runs/signal', seed = i_signal)
+num_signals = CONFIGURATION['num_signals']
+num_responses = CONFIGURATION['num_responses']
 
 
-def write_response(i_signal, i_response):
-    signal_name = CONFIGURATION['signals'].format(sig=i_signal)
-    analyzer.simulate_trajectory(CONFIGURATION['input_name'], CONFIGURATION['responses'].format(sig=i_signal, res=i_response), [signal_name],
-                                 seed=i_response)
+reaction_k = np.array([0.005, 0.02])
+reaction_reactants = np.array([[0], [1]])
+reaction_products = np.array([[0, 1], [-1, -1]])
 
 
-def delete_response(i_signal, i_response):
-    os.remove(CONFIGURATION['responses'].format(sig=i_signal, res=i_response))
+length = 100000
+timestamps = np.zeros((num_responses, length))
+trajectory = np.zeros((num_responses, 1, length))
+reaction_events = np.zeros((num_responses, length - 1), dtype='i4')
 
 
-def load_signal(i):
-    return analyzer.load_trajectory(pathlib.Path(CONFIGURATION['signals'].format(sig=i)))
+def generate_responses(s, num_responses, combined_signal):
+    trajectory[..., 0, 0] = 1000.0
 
+    ext_components = combined_signal['components']['S'][[s]]
+    ext_timestamps = combined_signal['timestamps'][s]
 
-def load_response(sig, res):
-    return analyzer.load_trajectory(pathlib.Path(CONFIGURATION['responses'].format(sig=sig, res=res)))
+    stochastic_sim.simulate(timestamps, trajectory, ext_components, ext_timestamps,
+                            reaction_k, reaction_reactants, reaction_products, reaction_events)
 
-
-def generate_responses(s, num_responses):
-    combined_response = None
-    for r in range(num_responses):
-        write_response(s, r)
-        response = load_response(s, r)
-        delete_response(s, r)
-        response_len = response['timestamps'].shape[0]
-
-        if combined_response is None:
-            combined_response = analyzer.empty_trajectory(
-                response['components'].keys(), num_responses, response_len, events=True)
-            combined_response['reactions'] = response['reactions']
-
-        for name, val in response['components'].items():
-            combined_response['components'][name][r] = val
-        combined_response['timestamps'][r] = response['timestamps']
-        combined_response['reaction_events'][r] = response['reaction_events']
-    return combined_response
-
+    return {
+        'components': trajectory,
+        'timestamps': timestamps,
+        'reaction_events': reaction_events,
+    }
 
 
 def calculate(s, combined_signal):
-    num_signals = CONFIGURATION['num_signals']
-    num_responses = CONFIGURATION['num_responses']
-
-    print(s, ': generate responses')
-    combined_response = generate_responses(s, num_responses)
+    combined_response = generate_responses(s, num_responses, combined_signal)
     response_len = combined_response['timestamps'][0].shape[-1]
-    print(s, ': generate responses: Done')
 
-    this_signal = {'components': {},
-                   'timestamps': combined_signal['timestamps'][[s]]}
-    for name, val in combined_signal['components'].items():
-        this_signal['components'][name] = val[[s]]
+    granularity = 100
+    result_size = -(-(response_len - 1) // granularity)
 
-    signals_without_this = {'components': {}, 'timestamps': None}
-    for name, comp in combined_signal['components'].items():
-        signals_without_this['components'][name] = np.delete(comp, s, axis=0)
-    signals_without_this['timestamps'] = np.delete(
-        combined_signal['timestamps'], s, axis=0)
+    mutual_information = np.empty(
+        (2, num_responses, result_size))
 
-    mutual_information = np.empty((2, num_responses, response_len))
-    mutual_information[0] = combined_response['timestamps']
+    mutual_information[0] = combined_response['timestamps'][:, 1::granularity]
 
-    print(s, ': generate this likelihood')
-    mutual_information[1] = analyzer.log_likelihoods_given_signal(
-        combined_response, this_signal)
-    print(s, ': generate other likelihood')
-    mutual_information[1] -= analyzer.log_likelihoods_given_signal(
-        combined_response, signals_without_this)
-    print(s, ': Save file')
+    signal_components = np.expand_dims(
+        combined_signal['components']['S'][[s]], axis=1)
+    signal_timestamps = combined_signal['timestamps'][[s]]
+    response_components = combined_response['components']
+    response_timestamps = combined_response['timestamps']
+    reaction_events = combined_response['reaction_events']
+
+    mutual_information[1] = analyzer.log_averaged_likelihood(
+        signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, granularity=granularity)
+
+    signal_components = np.expand_dims(np.delete(
+        combined_signal['components']['S'], s, axis=0), axis=1)
+    signal_timestamps = np.delete(combined_signal['timestamps'], s, axis=0)
+    mutual_information[1] -= analyzer.log_averaged_likelihood(
+        signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, granularity=granularity)
 
     name = CONFIGURATION['output']
-    np.save('{}.{}'.format(name, s), np.swapaxes(mutual_information, 0, 1))
-    print(s, ': DONE')
+    np.save(os.path.expandvars('{}.{}'.format(name, s)),
+            np.swapaxes(mutual_information, 0, 1))
 
 
 def generate_signals():
     num_signals = CONFIGURATION['num_signals']
 
-    for s in range(num_signals):
-        write_signal(s)
-
     combined_signal = None
     for s in range(num_signals):
-        signal = load_signal(s)
+        signal = analyzer.generate_signal(
+            'S', duration, 1/resolution, x0=mean, mean=mean, correlation_time=corr_time, diffusion=diffusion)
         if combined_signal is None:
             length = len(signal['timestamps'])
             names = ['S']
@@ -125,19 +104,21 @@ def generate_signals():
 def main():
     num_signals = CONFIGURATION['num_signals']
 
-    pathlib.Path(CONFIGURATION['output']).parent.mkdir(exist_ok=True)
+    pathlib.Path(os.path.expandvars(
+        CONFIGURATION['output'])).parent.mkdir(exist_ok=True)
 
     combined_signal = generate_signals()
 
-    # pbar = tqdm(total=num_signals)
+    pbar = tqdm(total=num_signals)
     for s in range(num_signals):
         calculate(s, combined_signal)
-        # pbar.update()
+        pbar.update()
 
 
 def profile():
     num_signals = CONFIGURATION['num_signals']
-    pathlib.Path(CONFIGURATION['output']).parent.mkdir(exist_ok=True)
+    pathlib.Path(os.path.expandvars(
+        CONFIGURATION['output'])).parent.mkdir(exist_ok=True)
     combined_signal = generate_signals()
 
     for s in range(1):

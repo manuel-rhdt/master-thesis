@@ -1,9 +1,11 @@
 import numpy
 import numpy.random
 
+from numba import njit, prange
 
-def calc_propensities(components, reaction_k, reaction_reactants):
-    propensities = numpy.zeros(reaction_k.shape)
+
+@njit(fastmath=True)
+def calc_propensities(components, reaction_k, reaction_reactants, propensities):
     for n in range(len(reaction_k)):
         propensities[n] = reaction_k[n]
         for reactant in reaction_reactants[n]:
@@ -12,16 +14,18 @@ def calc_propensities(components, reaction_k, reaction_reactants):
     return propensities
 
 
-def try_propagate_time(progress, random_variates, timestamps, next_ext_timestamp, components, reaction_k, reaction_reactants):
-    """ Returns `True` if time was successfully propagated
+@njit(fastmath=True)
+def try_propagate_time(progress, random_variates, timestamps, next_ext_timestamp, components, reaction_k, reaction_reactants, propensities):
+    """ Returns `True` if time was successfully propagated. 
+
+    If successfull the new timestamp will be saved in `timestamps`.
     """
     max_time_step = next_ext_timestamp - timestamps[progress]
 
     if max_time_step <= 0.0:
         return False
 
-    propensities = calc_propensities(
-        components, reaction_k, reaction_reactants)
+    calc_propensities(components, reaction_k, reaction_reactants, propensities)
     total_propensity = numpy.sum(propensities)
 
     assert total_propensity >= 0.0
@@ -37,27 +41,108 @@ def try_propagate_time(progress, random_variates, timestamps, next_ext_timestamp
         return True
 
 
-def simulate(length, initial_components, signal_components, signal_timestamps, response_components, reaction_k, reaction_reactants, reaction_events):
-    random_variates = -numpy.log(numpy.random.random_sample(size=length))
-    timestamps = numpy.zeros(length)
+@njit(fastmath=True)
+def select_reaction(propensities):
+    r = numpy.random.random_sample()
+    propensities = numpy.asarray(propensities)
 
-    components = initial_components
+    probabilities = propensities / numpy.sum(propensities)
+
+    i = 0
+    acc = probabilities[0]
+    while r > acc:
+        i += 1
+        acc += probabilities[i]
+
+    return i
+
+
+@njit(fastmath=True)
+def update_components(selected_reaction, components, reaction_reactants, reaction_products):
+    for reactant in reaction_reactants[selected_reaction]:
+        if reactant >= 0:
+            components[reactant] -= 1.0
+    for product in reaction_products[selected_reaction]:
+        if product >= 0:
+            components[product] += 1.0
+
+
+@njit(fastmath=True)
+def simulate_one(timestamps, trajectory, ext_components, ext_timestamps, reaction_k, reaction_reactants, reaction_products, reaction_events):
+    """Simulate one trajectory
+
+    Arguments:
+        timestamps {numpy.ndarray} -- [description]
+        initial_components {[type]} -- [description]
+        signal_components {[type]} -- [description]
+        signal_timestamps {[type]} -- [description]
+        response_components {[type]} -- [description]
+        reaction_k {[type]} -- [description]
+        reaction_reactants {[type]} -- [description]
+        reaction_products {[type]} -- [description]
+        reaction_events {[type]} -- [description]
+
+    Returns:
+        [type] -- [description]
+    """
+    length = len(timestamps)
+    if length < 2:
+        return
+    random_variates = numpy.array(
+        [numpy.random.random_sample() for _ in range(length)])
+    random_variates = -numpy.log(random_variates)
 
     progress = 0
     ext_progress = 0
+    components = numpy.zeros(len(trajectory) + len(ext_components))
 
-    result = numpy.empty((len(response_components), length))
-    timestamps = numpy.zeros(length)
-    while progress < length - 1:
-        next_ext_timestamp = signal_timestamps[ext_progress]
+    # use the initial values
+    timestamps[:] = 0.0
+    for i in range(len(ext_components)):
+        components[i] = ext_components[i][ext_progress]
+    for comp in range(len(trajectory)):
+        components[comp + len(ext_components)] = trajectory[comp][progress]
+
+    trajectory[:, progress] = components[len(ext_components):]
+
+    propensities = numpy.zeros(reaction_k.shape)
+
+    while progress + 1 < length:
+        if ext_progress >= len(ext_timestamps):
+            next_ext_timestamp = numpy.Inf
+        else:
+            next_ext_timestamp = ext_timestamps[ext_progress]
 
         if try_propagate_time(progress, random_variates, timestamps, next_ext_timestamp,
-                              components, reaction_k, reaction_reactants):
+                              components, reaction_k, reaction_reactants, propensities):
             progress += 1
-            # TODO: Update components
-            result[:, progress] = components[len(signal_components):]
+
+            # Update components
+            selected_reaction = select_reaction(propensities)
+            reaction_events[progress] = selected_reaction
+            update_components(selected_reaction, components,
+                              reaction_reactants, reaction_products)
+
+            trajectory[:, progress] = components[len(ext_components):]
+
+            if progress + 1 < length:
+                timestamps[progress + 1] = timestamps[progress]
         else:
             # update the external trajectory
             ext_progress += 1
-            for i, comp in enumerate(signal_components):
-                components[i] = comp[ext_progress]
+            for i in range(len(ext_components)):
+                components[i] = ext_components[i][min(
+                    ext_progress, len(ext_components[i]) - 1)]
+
+
+@njit(parallel=True, cache=True, fastmath=True)
+def simulate(timestamps, trajectory, ext_components, ext_timestamps, reaction_k, reaction_reactants, reaction_products, reaction_events):
+    assert len(timestamps.shape) == 2
+    assert len(trajectory.shape) == 3
+    assert len(reaction_events.shape) == 2
+
+    assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
+
+    for r in prange(timestamps.shape[0]):
+        simulate_one(timestamps[r], trajectory[r], ext_components, ext_timestamps,
+                     reaction_k, reaction_reactants, reaction_products, reaction_events[r])
