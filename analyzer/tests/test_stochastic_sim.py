@@ -10,6 +10,17 @@ class TestSim(unittest.TestCase):
         i = stochastic_sim.select_reaction([0.1, 0.2, 0.3])
         self.assertIn(i, [0, 1, 2])
 
+    def test_update_concentration(self):
+        reactants = np.array([[-1], [0]])
+        products = np.array([[0], [-1]])
+
+        components = np.array([10.0])
+
+        stochastic_sim.update_components(0, components, reactants, products)
+        self.assertAlmostEqual(components[0], 11.0)
+        stochastic_sim.update_components(1, components, reactants, products)
+        self.assertAlmostEqual(components[0], 10.0)
+
     def test_simulate(self):
         length = 100
 

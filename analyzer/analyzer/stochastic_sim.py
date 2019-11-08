@@ -1,6 +1,7 @@
 import numpy
 import numpy.random
 
+import numba
 from numba import njit, prange
 
 
@@ -9,7 +10,8 @@ def calc_propensities(components, reaction_k, reaction_reactants, propensities):
     for n in range(len(reaction_k)):
         propensities[n] = reaction_k[n]
         for reactant in reaction_reactants[n]:
-            propensities[n] *= components[reactant]
+            if reactant >= 0:
+                propensities[n] *= components[reactant]
 
     return propensities
 
@@ -48,13 +50,13 @@ def select_reaction(propensities):
 
     probabilities = propensities / numpy.sum(propensities)
 
-    i = 0
+    selected_reaction = 0
     acc = probabilities[0]
-    while r > acc:
-        i += 1
-        acc += probabilities[i]
+    while r > acc and selected_reaction + 1 < len(probabilities):
+        selected_reaction += 1
+        acc += probabilities[selected_reaction]
 
-    return i
+    return selected_reaction
 
 
 @njit(fastmath=True)
@@ -92,25 +94,30 @@ def simulate_one(timestamps, trajectory, ext_components, ext_timestamps, reactio
         [numpy.random.random_sample() for _ in range(length)])
     random_variates = -numpy.log(random_variates)
 
+    num_comps = len(trajectory)
+    num_ext_comps = len(ext_components) if ext_components is not None else 0
+    ext_length = len(ext_timestamps) if ext_timestamps is not None else 0
+
     progress = 0
     ext_progress = 0
-    components = numpy.zeros(len(trajectory) + len(ext_components))
+    components = numpy.zeros(num_comps + num_ext_comps)
 
     # use the initial values
     timestamps[:] = 0.0
-    for i in range(len(ext_components)):
-        components[i] = ext_components[i][ext_progress]
-    for comp in range(len(trajectory)):
-        components[comp + len(ext_components)] = trajectory[comp][progress]
+    for i in range(num_ext_comps):
+        if ext_components is not None:
+            components[i] = ext_components[i][ext_progress]
+    for comp in range(num_comps):
+        components[comp + num_ext_comps] = trajectory[comp][progress]
 
-    trajectory[:, progress] = components[len(ext_components):]
+    trajectory[:, progress] = components[num_ext_comps:]
 
     propensities = numpy.zeros(reaction_k.shape)
 
     while progress + 1 < length:
-        if ext_progress >= len(ext_timestamps):
+        if ext_progress >= ext_length:
             next_ext_timestamp = numpy.Inf
-        else:
+        elif ext_timestamps is not None:
             next_ext_timestamp = ext_timestamps[ext_progress]
 
         if try_propagate_time(progress, random_variates, timestamps, next_ext_timestamp,
@@ -119,23 +126,24 @@ def simulate_one(timestamps, trajectory, ext_components, ext_timestamps, reactio
 
             # Update components
             selected_reaction = select_reaction(propensities)
-            reaction_events[progress] = selected_reaction
+            reaction_events[progress - 1] = selected_reaction
             update_components(selected_reaction, components,
                               reaction_reactants, reaction_products)
 
-            trajectory[:, progress] = components[len(ext_components):]
+            trajectory[:, progress] = components[num_ext_comps:]
 
             if progress + 1 < length:
                 timestamps[progress + 1] = timestamps[progress]
         else:
             # update the external trajectory
             ext_progress += 1
-            for i in range(len(ext_components)):
-                components[i] = ext_components[i][min(
-                    ext_progress, len(ext_components[i]) - 1)]
+            for i in range(num_ext_comps):
+                if ext_components is not None:
+                    components[i] = ext_components[i][min(
+                        ext_progress, len(ext_components[i]) - 1)]
 
 
-@njit(parallel=True, cache=True, fastmath=True)
+@njit(parallel=True, fastmath=True)
 def simulate(timestamps, trajectory, ext_components, ext_timestamps, reaction_k, reaction_reactants, reaction_products, reaction_events):
     assert len(timestamps.shape) == 2
     assert len(trajectory.shape) == 3
@@ -144,5 +152,9 @@ def simulate(timestamps, trajectory, ext_components, ext_timestamps, reaction_k,
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
 
     for r in prange(timestamps.shape[0]):
-        simulate_one(timestamps[r], trajectory[r], ext_components, ext_timestamps,
-                     reaction_k, reaction_reactants, reaction_products, reaction_events[r])
+        if ext_components is not None:
+            simulate_one(timestamps[r], trajectory[r], ext_components[r], ext_timestamps[r],
+                         reaction_k, reaction_reactants, reaction_products, reaction_events[r])
+        else:
+            simulate_one(timestamps[r], trajectory[r], None, None,
+                         reaction_k, reaction_reactants, reaction_products, reaction_events[r])
