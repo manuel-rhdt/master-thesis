@@ -104,11 +104,11 @@ def calculate(i, num_responses, averaging_signals):
     if num_responses == 0:
         return
 
+    response_len = 50000
+
     # generate responses from signals
-    sig = generate_signals_sim(num_responses, length=50000)
-    responses = generate_responses(num_responses,
-                                           sig['timestamps'], sig['components'], length=50000)
-    response_len = responses['timestamps'][0].shape[-1]
+    sig = generate_signals_sim(num_responses, length=response_len)
+    responses = generate_responses(num_responses, sig['timestamps'], sig['components'], length=response_len)
 
     result_size = (response_len - 1)
 
@@ -121,7 +121,7 @@ def calculate(i, num_responses, averaging_signals):
         (2, num_responses, result_size))
 
     # store the trajectory lengths for which the mutual information is computed
-    mutual_information[0] = responses['timestamps'][:, 1:] - responses['timestamps'][:, 0]
+    mutual_information[0] = responses['timestamps'][:, 1:] - responses['timestamps'][:, [0]]
 
     response_components = responses['components']
     response_timestamps = responses['timestamps']
