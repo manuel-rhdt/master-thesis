@@ -11,14 +11,15 @@ class TestSim(unittest.TestCase):
         self.assertIn(i, [0, 1, 2])
 
     def test_update_concentration(self):
-        reactants = np.array([[-1], [0]])
-        products = np.array([[0], [-1]])
+        reactions = stochastic_sim.ReactionNetwork(2)
+        reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
+        reactions.products = np.array([[0], [-1]], dtype=np.int32)
 
         components = np.array([10.0])
 
-        stochastic_sim.update_components(0, components, reactants, products)
+        stochastic_sim.update_components(0, components, reactions)
         self.assertAlmostEqual(components[0], 11.0)
-        stochastic_sim.update_components(1, components, reactants, products)
+        stochastic_sim.update_components(1, components, reactions)
         self.assertAlmostEqual(components[0], 10.0)
 
     def test_simulate(self):
@@ -31,12 +32,13 @@ class TestSim(unittest.TestCase):
         ext_components = np.full((2, 5), 10.0)
         ext_timestamps = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
 
-        reaction_k = np.array([0.5, 0.8])
-        reaction_reactants = np.array([[-1], [0]])
-        reaction_products = np.array([[2, -1], [0, 2]])
+        reactions = stochastic_sim.ReactionNetwork(2)
+        reactions.k = np.array([0.5, 0.8])
+        reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
+        reactions.products = np.array([[2, -1], [0, 2]], dtype=np.int32)
 
-        stochastic_sim.simulate_one(timestamps, trajectory, ext_components, ext_timestamps,
-                                    reaction_k, reaction_reactants, reaction_products, reaction_events)
+        stochastic_sim.simulate_one(
+            timestamps, trajectory, reaction_events, reactions, ext_timestamps, ext_components)
 
         self.assertEqual(timestamps[0], 0.0)
         self.assertListEqual(trajectory[:, 0].tolist(), [5.0])

@@ -25,7 +25,7 @@ def generate_signal(name, max_time=1000, step_size=0.01, x0=500, mean=500, corre
 
 
 @jit(nopython=True, fastmath=True)
-def calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reactants):
+def calculate_sum_of_reaction_propensities(components, reactions):
     """ Accelerated reaction propensity calculation
 
     Arguments:
@@ -38,10 +38,10 @@ def calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reac
     """
     result = np.empty_like(components[0])
 
-    for n_reaction in range(len(reaction_k)):
-        tmp = np.full_like(components[0], reaction_k[n_reaction])
+    for n_reaction in range(reactions.size):
+        tmp = np.full_like(components[0], reactions.k[n_reaction])
 
-        for j_reactant in reaction_reactants[n_reaction]:
+        for j_reactant in reactions.reactants[n_reaction]:
             if j_reactant >= 0:
                 tmp *= components[j_reactant]
 
@@ -54,7 +54,7 @@ def calculate_sum_of_reaction_propensities(components, reaction_k, reaction_reac
 
 
 @jit(nopython=True, fastmath=True)
-def calculate_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events):
+def calculate_selected_reaction_propensities(components, reaction_events, reactions):
     """ Accelerated reaction propensity calculation
 
     Arguments:
@@ -68,11 +68,11 @@ def calculate_selected_reaction_propensities(components, reaction_k, reaction_re
     length, = components[0].shape
     assert length == reaction_events.shape[-1]
 
-    propensities = np.empty(reaction_k.shape + components[0].shape)
-    for n_reaction in range(len(reaction_k)):
-        propensities[n_reaction] = reaction_k[n_reaction]
+    propensities = np.empty(reactions.k.shape + components[0].shape)
+    for n_reaction in range(reactions.size):
+        propensities[n_reaction] = reactions.k[n_reaction]
 
-        for j_reactant in reaction_reactants[n_reaction]:
+        for j_reactant in reactions.reactants[n_reaction]:
             if j_reactant >= 0:
                 propensities[n_reaction] *= components[j_reactant]
 
@@ -175,7 +175,7 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None):
 
 
 @jit(nopython=True, fastmath=True)
-def log_likelihood_inner(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, out=None):
+def log_likelihood_inner(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, out=None):
     num_signal_comps, _ = signal_components.shape
     num_response_comps, length = response_components.shape
 
@@ -187,8 +187,7 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
     for i in range(num_response_comps):
         components.append(response_components[i, 1:])
 
-    averaged_rates = calculate_sum_of_reaction_propensities(
-        components, reaction_k, reaction_reactants)
+    averaged_rates = calculate_sum_of_reaction_propensities(components, reactions)
 
     for i in range(num_signal_comps):
         # we don't evaluate the trajectory at the first timestamp since it only specifies the
@@ -196,8 +195,7 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
         evaluate_trajectory_at(signal_components[i], signal_timestamps,
                                response_timestamps[1:], out=components[i])
 
-    instantaneous_rates = calculate_selected_reaction_propensities(
-        components, reaction_k, reaction_reactants, reaction_events)
+    instantaneous_rates = calculate_selected_reaction_propensities(components, reaction_events, reactions)
 
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
 
@@ -218,7 +216,7 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
 
 
 @jit(nopython=True, fastmath=True, parallel=True, cache=True)
-def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, out=None):
+def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, out=None):
     num_r, _, length = response_components.shape
     num_s, _, _ = signal_components.shape
 
@@ -231,14 +229,14 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
         sc = signal_components[r]
         st = signal_timestamps[r]
 
-        log_likelihood_inner(sc, st, rc, rt, reaction_k,
-                             reaction_reactants, reaction_events[r], out=result[r])
+        log_likelihood_inner(
+            sc, st, rc, rt, reaction_events[r], reactions, out=result[r])
 
     return result
 
 
 @jit(nopython=True, fastmath=True, parallel=True, cache=True)
-def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, out=None):
+def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, out=None):
     num_r, _, length = response_components.shape
     num_s, _, _ = signal_components.shape
 
@@ -252,7 +250,7 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
             st = signal_timestamps[s]
 
             log_p = log_likelihood_inner(
-                sc, st, rc, rt, reaction_k, reaction_reactants, reaction_events[r])
+                sc, st, rc, rt, reaction_events[r], reactions)
 
             if s > 0:
                 # We correctly average the likelihood over multiple signals if requested.

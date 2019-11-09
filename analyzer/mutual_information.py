@@ -30,39 +30,44 @@ mu = 0.02
 mean_s = kappa / lamda
 mean_x = mean_s * rho / mu
 
-reaction_k = np.array([rho, mu])
-reaction_reactants = np.array([[0], [1]])
-reaction_products = np.array([[0, 1], [-1, -1]])
+reactions = stochastic_sim.ReactionNetwork(2)
+reactions.k = np.array([rho, mu])
+reactions.reactants = np.array([[0], [1]], dtype=np.int32)
+reactions.products = np.array([[0, 1], [-1, -1]], dtype=np.int32)
 
 
-def generate_signals_numerical(n_signals):
+def generate_signals_numerical(count):
     stimestamps = np.arange(0, duration, 1/resolution)
-    signal_c = np.empty((n_signals, 1, len(stimestamps)))
-    for i in range(n_signals):
+    signal_c = np.empty((count, 1, len(stimestamps)))
+    for i in range(count):
         signal_c[i][0] = np.clip(ornstein_uhlenbeck.generate(
             stimestamps, x0=mean, correlation_time=corr_time, diffusion_constant=diffusion, mean=mean), 0.0, None)
     return {
-        'timestamps': np.broadcast_to(stimestamps, (n_signals, len(stimestamps))),
+        'timestamps': np.broadcast_to(stimestamps, (count, len(stimestamps))),
         'components': signal_c
     }
 
 
-def generate_signals_sim(n_signals, length=100000):
-    k = np.array([kappa, lamda])
-    reactants = np.array([[-1], [0]])
-    products = np.array([[0], [-1]])
+def generate_signals_sim(count, length=100000, initial_values=None):
+    sig_reactions = stochastic_sim.ReactionNetwork(2)
+    sig_reactions.k = np.array([kappa, lamda])
+    sig_reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
+    sig_reactions.products = np.array([[0], [-1]], dtype=np.int32)
 
-    timestamps = np.zeros((n_signals, length))
-    trajectory = np.zeros((n_signals, 1, length))
-    reaction_events = np.zeros((n_signals, length - 1), dtype='i1')
+    timestamps = np.zeros((count, length))
+    trajectory = np.zeros((count, 1, length))
+    reaction_events = np.zeros((count, length - 1), dtype='i1')
 
     # initial values
-    for s in range(n_signals):
-        trajectory[s, 0, 0] = np.random.normal(
-            loc=mean_s, scale=np.sqrt(mean_s))
+    if initial_values is not None:
+        trajectory[:, 0, 0] = initial_values
+    else:
+        for s in range(count):
+            trajectory[s, 0, 0] = np.random.normal(
+                loc=mean_s, scale=np.sqrt(mean_s))
 
-    stochastic_sim.simulate(timestamps, trajectory, ext_components=None, ext_timestamps=None,
-                            reaction_k=k, reaction_reactants=reactants, reaction_products=products, reaction_events=reaction_events)
+    stochastic_sim.simulate(
+        timestamps, trajectory, reaction_events=reaction_events, reactions=sig_reactions)
 
     return {
         'timestamps': timestamps,
@@ -71,24 +76,36 @@ def generate_signals_sim(n_signals, length=100000):
     }
 
 
-def generate_responses(num_responses, signal_timestamps, signal_comps, length=100000):
-    timestamps = np.zeros((num_responses, length))
-    trajectory = np.zeros((num_responses, 1, length))
-    reaction_events = np.zeros((num_responses, length - 1), dtype='i1')
+def generate_responses(count, signal_timestamps, signal_comps, length=100000):
+    timestamps = np.zeros((count, length))
+    trajectory = np.zeros((count, 1, length))
+    reaction_events = np.zeros((count, length - 1), dtype='i1')
 
     # initial values
-    for r in range(num_responses):
+    for r in range(count):
         trajectory[r, 0, 0] = np.random.normal(
             loc=mean_x, scale=np.sqrt(mean_x * (1.0 + rho/(lamda + mu))))
 
-    stochastic_sim.simulate(timestamps, trajectory, ext_components=signal_comps, ext_timestamps=signal_timestamps,
-                            reaction_k=reaction_k, reaction_reactants=reaction_reactants, reaction_products=reaction_products, reaction_events=reaction_events)
+    stochastic_sim.simulate(timestamps, trajectory, reaction_events=reaction_events,
+                            reactions=reactions, ext_components=signal_comps, ext_timestamps=signal_timestamps)
 
     return {
         'components': trajectory,
         'timestamps': timestamps,
         'reaction_events': reaction_events,
     }
+
+
+def generate_histogram(signal_start, size=100, traj_length=5000):
+    signals = generate_signals_sim(
+        size, length=traj_length, initial_values=signal_start)
+
+    # reverse the signals
+    sig_t = -signals['timestamps'][..., ::-1]
+    sig_t += sig_t[..., [0]]
+    sig_comp = signals['components'][..., ::-1]
+
+    responses = generate_responses(size, sig_t, sig_comp, length=traj_length)
 
 
 def calculate(i, num_responses, averaging_signals):
@@ -129,13 +146,13 @@ def calculate(i, num_responses, averaging_signals):
     response_timestamps = responses['timestamps']
     reaction_events = responses['reaction_events']
 
-    analyzer.log_likelihood(sig['components'], sig['timestamps'], response_components, response_timestamps,
-                            reaction_k, reaction_reactants, reaction_events, out=mutual_information[1])
+    analyzer.log_likelihood(sig['components'], sig['timestamps'], response_components,
+                            response_timestamps, reaction_events, reactions, out=mutual_information[1])
 
     signal_components = averaging_signals['components']
     signal_timestamps = averaging_signals['timestamps']
     mutual_information[1] -= analyzer.log_averaged_likelihood(
-        signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events)
+        signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions)
 
     np.save(os.path.join(OUT_PATH, 'mi.{}'.format(i)),
             np.swapaxes(mutual_information, 0, 1))
