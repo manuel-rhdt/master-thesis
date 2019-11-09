@@ -128,15 +128,11 @@ def calculate(i, num_responses, combined_signal):
     mutual_information[1] -= analyzer.log_averaged_likelihood(
         signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events)
 
-    name = CONFIGURATION['output']
-
     np.save(os.path.join(OUT_PATH, 'mi.{}'.format(i)),
             np.swapaxes(mutual_information, 0, 1))
 
 
 def main():
-    num_signals = CONFIGURATION['num_signals']
-
     pathlib.Path(OUT_PATH).mkdir(exist_ok=True)
 
     combined_signal = generate_signals_sim(num_signals)
