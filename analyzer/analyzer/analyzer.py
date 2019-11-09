@@ -217,7 +217,7 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
     return result
 
 
-@jit(nopython=True, fastmath=True, parallel=True)
+@jit(nopython=True, fastmath=True, parallel=True, cache=True)
 def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, out=None):
     num_r, _, length = response_components.shape
     num_s, _, _ = signal_components.shape
@@ -237,7 +237,7 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
     return result
 
 
-@jit(nopython=True, fastmath=True, parallel=True)
+@jit(nopython=True, fastmath=True, parallel=True, cache=True)
 def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, out=None):
     num_r, _, length = response_components.shape
     num_s, _, _ = signal_components.shape

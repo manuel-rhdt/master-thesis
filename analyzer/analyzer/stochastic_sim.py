@@ -143,7 +143,7 @@ def simulate_one(timestamps, trajectory, ext_components, ext_timestamps, reactio
                         ext_progress, len(ext_components[i]) - 1)]
 
 
-@njit(parallel=True, fastmath=True)
+@njit(parallel=True, fastmath=True, cache=True)
 def simulate(timestamps, trajectory, ext_components, ext_timestamps, reaction_k, reaction_reactants, reaction_products, reaction_events):
     assert len(timestamps.shape) == 2
     assert len(trajectory.shape) == 3
