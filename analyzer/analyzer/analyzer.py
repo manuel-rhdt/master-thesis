@@ -140,7 +140,7 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None):
 
               |                                    |
               |        +---------------------------|
-              |========|===========================| <== average
+              |========|===========================| <== average[i]
               |        |                           |
               |--------+                           |
               |                                    |
