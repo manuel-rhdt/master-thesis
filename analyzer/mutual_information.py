@@ -145,7 +145,7 @@ def main():
     for i in range(num_responses // response_batch):
         calculate(i, response_batch, combined_signal)
         pbar.update(response_batch)
-    i = num_responses // response_batch + 1
+    i = num_responses // response_batch
     remaining_responses = num_responses % response_batch
     calculate(i, remaining_responses, combined_signal)
     pbar.update(remaining_responses)
