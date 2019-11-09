@@ -12,6 +12,9 @@ from tqdm import tqdm
 
 
 CONFIGURATION = settings.configuration['mutual_information']
+
+OUT_PATH = os.path.expandvars(CONFIGURATION['output'])
+
 mean = CONFIGURATION['signal_mean']
 duration = CONFIGURATION['signal_duration']
 corr_time = CONFIGURATION['signal_correlation_time']
@@ -127,15 +130,14 @@ def calculate(i, num_responses, combined_signal):
 
     name = CONFIGURATION['output']
 
-    np.save(os.path.expandvars('{}.{}'.format(name, i)),
+    np.save(os.path.join(OUT_PATH, 'mi.{}'.format(i)),
             np.swapaxes(mutual_information, 0, 1))
 
 
 def main():
     num_signals = CONFIGURATION['num_signals']
 
-    pathlib.Path(os.path.expandvars(
-        CONFIGURATION['output'])).parent.mkdir(exist_ok=True)
+    pathlib.Path(OUT_PATH).mkdir(exist_ok=True)
 
     combined_signal = generate_signals_sim(num_signals)
 
