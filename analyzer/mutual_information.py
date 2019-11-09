@@ -91,15 +91,24 @@ def generate_responses(num_responses, signal_timestamps, signal_comps, length=10
     }
 
 
-def calculate(i, num_responses, combined_signal):
+def calculate(i, num_responses, averaging_signals):
+    """ Calculates and stores the mutual information for `num_responses` respones.
+
+    This function does the following:
+    1. generate signals
+    2. generate responses following the signals
+    3. calculate the log likelihoods of the responses
+    4. calculate the log marginal probabilities of the responses
+    5. use both quantities to estimate the mutual information
+    """
     if num_responses == 0:
         return
 
     # generate responses from signals
     sig = generate_signals_sim(num_responses, length=50000)
-    combined_response = generate_responses(num_responses,
+    responses = generate_responses(num_responses,
                                            sig['timestamps'], sig['components'], length=50000)
-    response_len = combined_response['timestamps'][0].shape[-1]
+    response_len = responses['timestamps'][0].shape[-1]
 
     result_size = (response_len - 1)
 
@@ -112,18 +121,17 @@ def calculate(i, num_responses, combined_signal):
         (2, num_responses, result_size))
 
     # store the trajectory lengths for which the mutual information is computed
-    # we don't store the initial timestamp since this does not contain any information
-    mutual_information[0] = combined_response['timestamps'][:, 1:]
+    mutual_information[0] = responses['timestamps'][:, 1:] - responses['timestamps'][:, 0]
 
-    response_components = combined_response['components']
-    response_timestamps = combined_response['timestamps']
-    reaction_events = combined_response['reaction_events']
+    response_components = responses['components']
+    response_timestamps = responses['timestamps']
+    reaction_events = responses['reaction_events']
 
     analyzer.log_likelihood(
         sig['components'], sig['timestamps'], response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, out=mutual_information[1])
 
-    signal_components = combined_signal['components']
-    signal_timestamps = combined_signal['timestamps']
+    signal_components = averaging_signals['components']
+    signal_timestamps = averaging_signals['timestamps']
     mutual_information[1] -= analyzer.log_averaged_likelihood(
         signal_components, signal_timestamps, response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events)
 
