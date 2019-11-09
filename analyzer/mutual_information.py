@@ -22,7 +22,6 @@ diffusion = CONFIGURATION['signal_diffusion']
 resolution = CONFIGURATION['signal_resolution']
 
 num_signals = CONFIGURATION['num_signals']
-num_responses = CONFIGURATION['num_responses']
 
 kappa = 20.0
 lamda = 0.005
@@ -137,6 +136,7 @@ def main():
 
     combined_signal = generate_signals_sim(num_signals)
 
+    num_responses = CONFIGURATION['num_responses']
     pbar = tqdm(total=num_responses)
     response_batch = multiprocessing.cpu_count()
 
