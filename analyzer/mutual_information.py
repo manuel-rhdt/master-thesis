@@ -108,7 +108,8 @@ def calculate(i, num_responses, averaging_signals):
 
     # generate responses from signals
     sig = generate_signals_sim(num_responses, length=response_len)
-    responses = generate_responses(num_responses, sig['timestamps'], sig['components'], length=response_len)
+    responses = generate_responses(
+        num_responses, sig['timestamps'], sig['components'], length=response_len)
 
     result_size = (response_len - 1)
 
@@ -121,14 +122,15 @@ def calculate(i, num_responses, averaging_signals):
         (2, num_responses, result_size))
 
     # store the trajectory lengths for which the mutual information is computed
-    mutual_information[0] = responses['timestamps'][:, 1:] - responses['timestamps'][:, [0]]
+    mutual_information[0] = responses['timestamps'][:, 1:] -\
+        responses['timestamps'][:, [0]]
 
     response_components = responses['components']
     response_timestamps = responses['timestamps']
     reaction_events = responses['reaction_events']
 
-    analyzer.log_likelihood(
-        sig['components'], sig['timestamps'], response_components, response_timestamps, reaction_k, reaction_reactants, reaction_events, out=mutual_information[1])
+    analyzer.log_likelihood(sig['components'], sig['timestamps'], response_components, response_timestamps,
+                            reaction_k, reaction_reactants, reaction_events, out=mutual_information[1])
 
     signal_components = averaging_signals['components']
     signal_timestamps = averaging_signals['timestamps']
