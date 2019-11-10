@@ -105,6 +105,7 @@ def generate_histogram(signal_start, size=100, traj_length=5000):
     sig_t += sig_t[..., [0]]
     sig_comp = signals['components'][..., ::-1]
 
+    stochastic_sim.simulate_until()
     responses = generate_responses(size, sig_t, sig_comp, length=traj_length)
 
 

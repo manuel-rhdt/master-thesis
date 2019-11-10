@@ -85,12 +85,12 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
 
 
 @cuda.jit
-def gpu_selected_reaction_propensities(components, reaction_k, reaction_reactants, reaction_events, propensities):
+def gpu_selected_reaction_propensities(components, reaction_events, reactions, propensities):
     pos = cuda.grid(1)
-    if pos < reaction_events.size:
+    if pos < reactions.size:
         event = reaction_events[pos]
-        propensities[pos] = reaction_k[event]
-        for j_reactant in reaction_reactants[event]:
+        propensities[pos] = reactions.k[event]
+        for j_reactant in reactions.reactants[event]:
             if j_reactant >= 0:
                 propensities[pos] *= components[j_reactant][pos]
 
@@ -118,7 +118,7 @@ def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None)
 
 
 @jit(nopython=True, fastmath=True)
-def time_average(trajectory, old_timestamps, new_timestamps, out=None):
+def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated=None):
     """ Average of `trajectory` with `old_timestamp` in the time-intervals specified by `new_timestamps`.
 
     Note: This function assumes that both `old_timestamps` and `new_timestamps` are ordered.
@@ -171,6 +171,8 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None):
             low = old_ts
 
         out[new_idx] = acc / delta_t
+        if evaluated is not None:
+            evaluated[new_idx] = trajectory_value
     return out
 
 
@@ -179,34 +181,37 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
     num_signal_comps, _ = signal_components.shape
     num_response_comps, length = response_components.shape
 
+    components_averaged = TypedList()
     components = TypedList()
     for i in range(num_signal_comps):
+        components_averaged.append(np.empty((length - 1)))
         components.append(np.empty((length - 1)))
         time_average(signal_components[i], signal_timestamps,
-                     response_timestamps, out=components[i])
+                     response_timestamps, out=components_averaged[i], evaluated=components[i])
     for i in range(num_response_comps):
         components.append(response_components[i, 1:])
+        components_averaged.append(response_components[i, 1:])
 
-    averaged_rates = calculate_sum_of_reaction_propensities(components, reactions)
+    averaged_rates = calculate_sum_of_reaction_propensities(components_averaged, reactions)
 
-    for i in range(num_signal_comps):
-        # we don't evaluate the trajectory at the first timestamp since it only specifies the
-        # initial value (no reaction occurecd)
-        evaluate_trajectory_at(signal_components[i], signal_timestamps,
-                               response_timestamps[1:], out=components[i])
+    # for i in range(num_signal_comps):
+    #     # we don't evaluate the trajectory at the first timestamp since it only specifies the
+    #     # initial value (no reaction occurecd)
+    #     evaluate_trajectory_at(signal_components[i], signal_timestamps,
+    #                            response_timestamps[1:], out=components[i])
 
     instantaneous_rates = calculate_selected_reaction_propensities(components, reaction_events, reactions)
 
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
 
     # perform the operations in-place
-    dt = np.zeros(length-1)
+    dt = out if out is not None else np.empty(length - 1)
     for i in range(length-1):
         dt[i] = response_timestamps[i+1] - response_timestamps[i]
     likelihoods = np.log(instantaneous_rates)
     likelihoods -= averaged_rates * dt
 
-    result = out if out is not None else np.empty(length - 1)
+    result = dt
     accumulator = 0.0
     for i in range(length-1):
         accumulator += likelihoods[i]
