@@ -118,12 +118,6 @@ def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None)
 
 
 @jit(nopython=True, fastmath=True)
-def iter_trajectory(timestamps, values):
-        for t, val in zip(timestamps[1:], values[:-1]):
-            yield t, val
-        yield np.inf, values[-1]
-
-@jit(nopython=True, fastmath=True)
 def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated=None):
     """ Average of `trajectory` with `old_timestamp` in the time-intervals specified by `new_timestamps`.
 
@@ -156,14 +150,23 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated
     if out is None:
         out = np.empty(len(new_timestamps) - 1, trajectory.dtype)
 
-    old_iter = iter_trajectory(old_timestamps, trajectory)
-    next_trajectory_change, trajectory_value = next(old_iter)
+    old_idx = 0
+    def iter_trajectory(old_idx):
+        old_idx += 1
+        if old_idx > len(old_timestamps) - 1:
+            return np.inf, trajectory[-1]
+        else:
+            return old_timestamps[old_idx], trajectory[old_idx - 1]
+
+    next_trajectory_change, trajectory_value = iter_trajectory(old_idx)
+    old_idx += 1
     for idx, (low, high) in enumerate(zip(new_timestamps[:-1], new_timestamps[1:])):
         delta_t = high - low
         acc = 0.0
         while low < high:
             while next_trajectory_change <= low:
-                next_trajectory_change, trajectory_value = next(old_iter)
+                next_trajectory_change, trajectory_value = iter_trajectory(old_idx)
+                old_idx += 1
 
             acc += trajectory_value * (min(high, next_trajectory_change) - low)
             low = next_trajectory_change
