@@ -170,7 +170,7 @@ def simulate_one(timestamps, trajectory, reaction_events, reactions, ext_timesta
 
 
 @njit(fastmath=True)
-def simulate_until(until, initial_values, reaction_events, reactions, ext_timestamps=None, ext_components=None):
+def simulate_until_one(until, initial_values, reactions, ext_timestamps=None, ext_components=None):
     prev_time = 0.0
     prev_components = initial_values
     for time, _ in timestep_generate(initial_values, ext_timestamps, ext_components, reactions):
@@ -179,6 +179,22 @@ def simulate_until(until, initial_values, reaction_events, reactions, ext_timest
 
         prev_time = time
         prev_components = components
+
+
+@njit(parallel=True, fastmath=True, cache=True)
+def simulate_until(until, initial_values, reactions, ext_timestamps=None, ext_components=None):
+    assert len(timestamps.shape) == 2
+    assert len(trajectory.shape) == 3
+    assert len(reaction_events.shape) == 2
+
+    assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
+
+    for r in prange(timestamps.shape[0]):
+        if ext_components is not None:
+            simulate_one(until, initial_values, reactions,
+                         ext_timestamps[r], ext_components[r])
+        else:
+            simulate_one(until, initial_values, reactions)
 
 
 @njit(parallel=True, fastmath=True, cache=True)
@@ -194,4 +210,5 @@ def simulate(timestamps, trajectory, reaction_events, reactions, ext_timestamps=
             simulate_one(timestamps[r], trajectory[r],
                          reaction_events[r], reactions, ext_timestamps[r], ext_components[r])
         else:
-            simulate_one(timestamps[r], trajectory[r], reaction_events[r], reactions)
+            simulate_one(timestamps[r], trajectory[r],
+                         reaction_events[r], reactions)
