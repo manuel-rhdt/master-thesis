@@ -181,30 +181,30 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
     num_signal_comps, _ = signal_components.shape
     num_response_comps, length = response_components.shape
 
-    components_averaged = TypedList()
+    # resampled signal components
+    rsc = np.empty((num_signal_comps, 2, length - 1))
+    for i in range(num_signal_comps):
+        time_average(signal_components[i], signal_timestamps,
+                     response_timestamps, out=rsc[i, 0], evaluated=rsc[i, 1])
+
     components = TypedList()
     for i in range(num_signal_comps):
-        components_averaged.append(np.empty((length - 1)))
-        components.append(np.empty((length - 1)))
-        time_average(signal_components[i], signal_timestamps,
-                     response_timestamps, out=components_averaged[i], evaluated=components[i])
+        components.append(rsc[i, 0])
+
     for i in range(num_response_comps):
         components.append(response_components[i, 1:])
-        components_averaged.append(response_components[i, 1:])
 
-    averaged_rates = calculate_sum_of_reaction_propensities(components_averaged, reactions)
+    averaged_rates = calculate_sum_of_reaction_propensities(
+        components, reactions)
 
-    # for i in range(num_signal_comps):
-    #     # we don't evaluate the trajectory at the first timestamp since it only specifies the
-    #     # initial value (no reaction occurecd)
-    #     evaluate_trajectory_at(signal_components[i], signal_timestamps,
-    #                            response_timestamps[1:], out=components[i])
-
-    instantaneous_rates = calculate_selected_reaction_propensities(components, reaction_events, reactions)
+    for i in range(num_signal_comps):
+        components[i] = rsc[i, 1]
+    instantaneous_rates = calculate_selected_reaction_propensities(
+        components, reaction_events, reactions)
 
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
 
-    # perform the operations in-place
+    # perform the operations in-place (reuse the output array for the dt's)
     dt = out if out is not None else np.empty(length - 1)
     for i in range(length-1):
         dt[i] = response_timestamps[i+1] - response_timestamps[i]
