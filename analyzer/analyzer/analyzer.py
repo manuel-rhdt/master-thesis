@@ -118,6 +118,12 @@ def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None)
 
 
 @jit(nopython=True, fastmath=True)
+def iter_trajectory(timestamps, values):
+        for t, val in zip(timestamps[1:], values[:-1]):
+            yield t, val
+        yield np.inf, values[-1]
+
+@jit(nopython=True, fastmath=True)
 def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated=None):
     """ Average of `trajectory` with `old_timestamp` in the time-intervals specified by `new_timestamps`.
 
@@ -149,30 +155,22 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated
     """
     if out is None:
         out = np.empty(len(new_timestamps) - 1, trajectory.dtype)
-    old_idx = 0
-    old_ts = old_timestamps[0]
-    trajectory_value = trajectory[0]
-    for new_idx in range(len(new_timestamps) - 1):
-        low = new_timestamps[new_idx]
-        high = new_timestamps[new_idx + 1]
+
+    old_iter = iter_trajectory(old_timestamps, trajectory)
+    old_ts, trajectory_value = next(old_iter)
+    for idx, (low, high) in enumerate(zip(new_timestamps[:-1], new_timestamps[1:])):
         delta_t = high - low
         acc = 0.0
         while low < high:
             while old_ts <= low:
-                old_idx += 1
-                if old_idx == len(old_timestamps):
-                    old_ts = np.inf
-                    trajectory_value = trajectory[-1]
-                else:
-                    old_ts = old_timestamps[old_idx]
-                    trajectory_value = trajectory[old_idx - 1]
+                old_ts, trajectory_value = next(old_iter)
 
-            acc += trajectory_value * (min(old_ts, high) - low)
+            acc += trajectory_value * (min(high, old_ts) - low)
             low = old_ts
 
-        out[new_idx] = acc / delta_t
+        out[idx] = acc / delta_t
         if evaluated is not None:
-            evaluated[new_idx] = trajectory_value
+            evaluated[idx] = trajectory_value
     return out
 
 
@@ -202,7 +200,7 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
     instantaneous_rates = calculate_selected_reaction_propensities(
         components, reaction_events, reactions)
 
-    # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * time_delta))`
+    # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * dt))`
 
     # perform the operations in-place (reuse the output array for the dt's)
     dt = out if out is not None else np.empty(length - 1)
