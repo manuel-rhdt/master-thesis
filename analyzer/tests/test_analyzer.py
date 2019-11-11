@@ -13,7 +13,8 @@ class TestAnalyzer(unittest.TestCase):
         reactions.k = np.array([1.0])
         reactions.reactants = np.array([[0]], dtype=np.int32)
         reaction_events = np.array([0, 0])
-        result = analyzer.calculate_selected_reaction_propensities(components, reaction_events, reactions)
+        result = analyzer.calculate_selected_reaction_propensities(
+            components, reaction_events, reactions)
         self.assertListEqual(result.tolist(), [1, 2])
 
     def test_reaction_propensities2(self):
@@ -24,7 +25,7 @@ class TestAnalyzer(unittest.TestCase):
 
         result = analyzer.calculate_sum_of_reaction_propensities(
             components, reactions)
-        
+
         self.assertListEqual(result.tolist(), [5 + 1 * 2, 5 + 2 * 2])
 
     def test_evaluate_trajectory(self):

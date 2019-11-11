@@ -27,7 +27,7 @@ class TestSim(unittest.TestCase):
 
         timestamps = np.zeros(length)
         trajectory = np.zeros((1, length))
-        reaction_events = np.zeros(length, dtype='i4')
+        reaction_events = np.zeros(length - 1, dtype='i4')
         trajectory[:, 0] = np.array([5.0])
         ext_components = np.full((2, 5), 10.0)
         ext_timestamps = np.array([0.0, 0.5, 1.0, 1.5, 2.0])

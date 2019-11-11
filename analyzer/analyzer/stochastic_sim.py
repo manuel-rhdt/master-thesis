@@ -15,8 +15,8 @@ spec = [
 class ReactionNetwork(object):
     def __init__(self, num_reactions):
         self.k = numpy.zeros(num_reactions)
-        self.reactants = numpy.zeros((num_reactions, 1), dtype=int32)
-        self.products = numpy.zeros((num_reactions, 1), dtype=int32)
+        self.reactants = numpy.zeros((num_reactions, 1), dtype=numpy.int32)
+        self.products = numpy.zeros((num_reactions, 1), dtype=numpy.int32)
 
     @property
     def size(self):
@@ -172,8 +172,9 @@ def simulate_one(timestamps, trajectory, reaction_events, reactions, ext_timesta
 @njit(fastmath=True)
 def simulate_until_one(until, initial_values, reactions, ext_timestamps=None, ext_components=None):
     prev_time = 0.0
-    prev_components = initial_values
-    for time, _ in timestep_generate(initial_values, ext_timestamps, ext_components, reactions):
+    components = initial_values
+    prev_components = components
+    for time, _ in timestep_generate(components, ext_timestamps, ext_components, reactions):
         if time >= until:
             return prev_time, prev_components
 
@@ -183,18 +184,14 @@ def simulate_until_one(until, initial_values, reactions, ext_timestamps=None, ex
 
 @njit(parallel=True, fastmath=True, cache=True)
 def simulate_until(until, initial_values, reactions, ext_timestamps=None, ext_components=None):
-    assert len(timestamps.shape) == 2
-    assert len(trajectory.shape) == 3
-    assert len(reaction_events.shape) == 2
+    num_trajectories, = until.shape
 
-    assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
-
-    for r in prange(timestamps.shape[0]):
+    for r in prange(num_trajectories):
         if ext_components is not None:
-            simulate_one(until, initial_values, reactions,
-                         ext_timestamps[r], ext_components[r])
+            simulate_until_one(until[r], initial_values[r], reactions,
+                               ext_timestamps[r], ext_components[r])
         else:
-            simulate_one(until, initial_values, reactions)
+            simulate_until_one(until[r], initial_values[r], reactions)
 
 
 @njit(parallel=True, fastmath=True, cache=True)
