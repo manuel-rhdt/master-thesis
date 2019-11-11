@@ -151,6 +151,7 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated
         out = np.empty(len(new_timestamps) - 1, trajectory.dtype)
 
     old_idx = 0
+
     def iter_trajectory(old_idx):
         old_idx += 1
         if old_idx > len(old_timestamps) - 1:
@@ -165,7 +166,8 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated
         acc = 0.0
         while low < high:
             while next_trajectory_change <= low:
-                next_trajectory_change, trajectory_value = iter_trajectory(old_idx)
+                next_trajectory_change, trajectory_value = iter_trajectory(
+                    old_idx)
                 old_idx += 1
 
             acc += trajectory_value * (min(high, next_trajectory_change) - low)
