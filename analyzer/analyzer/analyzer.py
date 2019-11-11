@@ -244,7 +244,7 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
 
 
 @jit(nopython=True, fastmath=True, parallel=True, cache=True)
-def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, out=None):
+def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, p_zero, out=None):
     num_r, _, length = response_components.shape
     num_s, _, _ = signal_components.shape
 
@@ -259,6 +259,9 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
 
             log_p = log_likelihood_inner(
                 sc, st, rc, rt, reaction_events[r], reactions)
+            
+            # add initial probabilities
+            log_p += p_zero[s, r]
 
             if s > 0:
                 # We correctly average the likelihood over multiple signals if requested.
