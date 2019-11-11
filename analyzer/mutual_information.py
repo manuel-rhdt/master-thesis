@@ -102,11 +102,19 @@ def generate_histogram(signal_start, size=100, traj_length=5000):
 
     # reverse the signals
     sig_t = -signals['timestamps'][..., ::-1]
-    sig_t += sig_t[..., [0]]
+    sig_t -= sig_t[..., [0]]
     sig_comp = signals['components'][..., ::-1]
 
-    stochastic_sim.simulate_until()
-    responses = generate_responses(size, sig_t, sig_comp, length=traj_length)
+    components = np.empty((size, 2), dtype=np.int32)
+    components[:, 0] = sig_comp[:, 0, 0]
+    components[:, 1] = 1000
+
+    until = sig_t[:, -1]
+
+    stochastic_sim.simulate_until(
+        until, components, reactions, ext_timestamps=sig_t, ext_components=sig_comp)
+
+    return np.histogram(components[:, 1], bins='auto')
 
 
 def calculate(i, num_responses, averaging_signals):
