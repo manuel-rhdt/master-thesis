@@ -2,10 +2,10 @@ import numpy
 import numpy.random
 
 import numba
-from numba import njit, prange, float64, int32, jitclass
+from numba import njit, prange, float32, int32, jitclass
 
 spec = [
-    ('k', float64[:]),
+    ('k', float32[:]),
     ('reactants', int32[:, :]),
     ('products', int32[:, :])
 ]
@@ -14,7 +14,7 @@ spec = [
 @jitclass(spec)
 class ReactionNetwork(object):
     def __init__(self, num_reactions):
-        self.k = numpy.zeros(num_reactions)
+        self.k = numpy.zeros(num_reactions, dtype=numpy.single)
         self.reactants = numpy.zeros((num_reactions, 1), dtype=numpy.int32)
         self.products = numpy.zeros((num_reactions, 1), dtype=numpy.int32)
 

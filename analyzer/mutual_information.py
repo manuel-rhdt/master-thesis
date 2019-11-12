@@ -33,7 +33,7 @@ mean_s = kappa / lamda
 mean_x = mean_s * rho / mu
 
 reactions = stochastic_sim.ReactionNetwork(2)
-reactions.k = np.array([rho, mu])
+reactions.k = np.array([rho, mu], dtype=np.single)
 reactions.reactants = np.array([[0], [1]], dtype=np.int32)
 reactions.products = np.array([[0, 1], [-1, -1]], dtype=np.int32)
 
@@ -52,13 +52,13 @@ def generate_signals_numerical(count):
 
 def generate_signals_sim(count, length=100000, initial_values=None):
     sig_reactions = stochastic_sim.ReactionNetwork(2)
-    sig_reactions.k = np.array([kappa, lamda])
+    sig_reactions.k = np.array([kappa, lamda], dtype=np.single)
     sig_reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
     sig_reactions.products = np.array([[0], [-1]], dtype=np.int32)
 
     timestamps = np.zeros((count, length))
-    trajectory = np.zeros((count, 1, length), dtype=np.uint16)
-    reaction_events = np.zeros((count, length - 1), dtype='i1')
+    trajectory = np.zeros((count, 1, length), dtype=np.int16)
+    reaction_events = np.zeros((count, length - 1), dtype=np.uint8)
 
     # initial values
     if initial_values is not None:
@@ -79,8 +79,8 @@ def generate_signals_sim(count, length=100000, initial_values=None):
 
 def generate_responses(count, signal_timestamps, signal_comps, length=100000, initial_values=None):
     timestamps = np.zeros((count, length))
-    trajectory = np.zeros((count, 1, length), dtype=np.uint16)
-    reaction_events = np.zeros((count, length - 1), dtype='i1')
+    trajectory = np.zeros((count, 1, length), dtype=np.int16)
+    reaction_events = np.zeros((count, length - 1), dtype=np.uint8)
 
     # initial values
     if initial_values is not None:
@@ -142,7 +142,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     # dimension2: arrays of responses
     # dimension3: arrays of trajectories
     mutual_information = np.empty(
-        (2, num_responses, result_size))
+        (2, num_responses, result_size), dtype=np.double)
 
     # store the trajectory lengths for which the mutual information is computed
     mutual_information[0] = responses['timestamps'][:, 1:] -\
@@ -171,7 +171,7 @@ def kde_estimate_p_0(size=500, traj_length=5000):
     sig = generate_signals_sim(
         size, length=traj_length, initial_values=signal_init)
 
-    components = np.empty((size, 2), dtype=np.int32)
+    components = np.empty((size, 2), dtype=np.int16)
     components[:, 0] = sig['components'][:, 0, 0]
     components[:, 1] = mean_x
 

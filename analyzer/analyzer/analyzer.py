@@ -68,7 +68,8 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
     length, = components[0].shape
     assert length == reaction_events.shape[-1]
 
-    propensities = np.empty(reactions.k.shape + components[0].shape)
+    propensities = np.empty(
+        reactions.k.shape + components[0].shape, dtype=components[0].dtype)
     for n_reaction in range(reactions.size):
         propensities[n_reaction] = reactions.k[n_reaction]
 
@@ -118,7 +119,7 @@ def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None)
 
 
 @jit(nopython=True, fastmath=True)
-def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated=None):
+def time_average(trajectory, old_timestamps, new_timestamps, dtype=np.double, out=None, evaluated=None):
     """ Average of `trajectory` with `old_timestamp` in the time-intervals specified by `new_timestamps`.
 
     Note: This function assumes that both `old_timestamps` and `new_timestamps` are ordered.
@@ -148,7 +149,7 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated
         old_timestamps[i]                  old_timestamps[i+1]
     """
     if out is None:
-        out = np.empty(len(new_timestamps) - 1, trajectory.dtype)
+        out = np.empty(len(new_timestamps) - 1, dtype=dtype)
 
     old_idx = 0
 
@@ -180,30 +181,28 @@ def time_average(trajectory, old_timestamps, new_timestamps, out=None, evaluated
 
 
 @jit(nopython=True, fastmath=True)
-def log_likelihood_inner(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, out=None):
+def log_likelihood_inner(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, dtype=np.double, out=None):
     num_signal_comps, _ = signal_components.shape
     num_response_comps, length = response_components.shape
 
     # resampled signal components
-    rsc = np.empty((num_signal_comps, 2, length - 1),
-                   dtype=signal_components[0].dtype)
+    rsc = np.empty((num_signal_comps, 2, length - 1), dtype=dtype)
     for i in range(num_signal_comps):
         time_average(signal_components[i], signal_timestamps,
-                     response_timestamps, out=rsc[i, 0], evaluated=rsc[i, 1])
+                     response_timestamps, dtype=dtype, out=rsc[i, 0], evaluated=rsc[i, 1])
 
     components = TypedList()
     for i in range(num_signal_comps):
-        components.append(rsc[i, 0].astype(np.float, copy=False))
+        components.append(rsc[i, 0])
 
     for i in range(num_response_comps):
-        components.append(
-            response_components[i, 1:].astype(np.float, copy=False))
+        components.append(response_components[i, 1:].astype(dtype))
 
     averaged_rates = calculate_sum_of_reaction_propensities(
         components, reactions)
 
     for i in range(num_signal_comps):
-        components[i] = rsc[i, 1].astype(np.float, copy=False)
+        components[i] = rsc[i, 1]
 
     instantaneous_rates = calculate_selected_reaction_propensities(
         components, reaction_events, reactions)
@@ -211,7 +210,7 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates * dt))`
 
     # perform the operations in-place (reuse the output array for the dt's)
-    dt = out if out is not None else np.empty(length - 1)
+    dt = out if out is not None else np.empty(length - 1, dtype=dtype)
     for i in range(length-1):
         dt[i] = response_timestamps[i+1] - response_timestamps[i]
     likelihoods = np.log(instantaneous_rates)
@@ -233,7 +232,8 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
 
     assert num_r == num_s
 
-    result = out if out is not None else np.empty((num_r, length - 1))
+    result = out if out is not None else np.empty(
+        (num_r, length - 1), dtype=np.double)
     for r in prange(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
@@ -241,7 +241,7 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
         st = signal_timestamps[r]
 
         log_likelihood_inner(
-            sc, st, rc, rt, reaction_events[r], reactions, out=result[r])
+            sc, st, rc, rt, reaction_events[r], reactions, dtype=np.double, out=result[r])
 
     return result
 
@@ -251,17 +251,18 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
     num_r, _, length = response_components.shape
     num_s, _, _ = signal_components.shape
 
-    result = out if out is not None else np.empty((num_r, length - 1))
+    result = out if out is not None else np.empty(
+        (num_r, length - 1), dtype=np.double)
     for r in prange(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
-        tmp = np.empty_like(result[r])
+        tmp = np.empty_like(result[r], dtype=np.double)
         for s in range(num_s):
             sc = signal_components[s]
             st = signal_timestamps[s]
 
             log_p = log_likelihood_inner(
-                sc, st, rc, rt, reaction_events[r], reactions)
+                sc, st, rc, rt, reaction_events[r], reactions, dtype=np.double)
 
             # add initial probabilities
             log_p += p_zero[s, r]
@@ -274,10 +275,11 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
                 #
                 # The next line of code performs the following computation:
                 # result <- log(exp(result) + exp(log_p) / num_s)
-                tmp = np.logaddexp(tmp, log_p - np.log(num_s))
+                tmp = np.logaddexp(
+                    tmp, log_p - np.log(num_s))
             else:
-                tmp = log_p - np.log(num_s)
+                tmp = (log_p - np.log(num_s))
 
-        result[r] = tmp
+        result[r] = tmp.astype(np.double)
 
     return result

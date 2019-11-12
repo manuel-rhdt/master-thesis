@@ -26,14 +26,14 @@ class TestSim(unittest.TestCase):
         length = 100
 
         timestamps = np.zeros(length)
-        trajectory = np.zeros((1, length))
+        trajectory = np.zeros((1, length), dtype=np.uint16)
         reaction_events = np.zeros(length - 1, dtype='i4')
-        trajectory[:, 0] = np.array([5.0])
-        ext_components = np.full((2, 5), 10.0)
+        trajectory[:, 0] = np.array([5])
+        ext_components = np.full((2, 5), 10, dtype=np.uint16)
         ext_timestamps = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
 
         reactions = stochastic_sim.ReactionNetwork(2)
-        reactions.k = np.array([0.5, 0.8])
+        reactions.k = np.array([0.5, 0.8], dtype=np.single)
         reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
         reactions.products = np.array([[2, -1], [0, 2]], dtype=np.int32)
 
@@ -41,7 +41,7 @@ class TestSim(unittest.TestCase):
             timestamps, trajectory, reaction_events, reactions, ext_timestamps, ext_components)
 
         self.assertEqual(timestamps[0], 0.0)
-        self.assertListEqual(trajectory[:, 0].tolist(), [5.0])
+        self.assertListEqual(trajectory[:, 0].tolist(), [5])
 
         for i in range(1, length):
             self.assertGreater(timestamps[i], timestamps[i - 1])
