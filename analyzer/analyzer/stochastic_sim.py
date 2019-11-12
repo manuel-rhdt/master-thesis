@@ -151,7 +151,7 @@ def simulate_one(timestamps, trajectory, reaction_events, reactions, ext_timesta
 
     # define values used during iteration
     progress = 0
-    components = numpy.zeros(num_comps + num_ext_comps)
+    components = numpy.zeros(num_comps + num_ext_comps, dtype=trajectory.dtype)
     for i in range(num_ext_comps):
         if ext_components is not None:
             components[i] = ext_components[i][0]

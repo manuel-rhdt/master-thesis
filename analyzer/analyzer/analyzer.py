@@ -185,23 +185,26 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
     num_response_comps, length = response_components.shape
 
     # resampled signal components
-    rsc = np.empty((num_signal_comps, 2, length - 1))
+    rsc = np.empty((num_signal_comps, 2, length - 1),
+                   dtype=signal_components[0].dtype)
     for i in range(num_signal_comps):
         time_average(signal_components[i], signal_timestamps,
                      response_timestamps, out=rsc[i, 0], evaluated=rsc[i, 1])
 
     components = TypedList()
     for i in range(num_signal_comps):
-        components.append(rsc[i, 0])
+        components.append(rsc[i, 0].astype(np.float, copy=False))
 
     for i in range(num_response_comps):
-        components.append(response_components[i, 1:])
+        components.append(
+            response_components[i, 1:].astype(np.float, copy=False))
 
     averaged_rates = calculate_sum_of_reaction_propensities(
         components, reactions)
 
     for i in range(num_signal_comps):
-        components[i] = rsc[i, 1]
+        components[i] = rsc[i, 1].astype(np.float, copy=False)
+
     instantaneous_rates = calculate_selected_reaction_propensities(
         components, reaction_events, reactions)
 
@@ -259,7 +262,7 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
 
             log_p = log_likelihood_inner(
                 sc, st, rc, rt, reaction_events[r], reactions)
-            
+
             # add initial probabilities
             log_p += p_zero[s, r]
 

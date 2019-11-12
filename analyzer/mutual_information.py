@@ -57,7 +57,7 @@ def generate_signals_sim(count, length=100000, initial_values=None):
     sig_reactions.products = np.array([[0], [-1]], dtype=np.int32)
 
     timestamps = np.zeros((count, length))
-    trajectory = np.zeros((count, 1, length))
+    trajectory = np.zeros((count, 1, length), dtype=np.uint16)
     reaction_events = np.zeros((count, length - 1), dtype='i1')
 
     # initial values
@@ -79,7 +79,7 @@ def generate_signals_sim(count, length=100000, initial_values=None):
 
 def generate_responses(count, signal_timestamps, signal_comps, length=100000, initial_values=None):
     timestamps = np.zeros((count, length))
-    trajectory = np.zeros((count, 1, length))
+    trajectory = np.zeros((count, 1, length), dtype=np.uint16)
     reaction_events = np.zeros((count, length - 1), dtype='i1')
 
     # initial values
