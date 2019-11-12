@@ -99,67 +99,6 @@ def generate_responses(count, signal_timestamps, signal_comps, length=100000, in
     }
 
 
-def generate_histogram(signal_start, size=80, traj_length=5000):
-    signals = generate_signals_sim(
-        size, length=traj_length, initial_values=signal_start)
-
-    # reverse the signals
-    sig_t = -signals['timestamps'][..., ::-1]
-    sig_t -= sig_t[..., [0]]
-    sig_comp = signals['components'][..., ::-1]
-
-    components = np.empty((size, 2), dtype=np.int32)
-    components[:, 0] = sig_comp[:, 0, 0]
-    components[:, 1] = 1000
-
-    until = sig_t[:, -1]
-
-    stochastic_sim.simulate_until(
-        until, components, reactions, ext_timestamps=sig_t, ext_components=sig_comp)
-
-    return gaussian_kde(components[:, 1])
-
-
-def generate_histograms(num_signals, progress=False):
-    signal_t0 = np.random.normal(
-        size=num_signals, loc=mean_s, scale=np.sqrt(mean_s))
-
-    if progress:
-        pbar = tqdm(total=num_signals, smoothing=0.9,
-                    desc='generated histograms')
-
-    histograms = []
-    for s0 in signal_t0:
-        hist = generate_histogram(s0)
-        histograms.append(hist)
-        if progress:
-            pbar.update()
-
-    if progress:
-        pbar.close()
-
-    return signal_t0, histograms
-
-
-def evaluate_hist(x, hist):
-    return hist(x)
-    # density, bins = hist
-    # indices = np.digitize(x, bins)
-    # out_of_bounds = np.logical_or(indices == 0, indices == len(bins))
-    # conditions = [out_of_bounds, np.logical_not(out_of_bounds)]
-    # choices = [0.0, np.take(density, indices, mode='wrap')]
-    # return np.select(conditions, choices)
-
-
-def sample_hist(hist, size=1):
-    return hist.resample(size=size)
-    # density, bins = hist
-    # cdf = np.cumsum(density)
-    # cdf = cdf / cdf[-1]
-    # rv = np.random.random_sample(size=size)
-    # indices = np.digitize(rv, bins)
-
-
 def calculate(i, num_responses, averaging_signals, kde_estimate):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
