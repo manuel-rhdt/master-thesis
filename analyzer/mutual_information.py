@@ -9,6 +9,7 @@ import os
 import queue
 import math
 from tqdm import tqdm
+import scipy
 from scipy.stats import gaussian_kde
 
 
@@ -159,7 +160,7 @@ def sample_hist(hist, size=1):
     # indices = np.digitize(rv, bins)
 
 
-def calculate(i, num_responses, averaging_signals, histograms):
+def calculate(i, num_responses, averaging_signals, kde_estimate):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
     This function does the following:
@@ -174,20 +175,26 @@ def calculate(i, num_responses, averaging_signals, histograms):
 
     response_len = 50000
 
+    signal_distr = scipy.stats.norm(loc=mean_s, scale=np.sqrt(mean_s))
+
     # generate responses from signals
-    signal_init, new_hists = generate_histograms(num_responses)
+    initial_comps = kde_estimate.resample(num_responses)
     sig = generate_signals_sim(
-        num_responses, length=response_len, initial_values=signal_init)
+        num_responses, length=response_len, initial_values=initial_comps[0])
     responses = generate_responses(
-        num_responses, sig['timestamps'], sig['components'], length=response_len, initial_values=np.concatenate([hist.resample(size=1).reshape((1)) for hist in new_hists]))
+        num_responses, sig['timestamps'], sig['components'], length=response_len, initial_values=initial_comps[1])
 
-    log_p_x_zero_this = np.empty(num_responses)
-    for r, hist in enumerate(new_hists):
-        log_p_x_zero_this[r] = hist.logpdf(responses['components'][r, 0, 0])
+    log_p_x_zero_this = kde_estimate.logpdf(
+        initial_comps) - signal_distr.logpdf(initial_comps[0])
 
-    log_p_x_zero = np.empty((num_signals, num_responses))
-    for s, hist in enumerate(histograms):
-        log_p_x_zero[s] = hist.logpdf(responses['components'][:, 0, 0])
+    values = np.empty((2, num_signals, num_responses))
+    values[0, :, :] = averaging_signals['components'][:, 0, 0, np.newaxis]
+    values[1, :, :] = responses['components'][:, 0, 0]
+    values = np.reshape(values, (2, -1))
+
+    log_p_x_zero = kde_estimate.logpdf(
+        values) - signal_distr.logpdf(values[0])
+    log_p_x_zero = np.reshape(log_p_x_zero, (num_signals, num_responses))
 
     result_size = response_len - 1
     # we create an array with the following dimensions to hold the results of our calculations
@@ -220,34 +227,40 @@ def calculate(i, num_responses, averaging_signals, histograms):
 
 
 def kde_estimate_p_0(size=500, traj_length=5000):
-    signal_init = np.random.normal(size=size, loc=mean_s, scale=np.sqrt(mean_s))
+    signal_init = np.random.normal(
+        size=size, loc=mean_s, scale=np.sqrt(mean_s))
     sig = generate_signals_sim(
         size, length=traj_length, initial_values=signal_init)
-    res = generate_responses(
-        size, sig['timestamps'], sig['components'], length=traj_length, initial_values=mean_x)
 
-    points = np.array([sig['components'][:,0,-1], res['components'][:,0,-1]])
-    return gaussian_kde(points)
+    components = np.empty((size, 2), dtype=np.int32)
+    components[:, 0] = sig['components'][:, 0, 0]
+    components[:, 1] = mean_x
+
+    until = sig['timestamps'][:, -1]
+
+    stochastic_sim.simulate_until(
+        until, components, reactions, ext_timestamps=sig['timestamps'], ext_components=sig['components'])
+
+    return gaussian_kde(components.T)
 
 
 def main():
     pathlib.Path(OUT_PATH).mkdir(exist_ok=True)
 
-    init_vals, histograms = generate_histograms(num_signals, progress=True)
+    kde_estimate = kde_estimate_p_0(size=num_signals)
     print("generating signals...")
-    combined_signal = generate_signals_sim(
-        num_signals, length=50000, initial_values=init_vals)
+    combined_signal = generate_signals_sim(num_signals, length=50000)
 
     num_responses = int(CONFIGURATION['num_responses'])
     pbar = tqdm(total=num_responses, smoothing=0.9, desc='simulated responses')
     response_batch = multiprocessing.cpu_count()
 
     for i in range(num_responses // response_batch):
-        calculate(i, response_batch, combined_signal, histograms)
+        calculate(i, response_batch, combined_signal, kde_estimate)
         pbar.update(response_batch)
     i = num_responses // response_batch
     remaining_responses = num_responses % response_batch
-    calculate(i, remaining_responses, combined_signal, histograms)
+    calculate(i, remaining_responses, combined_signal, kde_estimate)
     pbar.update(remaining_responses)
 
 
