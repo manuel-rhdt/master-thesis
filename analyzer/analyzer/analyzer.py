@@ -181,9 +181,12 @@ def time_average(trajectory, old_timestamps, new_timestamps, dtype=np.double, ou
 
 
 @jit(nopython=True, fastmath=True)
-def log_likelihood_inner(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, dtype=np.double, out=None):
+def log_likelihood_inner(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, dtype=np.dtype(np.double), out=None):
     num_signal_comps, _ = signal_components.shape
     num_response_comps, length = response_components.shape
+
+    if out is not None:
+        dtype = out.dtype
 
     # resampled signal components
     rsc = np.empty((num_signal_comps, 2, length - 1), dtype=dtype)
@@ -241,13 +244,16 @@ def log_likelihood(signal_components, signal_timestamps, response_components, re
         st = signal_timestamps[r]
 
         log_likelihood_inner(
-            sc, st, rc, rt, reaction_events[r], reactions, dtype=np.double, out=result[r])
+            sc, st, rc, rt, reaction_events[r], reactions, out=result[r])
 
     return result
 
 
 @jit(nopython=True, fastmath=True, parallel=True, cache=True)
 def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, p_zero, out=None):
+    """
+    Calculates the log likelihoods of the responses for various signals and averages over the signals.
+    """
     num_r, _, length = response_components.shape
     num_s, _, _ = signal_components.shape
 
@@ -274,12 +280,12 @@ def log_averaged_likelihood(signal_components, signal_timestamps, response_compo
                 # logaddexp operation to correctly perform the averaging
                 #
                 # The next line of code performs the following computation:
-                # result <- log(exp(result) + exp(log_p) / num_s)
-                tmp = np.logaddexp(
-                    tmp, log_p - np.log(num_s))
+                # tmp <- log(exp(tmp) + exp(log_p))
+                tmp = np.logaddexp(tmp, log_p)
             else:
-                tmp = (log_p - np.log(num_s))
+                tmp = log_p
 
-        result[r] = tmp.astype(np.double)
+        result[r] = tmp
 
+    result -= np.log(num_s)
     return result
