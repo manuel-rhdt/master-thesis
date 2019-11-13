@@ -4,13 +4,13 @@
         "Unix Makefiles"
     ],
     "C_Cpp.intelliSenseEngineFallback": "Enabled",
-    "python.pythonPath": "analyzer/venv/bin/python3",
+    "python.pythonPath": "/home/ipausers/reinhardt/opt/anaconda3/bin/python",
     "python.testing.unittestArgs": [
         "-v",
         "-s",
-        "./analyzer/tests",
+        "./tests",
         "-p",
-        "*_test.py"
+        "test_*.py"
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.nosetestsEnabled": false,
