@@ -135,31 +135,31 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
         values) - signal_distr.logpdf(values[0])
     log_p_x_zero = np.reshape(log_p_x_zero, (num_signals, num_responses))
 
-    result_size = response_len - 1
+    result_size = 5000
+    traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
     # we create an array with the following dimensions to hold the results of our calculations
     # dimension1 = 2: mutual_information[0] holds the trajectory length times
     #                 mutual_information[1] holds the mutual information values
     # dimension2: arrays of responses
     # dimension3: arrays of trajectories
     mutual_information = np.empty(
-        (2, num_responses, result_size), dtype=np.double)
+        (2, num_responses, result_size), dtype=np.single)
 
     # store the trajectory lengths for which the mutual information is computed
-    mutual_information[0] = responses['timestamps'][:, 1:] -\
-        responses['timestamps'][:, [0]]
+    mutual_information[0] = traj_lengths
 
     response_components = responses['components']
     response_timestamps = responses['timestamps']
     reaction_events = responses['reaction_events']
 
-    analyzer.log_likelihood(sig['components'], sig['timestamps'], response_components,
+    analyzer.log_likelihood(traj_lengths, sig['components'], sig['timestamps'], response_components,
                             response_timestamps, reaction_events, reactions, out=mutual_information[1])
     mutual_information[1] += log_p_x_zero_this[:, np.newaxis]
 
     signal_components = averaging_signals['components']
     signal_timestamps = averaging_signals['timestamps']
     mutual_information[1] -= analyzer.log_averaged_likelihood(
-        signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, log_p_x_zero)
+        traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, log_p_x_zero)
 
     np.save(os.path.join(OUT_PATH, 'mi.{}'.format(i)),
             np.swapaxes(mutual_information, 0, 1))

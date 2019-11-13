@@ -17,6 +17,23 @@ import settings
 from . import ornstein_uhlenbeck
 
 
+# inspired by scipy.special.logsumexp
+@jit(nopython=True, fastmath=True)
+def logsumexp(x):
+    x = np.asarray(x)
+    _, length = x.shape
+    xmax = np.empty(length, dtype=x.dtype)
+    for i in range(length):
+        xmax[i] = max(x[:, i])
+
+    tmp = np.exp(x - xmax)
+
+    s = np.sum(tmp, axis=0)
+    out = np.log(s)
+
+    return out + xmax
+
+
 def generate_signal(name, max_time=1000, step_size=0.01, x0=500, mean=500, correlation_time=10, diffusion=10):
     timestamps = np.arange(0, max_time, step_size)
     x = np.clip(ornstein_uhlenbeck.generate(
@@ -229,63 +246,53 @@ def log_likelihood_inner(signal_components, signal_timestamps, response_componen
 
 
 @jit(nopython=True, fastmath=True, parallel=True, cache=True)
-def log_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, out=None):
-    num_r, _, length = response_components.shape
+def log_likelihood(traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, out=None):
+    num_r, _, _ = response_components.shape
     num_s, _, _ = signal_components.shape
+    length, = traj_lengths.shape
 
     assert num_r == num_s
 
     result = out if out is not None else np.empty(
-        (num_r, length - 1), dtype=np.double)
+        (num_r, length), dtype=np.single)
     for r in prange(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
         sc = signal_components[r]
         st = signal_timestamps[r]
 
-        log_likelihood_inner(
-            sc, st, rc, rt, reaction_events[r], reactions, out=result[r])
+        log_p = log_likelihood_inner(
+            sc, st, rc, rt, reaction_events[r], reactions)
+        indices = np.digitize(traj_lengths, rt)
+        result[r] = log_p[indices]
 
     return result
 
 
 @jit(nopython=True, fastmath=True, parallel=True, cache=True)
-def log_averaged_likelihood(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, p_zero, out=None):
+def log_averaged_likelihood(traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, p_zero, out=None):
     """
     Calculates the log likelihoods of the responses for various signals and averages over the signals.
     """
-    num_r, _, length = response_components.shape
+    num_r, _, _ = response_components.shape
     num_s, _, _ = signal_components.shape
+    length, = traj_lengths.shape
 
     result = out if out is not None else np.empty(
-        (num_r, length - 1), dtype=np.double)
+        (num_r, length), dtype=np.single)
     for r in prange(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
-        tmp = np.empty_like(result[r], dtype=np.double)
+        tmp = np.empty((num_s, length), dtype=np.single)
+        indices = np.digitize(traj_lengths, rt)
         for s in range(num_s):
             sc = signal_components[s]
             st = signal_timestamps[s]
 
             log_p = log_likelihood_inner(
-                sc, st, rc, rt, reaction_events[r], reactions, dtype=np.double)
+                sc, st, rc, rt, reaction_events[r], reactions, dtype=np.single)
+            tmp[s] = log_p[indices] + p_zero[s, r]
 
-            # add initial probabilities
-            log_p += p_zero[s, r]
+        result[r] = logsumexp(tmp) - np.log(num_s)
 
-            if s > 0:
-                # We correctly average the likelihood over multiple signals if requested.
-                #
-                # Note that since we computed the log likelihoods we have to use the
-                # logaddexp operation to correctly perform the averaging
-                #
-                # The next line of code performs the following computation:
-                # tmp <- log(exp(tmp) + exp(log_p))
-                tmp = np.logaddexp(tmp, log_p)
-            else:
-                tmp = log_p
-
-        result[r] = tmp
-
-    result -= np.log(num_s)
     return result
