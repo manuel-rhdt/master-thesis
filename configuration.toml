@@ -1,5 +1,40 @@
 [mutual_information]
-num_signals = 100
+num_signals.envvar = 'SIGS'
 num_responses = 16
 
-output = '$HOME/testrun'
+output.expandvars = '$HOME/run$RUN'
+
+[kde_estimate]
+  size = 500
+  signal.length = 5000
+  response.length = 5000
+
+[signal]
+  length = 50000
+
+  components = ['S']
+
+  [[signal.reactions]]
+  k = 20.0 # kappa
+  reactants = []
+  products = ['S']
+
+  [[signal.reactions]]
+  k = 0.005 # lambda
+  reactants = ['S']
+  products = []
+
+[response]
+  length = 50000
+
+  components = ['X']
+
+  [[response.reactions]]
+  k = 0.005 # rho
+  reactants = ['S']
+  products = ['S', 'X']
+
+  [[response.reactions]]
+  k = 0.02 # mu
+  reactants = ['X']
+  products = []

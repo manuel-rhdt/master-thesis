@@ -17,9 +17,8 @@ import toml
 
 CONFIGURATION = configuration.get()['mutual_information']
 
-OUT_PATH = os.path.expandvars(CONFIGURATION['output'])
-
-num_signals = int(CONFIGURATION['num_signals'])
+OUT_PATH = CONFIGURATION['output']
+num_signals = CONFIGURATION['num_signals']
 
 kappa = 20.0
 lamda = 0.005
@@ -195,7 +194,7 @@ def main():
     print("generating signals...")
     combined_signal = generate_signals_sim(num_signals, length=50000)
 
-    num_responses = int(CONFIGURATION['num_responses'])
+    num_responses = CONFIGURATION['num_responses']
     pbar = tqdm(total=num_responses, smoothing=0.9, desc='simulated responses')
     response_batch = multiprocessing.cpu_count()
 
