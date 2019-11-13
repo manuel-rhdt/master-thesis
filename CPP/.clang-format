@@ -1,6 +1,0 @@
-﻿---
-BasedOnStyle: WebKit
-Cpp11BracedListStyle: 'false'
-PointerAlignment: Right
-
-...
