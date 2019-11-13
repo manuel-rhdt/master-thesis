@@ -1,0 +1,5 @@
+[mutual_information]
+num_signals = 100
+num_responses = 16
+
+output = '$HOME/testrun'

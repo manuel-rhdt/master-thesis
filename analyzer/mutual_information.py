@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import multiprocessing
-import settings
 from analyzer import analyzer, stochastic_sim, ornstein_uhlenbeck
+from analyzer import configuration
 import pathlib
 import numpy as np
 import os
@@ -11,19 +11,15 @@ import math
 from tqdm import tqdm
 import scipy
 from scipy.stats import gaussian_kde
+from datetime import datetime, timezone
+import toml
 
 
-CONFIGURATION = settings.configuration['mutual_information']
+CONFIGURATION = configuration.get()['mutual_information']
 
 OUT_PATH = os.path.expandvars(CONFIGURATION['output'])
 
-mean = CONFIGURATION['signal_mean']
-duration = CONFIGURATION['signal_duration']
-corr_time = CONFIGURATION['signal_correlation_time']
-diffusion = CONFIGURATION['signal_diffusion']
-resolution = CONFIGURATION['signal_resolution']
-
-num_signals = CONFIGURATION['num_signals']
+num_signals = int(CONFIGURATION['num_signals'])
 
 kappa = 20.0
 lamda = 0.005
@@ -38,16 +34,16 @@ reactions.reactants = np.array([[0], [1]], dtype=np.int32)
 reactions.products = np.array([[0, 1], [-1, -1]], dtype=np.int32)
 
 
-def generate_signals_numerical(count):
-    stimestamps = np.arange(0, duration, 1/resolution)
-    signal_c = np.empty((count, 1, len(stimestamps)))
-    for i in range(count):
-        signal_c[i][0] = np.clip(ornstein_uhlenbeck.generate(
-            stimestamps, x0=mean, correlation_time=corr_time, diffusion_constant=diffusion, mean=mean), 0.0, None)
-    return {
-        'timestamps': np.broadcast_to(stimestamps, (count, len(stimestamps))),
-        'components': signal_c
-    }
+# def generate_signals_numerical(count):
+#     stimestamps = np.arange(0, duration, 1/resolution)
+#     signal_c = np.empty((count, 1, len(stimestamps)))
+#     for i in range(count):
+#         signal_c[i][0] = np.clip(ornstein_uhlenbeck.generate(
+#             stimestamps, x0=mean, correlation_time=corr_time, diffusion_constant=diffusion, mean=mean), 0.0, None)
+#     return {
+#         'timestamps': np.broadcast_to(stimestamps, (count, len(stimestamps))),
+#         'components': signal_c
+#     }
 
 
 def generate_signals_sim(count, length=100000, initial_values=None):
@@ -184,7 +180,16 @@ def kde_estimate_p_0(size=500, traj_length=5000):
 
 
 def main():
-    pathlib.Path(OUT_PATH).mkdir(exist_ok=True)
+    output_path = pathlib.Path(OUT_PATH)
+    output_path.mkdir(exist_ok=False)
+
+    runinfo = configuration.get()
+    runinfo['run'] = {
+        'started': datetime.now(timezone.utc)
+    }
+
+    with (output_path / 'info.toml').open('w') as f:
+        toml.dump(runinfo, f)
 
     kde_estimate = kde_estimate_p_0(size=num_signals)
     print("generating signals...")

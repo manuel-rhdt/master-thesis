@@ -12,8 +12,6 @@ from scipy import interpolate
 from numba import jit, guvectorize, float64, int32, prange, cuda
 from numba.typed import List as TypedList
 
-import settings
-
 from . import ornstein_uhlenbeck
 
 
