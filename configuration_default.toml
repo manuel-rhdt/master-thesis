@@ -1,11 +1,11 @@
-num_signals = 1000
-num_responses = 100
+num_signals = 5000
+num_responses = 1000
 
 output.expandvars = '$HOME/testrun'
 
 [kde_estimate]
-  size = 500
-  signal.length = 8_000
+  size = 15_000
+  signal.length = 4_000
   signal.initial = 4_000
   response.initial = 1_000
 
