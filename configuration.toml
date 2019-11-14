@@ -1,13 +1,11 @@
-[mutual_information]
-num_signals.envvar = 'SIGS'
+num_signals = 30
 num_responses = 16
 
-output.expandvars = '$HOME/run$RUN'
+output.expandvars = '$HOME/testrun'
 
 [kde_estimate]
   size = 500
   signal.length = 5000
-  response.length = 5000
 
 [signal]
   length = 50000

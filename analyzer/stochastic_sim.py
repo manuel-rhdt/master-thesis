@@ -23,6 +23,26 @@ class ReactionNetwork(object):
         return self.k.size
 
 
+def create_reaction_network(k, reactants, products):
+    network = ReactionNetwork(len(k))
+    network.k = numpy.asarray(k, dtype=numpy.single)
+    max_num_reactants = max(len(react) for react in reactants)
+    network.reactants = numpy.full(
+        (len(k), max_num_reactants), -1, dtype=numpy.int32)
+    for i, react in enumerate(reactants):
+        for j, r in enumerate(react):
+            network.reactants[i, j] = r
+
+    max_num_products = max(len(prod) for prod in products)
+    network.products = numpy.full(
+        (len(k), max_num_products), -1, dtype=numpy.int32)
+    for i, prod in enumerate(products):
+        for j, p in enumerate(prod):
+            network.products[i, j] = p
+
+    return network
+
+
 @njit(fastmath=True)
 def calc_propensities(components, propensities, reactions):
     for n in range(reactions.size):

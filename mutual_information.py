@@ -14,23 +14,10 @@ from scipy.stats import gaussian_kde
 from datetime import datetime, timezone
 import toml
 
+OUT_PATH = configuration.get()['output']
+num_signals = configuration.get()['num_signals']
 
-CONFIGURATION = configuration.get()['mutual_information']
-
-OUT_PATH = CONFIGURATION['output']
-num_signals = CONFIGURATION['num_signals']
-
-kappa = 20.0
-lamda = 0.005
-rho = 0.005
-mu = 0.02
-mean_s = kappa / lamda
-mean_x = mean_s * rho / mu
-
-reactions = stochastic_sim.ReactionNetwork(2)
-reactions.k = np.array([rho, mu], dtype=np.single)
-reactions.reactants = np.array([[0], [1]], dtype=np.int32)
-reactions.products = np.array([[0, 1], [-1, -1]], dtype=np.int32)
+SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
 
 
 # def generate_signals_numerical(count):
@@ -46,11 +33,6 @@ reactions.products = np.array([[0, 1], [-1, -1]], dtype=np.int32)
 
 
 def generate_signals_sim(count, length=100000, initial_values=None):
-    sig_reactions = stochastic_sim.ReactionNetwork(2)
-    sig_reactions.k = np.array([kappa, lamda], dtype=np.single)
-    sig_reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
-    sig_reactions.products = np.array([[0], [-1]], dtype=np.int32)
-
     timestamps = np.zeros((count, length))
     trajectory = np.zeros((count, 1, length), dtype=np.int16)
     reaction_events = np.zeros((count, length - 1), dtype=np.uint8)
@@ -59,11 +41,10 @@ def generate_signals_sim(count, length=100000, initial_values=None):
     if initial_values is not None:
         trajectory[:, 0, 0] = initial_values
     else:
-        trajectory[:, 0, 0] = np.random.normal(
-            size=count, loc=mean_s, scale=np.sqrt(mean_s))
+        raise RuntimeError('Need to specify initial values')
 
     stochastic_sim.simulate(
-        timestamps, trajectory, reaction_events=reaction_events, reactions=sig_reactions)
+        timestamps, trajectory, reaction_events=reaction_events, reactions=SIGNAL_NETWORK)
 
     return {
         'timestamps': timestamps,
@@ -81,11 +62,10 @@ def generate_responses(count, signal_timestamps, signal_comps, length=100000, in
     if initial_values is not None:
         trajectory[:, 0, 0] = initial_values
     else:
-        trajectory[:, 0, 0] = np.random.normal(
-            size=count, loc=mean_x, scale=np.sqrt(mean_x * (1.0 + rho/(lamda + mu))))
+        raise RuntimeError('Need to specify initial values')
 
     stochastic_sim.simulate(timestamps, trajectory, reaction_events=reaction_events,
-                            reactions=reactions, ext_components=signal_comps, ext_timestamps=signal_timestamps)
+                            reactions=RESPONSE_NETWORK, ext_components=signal_comps, ext_timestamps=signal_timestamps)
 
     return {
         'components': trajectory,
@@ -107,18 +87,19 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     if num_responses == 0:
         return
 
-    response_len = 50000
+    response_len = configuration.get()['response']['length']
 
-    signal_distr = scipy.stats.norm(loc=mean_s, scale=np.sqrt(mean_s))
+    joined_distr = kde_estimate['joined']
+    signal_distr = kde_estimate['signal']
 
     # generate responses from signals
-    initial_comps = kde_estimate.resample(num_responses)
+    initial_comps = joined_distr.resample(num_responses)
     sig = generate_signals_sim(
         num_responses, length=response_len, initial_values=initial_comps[0])
     responses = generate_responses(
         num_responses, sig['timestamps'], sig['components'], length=response_len, initial_values=initial_comps[1])
 
-    log_p_x_zero_this = kde_estimate.logpdf(
+    log_p_x_zero_this = joined_distr.logpdf(
         initial_comps) - signal_distr.logpdf(initial_comps[0])
 
     values = np.empty((2, num_signals, num_responses))
@@ -126,7 +107,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     values[1, :, :] = responses['components'][:, 0, 0]
     values = np.reshape(values, (2, -1))
 
-    log_p_x_zero = kde_estimate.logpdf(
+    log_p_x_zero = joined_distr.logpdf(
         values) - signal_distr.logpdf(values[0])
     log_p_x_zero = np.reshape(log_p_x_zero, (num_signals, num_responses))
 
@@ -148,34 +129,35 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     reaction_events = responses['reaction_events']
 
     analyzer.log_likelihood(traj_lengths, sig['components'], sig['timestamps'], response_components,
-                            response_timestamps, reaction_events, reactions, out=mutual_information[1])
+                            response_timestamps, reaction_events, RESPONSE_NETWORK, out=mutual_information[1])
     mutual_information[1] += log_p_x_zero_this[:, np.newaxis]
 
     signal_components = averaging_signals['components']
     signal_timestamps = averaging_signals['timestamps']
     mutual_information[1] -= analyzer.log_averaged_likelihood(
-        traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, log_p_x_zero)
+        traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, RESPONSE_NETWORK, log_p_x_zero)
 
     np.save(os.path.join(OUT_PATH, 'mi.{}'.format(i)),
             np.swapaxes(mutual_information, 0, 1))
 
 
-def kde_estimate_p_0(size=500, traj_length=5000):
-    signal_init = np.random.normal(
-        size=size, loc=mean_s, scale=np.sqrt(mean_s))
+def kde_estimate_p_0(size, traj_length, signal_init=1, response_init=1):
     sig = generate_signals_sim(
         size, length=traj_length, initial_values=signal_init)
 
     components = np.empty((size, 2), dtype=np.int16)
     components[:, 0] = sig['components'][:, 0, 0]
-    components[:, 1] = mean_x
+    components[:, 1] = response_init
 
     until = sig['timestamps'][:, -1]
 
     stochastic_sim.simulate_until(
-        until, components, reactions, ext_timestamps=sig['timestamps'], ext_components=sig['components'])
+        until, components, RESPONSE_NETWORK, ext_timestamps=sig['timestamps'], ext_components=sig['components'])
 
-    return gaussian_kde(components.T)
+    return {
+        'joined': gaussian_kde(components.T),
+        'signal': gaussian_kde(components[:, 0])
+    }
 
 
 def main():
@@ -187,24 +169,33 @@ def main():
         'started': datetime.now(timezone.utc)
     }
 
-    with (output_path / 'info.toml').open('w') as f:
+    with (output_path / 'info.toml').open('x') as f:
         toml.dump(runinfo, f)
 
-    kde_estimate = kde_estimate_p_0(size=num_signals)
+    kde_estimate = kde_estimate_p_0(size=num_signals, traj_length=configuration.get()[
+                                    'kde_estimate']['signal']['length'])
     print("generating signals...")
-    combined_signal = generate_signals_sim(num_signals, length=50000)
+    initial_values = kde_estimate['signal'].resample(size=num_signals)
+    signal_length = configuration.get()['signal']['length']
+    combined_signal = generate_signals_sim(
+        num_signals, length=signal_length, initial_values=initial_values)
 
-    num_responses = CONFIGURATION['num_responses']
+    num_responses = configuration.get()['num_responses']
     pbar = tqdm(total=num_responses, smoothing=0.9, desc='simulated responses')
     response_batch = multiprocessing.cpu_count()
 
     for i in range(num_responses // response_batch):
         calculate(i, response_batch, combined_signal, kde_estimate)
         pbar.update(response_batch)
+
     i = num_responses // response_batch
     remaining_responses = num_responses % response_batch
     calculate(i, remaining_responses, combined_signal, kde_estimate)
     pbar.update(remaining_responses)
+
+    runinfo['run']['ended'] = datetime.now(timezone.utc)
+    with (output_path / 'info.toml').open('w') as f:
+        toml.dump(runinfo, f)
 
 
 if __name__ == '__main__':
