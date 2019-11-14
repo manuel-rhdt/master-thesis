@@ -3,6 +3,8 @@
 import multiprocessing
 from analyzer import analyzer, stochastic_sim, ornstein_uhlenbeck
 from analyzer import configuration
+import numba
+from numba import njit
 import pathlib
 import numpy as np
 import os
@@ -74,6 +76,30 @@ def generate_responses(count, signal_timestamps, signal_comps, length=100000, in
     }
 
 
+@njit(parallel=True, fastmath=True)
+def log_evaluate_kde(points, dataset, inv_cov):
+    d, n = dataset.shape
+    num_r, _, m = points.shape
+    assert len(inv_cov.shape) == 2
+
+    log_norm_factor = -0.5 * np.log(np.linalg.det(inv_cov / (2 * np.pi)))
+
+    result = np.empty((num_r, m))
+    for j in numba.prange(num_r):
+        tmp = np.zeros((n, m))
+        for i in range(n):
+            diff = np.empty((d, m))
+            for k in range(m):
+                for l in range(d):
+                    diff[l, k] = dataset[l, i] - points[j, l, k]
+            tdiff = np.dot(inv_cov, diff)
+            tmp[i] = -np.sum(diff*tdiff, axis=0) / 2.0
+
+        result[j] = analyzer.logsumexp(tmp) - np.log(n) - log_norm_factor
+
+    return result
+
+
 def calculate(i, num_responses, averaging_signals, kde_estimate):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
@@ -102,12 +128,14 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     log_p_x_zero_this = joined_distr.logpdf(
         initial_comps) - signal_distr.logpdf(initial_comps[0])
 
-    sig_0, res_0 = np.meshgrid(
-        averaging_signals['components'][:, 0, 0], responses['components'][:, 0, 0])
-    values = np.vstack((sig_0.flatten(), res_0.flatten()))
+    points = np.empty((num_responses, 2, num_signals))
+    points[:, 0, :] = averaging_signals['components'][np.newaxis, :, 0, 0]
+    points[:, 1, :] = responses['components'][:, 0, 0, np.newaxis]
 
-    log_p_x_zero = joined_distr.logpdf(values) - signal_distr.logpdf(values[0])
-    log_p_x_zero = np.reshape(log_p_x_zero, (num_signals, num_responses))
+    log_p_x_zero = log_evaluate_kde(
+        points, joined_distr.dataset, joined_distr.inv_cov)
+    log_p_x_zero -= log_evaluate_kde(
+        points[:, [0], :], joined_distr.dataset[[0]], joined_distr.inv_cov[0, 0, None, None])
 
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
@@ -133,7 +161,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     signal_components = averaging_signals['components']
     signal_timestamps = averaging_signals['timestamps']
     mutual_information[1] -= analyzer.log_averaged_likelihood(
-        traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, RESPONSE_NETWORK, log_p_x_zero)
+        traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, RESPONSE_NETWORK, log_p_x_zero.T)
 
     np.save(OUT_PATH / 'mi.{}'.format(i),
             np.swapaxes(mutual_information, 0, 1))
