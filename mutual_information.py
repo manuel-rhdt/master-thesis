@@ -135,7 +135,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     log_p_x_zero = log_evaluate_kde(
         points, joined_distr.dataset, joined_distr.inv_cov)
     log_p_x_zero -= log_evaluate_kde(
-        points[:, [0], :], joined_distr.dataset[[0]], joined_distr.inv_cov[0, 0, None, None])
+        points[:, [0], :], signal_distr.dataset, signal_distr.inv_cov)
 
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
