@@ -14,7 +14,7 @@ from scipy.stats import gaussian_kde
 from datetime import datetime, timezone
 import toml
 
-OUT_PATH = configuration.get()['output']
+OUT_PATH = pathlib.Path(configuration.get()['output'])
 num_signals = configuration.get()['num_signals']
 
 SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
@@ -102,13 +102,11 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     log_p_x_zero_this = joined_distr.logpdf(
         initial_comps) - signal_distr.logpdf(initial_comps[0])
 
-    values = np.empty((2, num_signals, num_responses))
-    values[0, :, :] = averaging_signals['components'][:, 0, 0, np.newaxis]
-    values[1, :, :] = responses['components'][:, 0, 0]
-    values = np.reshape(values, (2, -1))
+    sig_0, res_0 = np.meshgrid(
+        averaging_signals['components'][:, 0, 0], responses['components'][:, 0, 0])
+    values = np.vstack((sig_0.flatten(), res_0.flatten()))
 
-    log_p_x_zero = joined_distr.logpdf(
-        values) - signal_distr.logpdf(values[0])
+    log_p_x_zero = joined_distr.logpdf(values) - signal_distr.logpdf(values[0])
     log_p_x_zero = np.reshape(log_p_x_zero, (num_signals, num_responses))
 
     result_size = 5000
@@ -137,11 +135,11 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
     mutual_information[1] -= analyzer.log_averaged_likelihood(
         traj_lengths, signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, RESPONSE_NETWORK, log_p_x_zero)
 
-    np.save(os.path.join(OUT_PATH, 'mi.{}'.format(i)),
+    np.save(OUT_PATH / 'mi.{}'.format(i),
             np.swapaxes(mutual_information, 0, 1))
 
 
-def kde_estimate_p_0(size, traj_length, signal_init=1, response_init=1):
+def kde_estimate_p_0(size, traj_length, signal_init, response_init):
     sig = generate_signals_sim(
         size, length=traj_length, initial_values=signal_init)
 
@@ -154,6 +152,8 @@ def kde_estimate_p_0(size, traj_length, signal_init=1, response_init=1):
     stochastic_sim.simulate_until(
         until, components, RESPONSE_NETWORK, ext_timestamps=sig['timestamps'], ext_components=sig['components'])
 
+    np.save(OUT_PATH / 'equilibrated', components)
+
     return {
         'joined': gaussian_kde(components.T),
         'signal': gaussian_kde(components[:, 0])
@@ -161,19 +161,23 @@ def kde_estimate_p_0(size, traj_length, signal_init=1, response_init=1):
 
 
 def main():
-    output_path = pathlib.Path(OUT_PATH)
-    output_path.mkdir(exist_ok=False)
+    OUT_PATH.mkdir(exist_ok=False)
+    conf = configuration.get()
 
     runinfo = configuration.get()
     runinfo['run'] = {
         'started': datetime.now(timezone.utc)
     }
 
-    with (output_path / 'info.toml').open('x') as f:
+    with (OUT_PATH / 'info.toml').open('x') as f:
         toml.dump(runinfo, f)
 
-    kde_estimate = kde_estimate_p_0(size=num_signals, traj_length=configuration.get()[
-                                    'kde_estimate']['signal']['length'])
+    kde_estimate = kde_estimate_p_0(
+        size=conf['kde_estimate']['size'],
+        traj_length=conf['kde_estimate']['signal']['length'],
+        signal_init=conf['kde_estimate']['signal']['initial'],
+        response_init=conf['kde_estimate']['response']['initial']
+    )
     print("generating signals...")
     initial_values = kde_estimate['signal'].resample(size=num_signals)
     signal_length = configuration.get()['signal']['length']
@@ -194,7 +198,7 @@ def main():
     pbar.update(remaining_responses)
 
     runinfo['run']['ended'] = datetime.now(timezone.utc)
-    with (output_path / 'info.toml').open('w') as f:
+    with (OUT_PATH / 'info.toml').open('w') as f:
         toml.dump(runinfo, f)
 
 

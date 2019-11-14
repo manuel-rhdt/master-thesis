@@ -195,7 +195,7 @@ def time_average(trajectory, old_timestamps, new_timestamps, dtype=np.double, ou
     return out
 
 
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True, fastmath=True, cache=True)
 def log_likelihood_inner(signal_components, signal_timestamps, response_components, response_timestamps, reaction_events, reactions, dtype=np.dtype(np.double), out=None):
     num_signal_comps, _ = signal_components.shape
     num_response_comps, length = response_components.shape
