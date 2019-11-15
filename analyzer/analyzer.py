@@ -16,7 +16,7 @@ from . import ornstein_uhlenbeck
 
 
 # inspired by scipy.special.logsumexp
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True, fastmath=True, cache=True)
 def logsumexp(x):
     x = np.asarray(x)
     _, length = x.shape
@@ -39,7 +39,7 @@ def generate_signal(name, max_time=1000, step_size=0.01, x0=500, mean=500, corre
     return {'timestamps': timestamps, 'components': {name: x}}
 
 
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True, fastmath=True, cache=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
     """ Accelerated reaction propensity calculation
 
@@ -68,7 +68,7 @@ def calculate_sum_of_reaction_propensities(components, reactions):
     return result
 
 
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True, fastmath=True, cache=True)
 def calculate_selected_reaction_propensities(components, reaction_events, reactions):
     """ Accelerated reaction propensity calculation
 
@@ -111,7 +111,7 @@ def gpu_selected_reaction_propensities(components, reaction_events, reactions, p
                 propensities[pos] *= components[j_reactant][pos]
 
 
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True, fastmath=True, cache=True)
 def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None):
     """ Evaluate trajectory with events at `old_timestamps` at the times in `new_timestamps`.
 
