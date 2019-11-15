@@ -1,9 +1,4 @@
 {
-    "cmake.preferredGenerators": [
-        "Ninja",
-        "Unix Makefiles"
-    ],
-    "C_Cpp.intelliSenseEngineFallback": "Enabled",
     "python.pythonPath": "/home/ipausers/reinhardt/opt/anaconda3/bin/python",
     "python.testing.unittestArgs": [
         "-v",
