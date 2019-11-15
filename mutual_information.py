@@ -76,7 +76,7 @@ def generate_responses(count, signal_timestamps, signal_comps, length=100000, in
     }
 
 
-@njit(parallel=True, fastmath=True)
+@njit(parallel=True, fastmath=True, cache=True)
 def log_evaluate_kde(points, dataset, inv_cov):
     d, n = dataset.shape
     num_r, _, m = points.shape
@@ -100,7 +100,7 @@ def log_evaluate_kde(points, dataset, inv_cov):
     return result
 
 
-def calculate(i, num_responses, averaging_signals, kde_estimate):
+def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
     This function does the following:
@@ -134,8 +134,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate):
 
     log_p_x_zero = log_evaluate_kde(
         points, joined_distr.dataset, joined_distr.inv_cov)
-    log_p_x_zero -= log_evaluate_kde(
-        points[:, [0], :], signal_distr.dataset, signal_distr.inv_cov)
+    log_p_x_zero -= log_p0_signal
 
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
@@ -212,17 +211,24 @@ def main():
     combined_signal = generate_signals_sim(
         num_signals, length=signal_length, initial_values=initial_values)
 
+    signal_distr = kde_estimate['signal']
+    points = combined_signal['components'][np.newaxis, np.newaxis, :, 0, 0]
+    log_p0_signal = log_evaluate_kde(
+        points, signal_distr.dataset, signal_distr.inv_cov)
+
     num_responses = configuration.get()['num_responses']
     pbar = tqdm(total=num_responses, smoothing=0.9, desc='simulated responses')
     response_batch = multiprocessing.cpu_count()
 
     for i in range(num_responses // response_batch):
-        calculate(i, response_batch, combined_signal, kde_estimate)
+        calculate(i, response_batch, combined_signal,
+                  kde_estimate, log_p0_signal)
         pbar.update(response_batch)
 
     i = num_responses // response_batch
     remaining_responses = num_responses % response_batch
-    calculate(i, remaining_responses, combined_signal, kde_estimate)
+    calculate(i, remaining_responses, combined_signal,
+              kde_estimate, log_p0_signal)
     pbar.update(remaining_responses)
 
     runinfo['run']['ended'] = datetime.now(timezone.utc)
