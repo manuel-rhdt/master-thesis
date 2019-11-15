@@ -1,3 +1,7 @@
+---
+title: Mutual Information between Trajectories
+---
+
 # Mutual Information between Trajectories
 
 ## Information theory for trajectories
@@ -87,16 +91,16 @@ $$
 
 which means that for finite amount of signal samples we will _systematically over-estimate_ the mutual information. Even worse: the longer the trajectories the bigger the error becomes since the dimensionality of the space of possible signals is growing.
 
-Another way to phrase this insight is that to get a good approximation for the logarithmized average likelihood, our set of signals that we use for monte-carlo sampling should contain many signals that produce a high likelihood. **Therefore it probably is necessary to come up with a scheme to specifically sample signal trajectories for which the likelihood of a particular trajectory is high**.
+Another way to phrase this insight is that to get a good approximation for the logarithmized average likelihood, our set of signals that we use for monte-carlo sampling should contain many signals that produce a high likelihood. **Therefore it probably is necessary to come up with a scheme to specifically sample signal trajectories for which the likelihood of a particular trajectory is high**. On the other hand the results do not seem to get significantly better when averaging over more trajectories.
 
 ## Simulating chemical networks
 
 As a model for the biochemical processing that takes place inside a cell we suppose that all interactions can be described by a chemical networks composed of a number of components (different types of molecules) and a number of reactions between them. As a very basic example we consider a highly simplified model of gene expression consisting of two components and four reactions:
 
-$$
-\emptyset \longrightarrow S \longrightarrow \emptyset \\
-S \longrightarrow S + X \\
-X \longrightarrow \emptyset \,.
-$$
+\begin{align}
+\emptyset &\longrightarrow S \longrightarrow \emptyset \\
+S &\longrightarrow S + X \\
+X &\longrightarrow \emptyset \,.
+\end{align}
 
 We might interpret $S$ as some signal whose quantity varies stochastically. Then there is a certain chance that a signal molecule is registered by the cell which triggers the creation of an $X$. The amount of $X$ then also decays over time. We call the trajectory of $S$ the "signal" and the trajectory of $X$ the "response".
