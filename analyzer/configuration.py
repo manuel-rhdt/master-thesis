@@ -19,20 +19,46 @@ def get(path='configuration.toml'):
     return CONF
 
 
+def evaluate_envvar(func):
+    val = os.environ[func['envvar']]
+    try:
+        return int(val)
+    except ValueError:
+        try:
+            return float(val)
+        except ValueError:
+            return val
+
+
+def evaluate_expandvars(func):
+    return Template(func['expandvars']).substitute(os.environ)
+
+
+def evaluate_expression(expr):
+    functions = [{'key': 'envvar',
+                  'func': evaluate_envvar},
+                 {'key': 'expandvars',
+                  'func': evaluate_expandvars}]
+
+    for fn in functions:
+        if fn['key'] in expr:
+            return fn['func'](expr)
+
+    # we did not find any matching function so we just return the
+    # expression unchanged
+    return expr
+
+
 def expand(dictionary):
-    """Perform a recursive evaluation of configuration functions.
+    """Perform a recursive evaluation of configuration expression.
 
     Arguments:
-        dictionary {dict} -- The dictionary to evaluate
+        dictionary {dict} -- The dictionary whose entries to expand
     """
     for key, value in dictionary.items():
         if type(value) == dict:
             expand(value)
-            if 'envvar' in value:
-                dictionary[key] = int(os.environ[value['envvar']])
-            if 'expandvars' in value:
-                dictionary[key] = Template(
-                    value['expandvars']).substitute(os.environ)
+            dictionary[key] = evaluate_expression(value)
 
 
 def load(path):

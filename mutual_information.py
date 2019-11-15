@@ -119,6 +119,8 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     signal_distr = kde_estimate['signal']
 
     # generate responses from signals
+
+    # first we sample the initial points from the joined distribution
     initial_comps = joined_distr.resample(num_responses)
     sig = generate_signals_sim(
         num_responses, length=response_len, initial_values=initial_comps[0])
@@ -136,6 +138,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         points, joined_distr.dataset, joined_distr.inv_cov)
     log_p_x_zero -= log_p0_signal
 
+    # TODO: make this configurable
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
     # we create an array with the following dimensions to hold the results of our calculations
