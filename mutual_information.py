@@ -3,7 +3,6 @@
 import multiprocessing
 from analyzer import analyzer, stochastic_sim
 from analyzer import configuration
-import numba
 from numba import njit
 import pathlib
 import numpy as np
@@ -72,7 +71,7 @@ def generate_responses(
     }
 
 
-@njit(parallel=True, fastmath=True, cache=True)
+@njit(fastmath=True, cache=True)
 def log_evaluate_kde(points, dataset, inv_cov):
     d, n = dataset.shape
     num_r, _, m = points.shape
@@ -81,7 +80,7 @@ def log_evaluate_kde(points, dataset, inv_cov):
     log_norm_factor = -0.5 * np.log(np.linalg.det(inv_cov / (2 * np.pi)))
 
     result = np.empty((num_r, m))
-    for j in numba.prange(num_r):
+    for j in range(num_r):
         tmp = np.zeros((n, m))
         for i in range(n):
             diff = np.empty((d, m))
@@ -211,6 +210,21 @@ def kde_estimate_p_0(size, traj_length, signal_init, response_init):
     }
 
 
+def worker(tasks, done_queue, pregenerated_signals, kde_estimate):
+    signal_distr = kde_estimate["signal"]
+    points = pregenerated_signals["components"][np.newaxis, np.newaxis, :, 0, 0]
+    log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
+    for i in iter(tasks.get, "STOP"):
+        calculate(
+            i,
+            num_responses=1,
+            averaging_signals=pregenerated_signals,
+            kde_estimate=kde_estimate,
+            log_p0_signal=log_p0_signal,
+        )
+        done_queue.put(1)
+
+
 def main():
     OUT_PATH.mkdir(exist_ok=False)
     conf = configuration.get()
@@ -234,22 +248,34 @@ def main():
         num_signals, length=signal_length, initial_values=initial_values
     )
 
-    signal_distr = kde_estimate["signal"]
-    points = combined_signal["components"][np.newaxis, np.newaxis, :, 0, 0]
-    log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
-
     num_responses = configuration.get()["num_responses"]
-    pbar = tqdm(total=num_responses, smoothing=0.9, desc="simulated responses")
-    response_batch = multiprocessing.cpu_count()
+    task_queue = multiprocessing.Queue()
+    for task in range(num_responses):
+        task_queue.put(task)
+    done_queue = multiprocessing.Queue()
 
-    for i in range(num_responses // response_batch):
-        calculate(i, response_batch, combined_signal, kde_estimate, log_p0_signal)
-        pbar.update(response_batch)
+    try:
+        num_processes = conf['num_processes']
+    except KeyError:
+        num_processes = multiprocessing.cpu_count()
 
-    i = num_responses // response_batch
-    remaining_responses = num_responses % response_batch
-    calculate(i, remaining_responses, combined_signal, kde_estimate, log_p0_signal)
-    pbar.update(remaining_responses)
+    workers = [
+        multiprocessing.Process(
+            target=worker, args=(task_queue, done_queue, combined_signal, kde_estimate)
+        )
+        for _ in range(num_processes)
+    ]
+
+    pbar = tqdm(total=num_responses, smoothing=0.1, desc="simulated responses")
+    for process in workers:
+        process.start()
+        task_queue.put("STOP")
+
+    for _ in range(num_responses):
+        pbar.update(done_queue.get())
+
+    for process in workers:
+        process.join()
 
     runinfo["run"]["ended"] = datetime.now(timezone.utc)
     with (OUT_PATH / "info.toml").open("w") as f:

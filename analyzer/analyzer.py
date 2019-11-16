@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit, prange, cuda
+from numba import jit, cuda
 from numba.typed import List as TypedList
 
 from . import ornstein_uhlenbeck
@@ -281,7 +281,7 @@ def log_likelihood_inner(
     return result
 
 
-@jit(nopython=True, fastmath=True, parallel=True, cache=True)
+@jit(nopython=True, fastmath=True, cache=True)
 def log_likelihood(
     traj_lengths,
     signal_components,
@@ -299,7 +299,7 @@ def log_likelihood(
     assert num_r == num_s
 
     result = out if out is not None else np.empty((num_r, length), dtype=np.single)
-    for r in prange(num_r):
+    for r in range(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
         sc = signal_components[r]
@@ -312,7 +312,7 @@ def log_likelihood(
     return result
 
 
-@jit(nopython=True, fastmath=True, parallel=True, cache=True)
+@jit(nopython=True, fastmath=True, cache=True)
 def log_averaged_likelihood(
     traj_lengths,
     signal_components,
@@ -333,7 +333,7 @@ def log_averaged_likelihood(
     (length,) = traj_lengths.shape
 
     result = out if out is not None else np.empty((num_r, length), dtype=np.single)
-    for r in prange(num_r):
+    for r in range(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
         tmp = np.empty((num_s, length), dtype=np.single)

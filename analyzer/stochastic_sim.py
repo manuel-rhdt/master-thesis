@@ -1,7 +1,7 @@
 import numpy
 import numpy.random
 
-from numba import njit, prange, float32, int32, jitclass
+from numba import njit, float32, int32, jitclass
 
 spec = [("k", float32[:]), ("reactants", int32[:, :]), ("products", int32[:, :])]
 
@@ -212,13 +212,13 @@ def simulate_until_one(
         prev_components = components
 
 
-@njit(parallel=True, fastmath=True, cache=True)
+@njit(fastmath=True, cache=True)
 def simulate_until(
     until, initial_values, reactions, ext_timestamps=None, ext_components=None
 ):
     (num_trajectories,) = until.shape
 
-    for r in prange(num_trajectories):
+    for r in range(num_trajectories):
         if ext_components is not None:
             simulate_until_one(
                 until[r],
@@ -231,7 +231,7 @@ def simulate_until(
             simulate_until_one(until[r], initial_values[r], reactions)
 
 
-@njit(parallel=True, fastmath=True, cache=True)
+@njit(fastmath=True, cache=True)
 def simulate(
     timestamps,
     trajectory,
@@ -246,7 +246,7 @@ def simulate(
 
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
 
-    for r in prange(timestamps.shape[0]):
+    for r in range(timestamps.shape[0]):
         if ext_components is not None:
             simulate_one(
                 timestamps[r],
