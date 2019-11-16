@@ -164,3 +164,4 @@ ipython_config.py
 **.reactions
 **.log
 configuration.toml
+data
