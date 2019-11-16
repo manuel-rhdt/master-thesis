@@ -18,22 +18,6 @@ num_signals = configuration.get()["num_signals"]
 SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
 
 
-# def generate_signals_numerical(count):
-#     stimestamps = np.arange(0, duration, 1/resolution)
-#     signal_c = np.empty((count, 1, len(stimestamps)))
-#     for i in range(count):
-#         signal_c[i][0] = np.clip(ornstein_uhlenbeck.generate(
-#             stimestamps,
-#             x0=mean,
-#             correlation_time=corr_time,
-#             diffusion_constant=diffusion,
-#             mean=mean), 0.0, None)
-#     return {
-#         'timestamps': np.broadcast_to(stimestamps, (count, len(stimestamps))),
-#         'components': signal_c
-#     }
-
-
 def generate_signals_sim(count, length=100000, initial_values=None):
     timestamps = np.zeros((count, length))
     trajectory = np.zeros((count, 1, length), dtype=np.int16)
