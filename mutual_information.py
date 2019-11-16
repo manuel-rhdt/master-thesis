@@ -214,6 +214,7 @@ def worker(tasks, done_queue, pregenerated_signals, kde_estimate):
     signal_distr = kde_estimate["signal"]
     points = pregenerated_signals["components"][np.newaxis, np.newaxis, :, 0, 0]
     log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
+
     for i in iter(tasks.get, "STOP"):
         calculate(
             i,
