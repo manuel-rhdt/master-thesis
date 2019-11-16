@@ -27,7 +27,7 @@ class TestSim(unittest.TestCase):
 
         timestamps = np.zeros(length)
         trajectory = np.zeros((1, length), dtype=np.uint16)
-        reaction_events = np.zeros(length - 1, dtype='i4')
+        reaction_events = np.zeros(length - 1, dtype="i4")
         trajectory[:, 0] = np.array([5])
         ext_components = np.full((2, 5), 10, dtype=np.uint16)
         ext_timestamps = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
@@ -38,7 +38,13 @@ class TestSim(unittest.TestCase):
         reactions.products = np.array([[2, -1], [0, 2]], dtype=np.int32)
 
         stochastic_sim.simulate_one(
-            timestamps, trajectory, reaction_events, reactions, ext_timestamps, ext_components)
+            timestamps,
+            trajectory,
+            reaction_events,
+            reactions,
+            ext_timestamps,
+            ext_components,
+        )
 
         self.assertEqual(timestamps[0], 0.0)
         self.assertListEqual(trajectory[:, 0].tolist(), [5])
@@ -47,5 +53,5 @@ class TestSim(unittest.TestCase):
             self.assertGreater(timestamps[i], timestamps[i - 1])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
