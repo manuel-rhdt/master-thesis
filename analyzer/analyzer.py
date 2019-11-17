@@ -2,8 +2,6 @@ import numpy as np
 from numba import jit, cuda
 from numba.typed import List as TypedList
 
-from . import ornstein_uhlenbeck
-
 
 # inspired by scipy.special.logsumexp
 @jit(nopython=True, fastmath=True, cache=True)
@@ -20,26 +18,6 @@ def logsumexp(x):
     out = np.log(s)
 
     return out + xmax
-
-
-def generate_signal(
-    name,
-    max_time=1000,
-    step_size=0.01,
-    x0=500,
-    mean=500,
-    correlation_time=10,
-    diffusion=10,
-):
-    timestamps = np.arange(0, max_time, step_size)
-    x = np.clip(
-        ornstein_uhlenbeck.generate(
-            timestamps, x0, correlation_time, diffusion, mean=mean
-        ),
-        0.0,
-        None,
-    )
-    return {"timestamps": timestamps, "components": {name: x}}
 
 
 @jit(nopython=True, fastmath=True, cache=True)
