@@ -9,6 +9,7 @@ import numpy as np
 from tqdm import tqdm
 from scipy.stats import gaussian_kde
 from datetime import datetime, timezone
+import platform
 import toml
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
@@ -230,10 +231,14 @@ def main():
     OUT_PATH.mkdir(exist_ok=False)
     conf = configuration.get()
 
-    runinfo = configuration.get()
+    runinfo = {}
     runinfo["run"] = {"started": datetime.now(timezone.utc)}
+    if platform.node():
+        runinfo["run"]["node"] = platform.node()
 
     with (OUT_PATH / "info.toml").open("x") as f:
+        f.write(configuration.CONF_STRING)
+        f.write("\n\n")
         toml.dump(runinfo, f)
 
     kde_estimate = kde_estimate_p_0(
@@ -256,7 +261,7 @@ def main():
     done_queue = multiprocessing.Queue()
 
     try:
-        num_processes = conf['num_processes']
+        num_processes = conf["num_processes"]
     except KeyError:
         num_processes = multiprocessing.cpu_count()
 
@@ -279,7 +284,12 @@ def main():
         process.join()
 
     runinfo["run"]["ended"] = datetime.now(timezone.utc)
+    runinfo["run"]["duration"] = str(
+        runinfo["run"]["ended"] - runinfo["run"]["started"]
+    )
     with (OUT_PATH / "info.toml").open("w") as f:
+        f.write(configuration.CONF_STRING)
+        f.write("\n\n")
         toml.dump(runinfo, f)
 
 

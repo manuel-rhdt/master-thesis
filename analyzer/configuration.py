@@ -2,13 +2,15 @@
 """
 
 import toml
+from jinja2 import Environment, FileSystemLoader
 
-from string import Template
 import os
+import string
 
 from . import stochastic_sim
 
 CONF = None
+CONF_STRING = None
 
 
 def get(path='configuration.toml'):
@@ -31,7 +33,7 @@ def evaluate_envvar(func):
 
 
 def evaluate_expandvars(func):
-    return Template(func['expandvars']).substitute(os.environ)
+    return string.Template(func['expandvars']).substitute(os.environ)
 
 
 def evaluate_expression(expr):
@@ -61,8 +63,18 @@ def expand(dictionary):
             dictionary[key] = evaluate_expression(value)
 
 
+def process_template(path):
+    directory, filename = os.path.split(path)
+    env = Environment(loader=FileSystemLoader(directory), trim_blocks=True)
+    template = env.get_template(filename)
+    return template.render(env=os.environ)
+
+
 def load(path):
-    conf = toml.load(path)
+    global CONF_STRING
+    loaded = process_template(path)
+    CONF_STRING = loaded
+    conf = toml.loads(loaded)
     expand(conf)
     return conf
 

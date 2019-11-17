@@ -18,5 +18,6 @@
         88
     ],
     "rewrap.wrappingColumn": 88,
-    "python.linting.flake8Path": "/usr/local/anaconda3/envs/mutual_env/bin/flake8"
+    "python.linting.flake8Path": "/usr/local/anaconda3/envs/mutual_env/bin/flake8",
+    "licenser.license": "MIT"
 }

@@ -1,7 +1,18 @@
 num_signals = 5000
 num_responses = 1000
 
-output.expandvars = '$HOME/testrun'
+output = '{{ env.HOME }}/testrun'
+
+description = """
+This is the default configuration. The description is not read or modified in any way
+and you can use it for any information you want to store with your results.
+"""
+
+{# you can use jinja templating to define variables #}
+{% set kappa = 20.0 %}
+{% set lambda = 0.005 %}
+{% set rho = 0.005 %}
+{% set mu = 0.02 %}
 
 [kde_estimate]
   size = 15_000
@@ -15,12 +26,12 @@ output.expandvars = '$HOME/testrun'
   components = ['S']
 
   [[signal.reactions]]
-  k = 20.0 # kappa
+  k = {{ kappa }} # use the previously defined variable
   reactants = []
   products = ['S']
 
   [[signal.reactions]]
-  k = 0.005 # lambda
+  k = {{ lambda }}
   reactants = ['S']
   products = []
 
@@ -30,11 +41,11 @@ output.expandvars = '$HOME/testrun'
   components = ['X']
 
   [[response.reactions]]
-  k = 0.005 # rho
+  k = {{ rho }}
   reactants = ['S']
   products = ['S', 'X']
 
   [[response.reactions]]
-  k = 0.02 # mu
+  k = {{ mu }}
   reactants = ['X']
   products = []
