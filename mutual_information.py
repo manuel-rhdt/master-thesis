@@ -183,7 +183,8 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         log_p_x_zero.T,
     )
 
-    np.save(OUT_PATH / "mi.{}".format(i), np.swapaxes(mutual_information, 0, 1))
+    return np.swapaxes(mutual_information, 0, 1)
+    # np.save(OUT_PATH / "mi.{}".format(i), np.swapaxes(mutual_information, 0, 1))
 
 
 def kde_estimate_p_0(size, traj_length, signal_init, response_init):
@@ -217,14 +218,14 @@ def worker(tasks, done_queue, pregenerated_signals, kde_estimate):
     log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
 
     for i in iter(tasks.get, "STOP"):
-        calculate(
+        result = calculate(
             i,
             num_responses=1,
             averaging_signals=pregenerated_signals,
             kde_estimate=kde_estimate,
             log_p0_signal=log_p0_signal,
         )
-        done_queue.put(1)
+        done_queue.put(result)
 
 
 def main():
@@ -277,11 +278,15 @@ def main():
         process.start()
         task_queue.put("STOP")
 
+    results = []
     for _ in range(num_responses):
-        pbar.update(done_queue.get())
+        results.append(done_queue.get())
+        pbar.update(1)
 
     for process in workers:
         process.join()
+
+    np.save(OUT_PATH / "mi", np.concatenate(results), allow_pickle=False)
 
     runinfo["run"]["ended"] = datetime.now(timezone.utc)
     runinfo["run"]["duration"] = str(
