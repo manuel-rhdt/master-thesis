@@ -165,3 +165,4 @@ ipython_config.py
 **.log
 configuration.toml
 data
+.vscode
