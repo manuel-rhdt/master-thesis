@@ -10,6 +10,7 @@ from tqdm import tqdm
 from scipy.stats import gaussian_kde
 from datetime import datetime, timezone
 import platform
+import sys
 import toml
 import concurrent.futures
 
@@ -261,13 +262,14 @@ def main():
         f.write("\n\n")
         toml.dump(runinfo, f)
 
+    print("Estimate initial distribution...", file=sys.stderr)
     kde_estimate = kde_estimate_p_0(
         size=conf["kde_estimate"]["size"],
         traj_length=conf["kde_estimate"]["signal"]["length"],
         signal_init=conf["kde_estimate"]["signal"]["initial"],
         response_init=conf["kde_estimate"]["response"]["initial"],
     )
-    print("generating signals...")
+    print("generating signals...", file=sys.stderr)
     initial_values = kde_estimate["signal"].resample(size=num_signals)
     signal_length = configuration.get()["signal"]["length"]
     combined_signal = generate_signals_sim(
@@ -275,7 +277,7 @@ def main():
     )
     np.savez(OUT_PATH / "signals.npz", **combined_signal)
     del combined_signal
-    print("Done!")
+    print("Done!", file=sys.stderr)
 
     num_responses = configuration.get()["num_responses"]
     task_queue = multiprocessing.Queue()
