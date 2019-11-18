@@ -138,7 +138,7 @@ def timestep_generate(components, ext_timestamps, ext_components, reactions):
                     ]
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True, cache=True, nogil=True)
 def simulate_one(
     timestamps,
     trajectory,
@@ -231,7 +231,7 @@ def simulate_until(
             simulate_until_one(until[r], initial_values[r], reactions)
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True, cache=True, nogil=True)
 def simulate(
     timestamps,
     trajectory,

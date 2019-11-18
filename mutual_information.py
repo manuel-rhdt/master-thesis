@@ -11,15 +11,20 @@ from scipy.stats import gaussian_kde
 from datetime import datetime, timezone
 import platform
 import toml
+import concurrent.futures
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
 num_signals = configuration.get()["num_signals"]
+try:
+    NUM_PROCESSES = configuration.get()["num_processes"]
+except KeyError:
+    NUM_PROCESSES = multiprocessing.cpu_count()
 
 SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
 
 
 def generate_signals_sim(count, length=100000, initial_values=None):
-    timestamps = np.zeros((count, length))
+    timestamps = np.zeros((count, length), dtype=np.single)
     trajectory = np.zeros((count, 1, length), dtype=np.int16)
     reaction_events = np.zeros((count, length - 1), dtype=np.uint8)
 
@@ -29,12 +34,25 @@ def generate_signals_sim(count, length=100000, initial_values=None):
     else:
         raise RuntimeError("Need to specify initial values")
 
-    stochastic_sim.simulate(
-        timestamps,
-        trajectory,
-        reaction_events=reaction_events,
-        reactions=SIGNAL_NETWORK,
-    )
+    if count > 1:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=NUM_PROCESSES
+        ) as executor:
+            for i in range(count):
+                executor.submit(
+                    stochastic_sim.simulate_one,
+                    timestamps[i],
+                    trajectory[i],
+                    reaction_events=reaction_events[i],
+                    reactions=SIGNAL_NETWORK,
+                )
+    else:
+        stochastic_sim.simulate_one(
+            timestamps[0],
+            trajectory[0],
+            reaction_events=reaction_events[0],
+            reactions=SIGNAL_NETWORK,
+        )
 
     return {
         "timestamps": timestamps,
@@ -149,10 +167,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     #                 mutual_information[1] holds the mutual information values
     # dimension2: arrays of responses
     # dimension3: arrays of trajectories
-    mutual_information = np.empty((2, num_responses, result_size), dtype=np.single)
-
-    # store the trajectory lengths for which the mutual information is computed
-    mutual_information[0] = traj_lengths
+    mutual_information = np.empty((num_responses, result_size), dtype=np.single)
 
     response_components = responses["components"]
     response_timestamps = responses["timestamps"]
@@ -166,13 +181,13 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         response_timestamps,
         reaction_events,
         RESPONSE_NETWORK,
-        out=mutual_information[1],
+        out=mutual_information,
     )
-    mutual_information[1] += log_p_x_zero_this[:, np.newaxis]
+    mutual_information += log_p_x_zero_this[:, np.newaxis]
 
     signal_components = averaging_signals["components"]
     signal_timestamps = averaging_signals["timestamps"]
-    mutual_information[1] -= analyzer.log_averaged_likelihood(
+    mutual_information -= analyzer.log_averaged_likelihood(
         traj_lengths,
         signal_components,
         signal_timestamps,
@@ -183,7 +198,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         log_p_x_zero.T,
     )
 
-    return np.swapaxes(mutual_information, 0, 1)
+    return {"trajectory_length": traj_lengths, "mutual_information": mutual_information}
     # np.save(OUT_PATH / "mi.{}".format(i), np.swapaxes(mutual_information, 0, 1))
 
 
@@ -196,13 +211,16 @@ def kde_estimate_p_0(size, traj_length, signal_init, response_init):
 
     until = sig["timestamps"][:, -1]
 
-    stochastic_sim.simulate_until(
-        until,
-        components,
-        RESPONSE_NETWORK,
-        ext_timestamps=sig["timestamps"],
-        ext_components=sig["components"],
-    )
+    with concurrent.futures.ThreadPoolExecutor(max_workers=NUM_PROCESSES) as executor:
+        for i in range(size):
+            executor.submit(
+                stochastic_sim.simulate_until_one,
+                until[i],
+                components[i],
+                reactions=RESPONSE_NETWORK,
+                ext_timestamps=sig["timestamps"][i],
+                ext_components=sig["components"][i],
+            )
 
     np.save(OUT_PATH / "equilibrated", components)
 
@@ -212,8 +230,9 @@ def kde_estimate_p_0(size, traj_length, signal_init, response_init):
     }
 
 
-def worker(tasks, done_queue, pregenerated_signals, kde_estimate):
+def worker(tasks, done_queue, signal_path, kde_estimate):
     signal_distr = kde_estimate["signal"]
+    pregenerated_signals = np.load(signal_path, mmap_mode="r")
     points = pregenerated_signals["components"][np.newaxis, np.newaxis, :, 0, 0]
     log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
 
@@ -254,6 +273,9 @@ def main():
     combined_signal = generate_signals_sim(
         num_signals, length=signal_length, initial_values=initial_values
     )
+    np.savez(OUT_PATH / "signals.npz", **combined_signal)
+    del combined_signal
+    print("Done!")
 
     num_responses = configuration.get()["num_responses"]
     task_queue = multiprocessing.Queue()
@@ -261,16 +283,12 @@ def main():
         task_queue.put(task)
     done_queue = multiprocessing.Queue()
 
-    try:
-        num_processes = conf["num_processes"]
-    except KeyError:
-        num_processes = multiprocessing.cpu_count()
-
     workers = [
         multiprocessing.Process(
-            target=worker, args=(task_queue, done_queue, combined_signal, kde_estimate)
+            target=worker,
+            args=(task_queue, done_queue, OUT_PATH / "signals.npz", kde_estimate),
         )
-        for _ in range(num_processes)
+        for _ in range(NUM_PROCESSES)
     ]
 
     pbar = tqdm(total=num_responses, smoothing=0.1, desc="simulated responses")
@@ -286,7 +304,12 @@ def main():
     for process in workers:
         process.join()
 
-    np.save(OUT_PATH / "mi", np.concatenate(results), allow_pickle=False)
+    mutual_information = np.concatenate([res["mutual_information"] for res in results])
+    np.savez(
+        OUT_PATH / "mutual_information",
+        trajectory_length=results[0]["trajectory_length"],
+        mutual_information=mutual_information,
+    )
 
     runinfo["run"]["ended"] = datetime.now(timezone.utc)
     runinfo["run"]["duration"] = str(
