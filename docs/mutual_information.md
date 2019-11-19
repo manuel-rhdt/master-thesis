@@ -1,7 +1,3 @@
----
-title: Mutual Information between Trajectories
----
-
 # Mutual Information between Trajectories
 
 ## Information theory for trajectories
