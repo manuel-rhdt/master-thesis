@@ -10,8 +10,6 @@ import string
 from . import stochastic_sim
 
 CONF = None
-CONF_STRING = None
-
 
 def get(path='configuration.toml'):
     global CONF
@@ -71,15 +69,18 @@ def process_template(path):
 
 
 def load(path):
-    global CONF_STRING
     loaded = process_template(path)
-    CONF_STRING = loaded
+    conf_string = loaded
     conf = toml.loads(loaded)
+    conf["original"] = conf_string
     expand(conf)
     return conf
 
 
-def read_reactions(conf=get()):
+def read_reactions(conf=None):
+    if conf is None:
+        conf = get()
+    
     name_index_table = {}
 
     for comp in conf['signal']['components']:

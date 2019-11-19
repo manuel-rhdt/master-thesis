@@ -258,7 +258,7 @@ def main():
         runinfo["run"]["node"] = platform.node()
 
     with (OUT_PATH / "info.toml").open("x") as f:
-        f.write(configuration.CONF_STRING)
+        f.write(conf["original"])
         f.write("\n\n")
         toml.dump(runinfo, f)
 
@@ -318,7 +318,7 @@ def main():
         runinfo["run"]["ended"] - runinfo["run"]["started"]
     )
     with (OUT_PATH / "info.toml").open("w") as f:
-        f.write(configuration.CONF_STRING)
+        f.write(conf["original"])
         f.write("\n\n")
         toml.dump(runinfo, f)
 
