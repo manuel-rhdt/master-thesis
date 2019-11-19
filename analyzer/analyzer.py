@@ -281,6 +281,7 @@ def log_likelihood(
     response_timestamps,
     reaction_events,
     reactions,
+    dtype=None,
     out=None,
 ):
     num_r, _, _ = response_components.shape
@@ -289,7 +290,15 @@ def log_likelihood(
 
     assert num_r == num_s
 
-    result = out if out is not None else np.empty((num_r, length), dtype=np.single)
+    if dtype is None:
+        if out is not None:
+            dtype = out.dtype
+        else:
+            dtype = np.dtype(np.double)
+    else:
+        dtype = np.dtype(dtype)
+
+    result = out if out is not None else np.empty((num_r, length), dtype=dtype)
     for r in range(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
@@ -313,6 +322,7 @@ def log_averaged_likelihood(
     reaction_events,
     reactions,
     p_zero,
+    dtype=None,
     out=None,
 ):
     """
@@ -323,11 +333,19 @@ def log_averaged_likelihood(
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
 
-    result = out if out is not None else np.empty((num_r, length), dtype=np.single)
+    if dtype is None:
+        if out is not None:
+            dtype = out.dtype
+        else:
+            dtype = np.dtype(np.double)
+    else:
+        dtype = np.dtype(dtype)
+
+    result = out if out is not None else np.empty((num_r, length), dtype=dtype)
     for r in range(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
-        tmp = np.empty((num_s, length), dtype=np.single)
+        tmp = np.empty((num_s, length), dtype=dtype)
         for s in range(num_s):
             tmp[s] = p_zero[r, s]
 
@@ -337,7 +355,7 @@ def log_averaged_likelihood(
             st = signal_timestamps[s]
 
             log_p = log_likelihood_inner(
-                sc, st, rc, rt, reaction_events[r], reactions, dtype=np.single
+                sc, st, rc, rt, reaction_events[r], reactions, dtype=dtype
             )
             for i, index in enumerate(indices):
                 if index >= len(log_p):

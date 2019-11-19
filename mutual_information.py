@@ -165,33 +165,28 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     # TODO: make this configurable
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
-    # we create an array with the following dimensions to hold the results of our
-    # calculations
-    # dimension1 = 2: mutual_information[0] holds the trajectory length times
-    #                 mutual_information[1] holds the mutual information values
-    # dimension2: arrays of responses
-    # dimension3: arrays of trajectories
-    mutual_information = np.empty((num_responses, result_size), dtype=np.single)
 
     response_components = responses["components"]
     response_timestamps = responses["timestamps"]
     reaction_events = responses["reaction_events"]
 
-    analyzer.log_likelihood(
-        traj_lengths,
-        sig["components"],
-        sig["timestamps"],
-        response_components,
-        response_timestamps,
-        reaction_events,
-        RESPONSE_NETWORK,
-        out=mutual_information,
+    conditional_entropy = -(
+        analyzer.log_likelihood(
+            traj_lengths,
+            sig["components"],
+            sig["timestamps"],
+            response_components,
+            response_timestamps,
+            reaction_events,
+            RESPONSE_NETWORK,
+            dtype=np.single,
+        )
+        + log_p_x_zero_this[:, np.newaxis]
     )
-    mutual_information += log_p_x_zero_this[:, np.newaxis]
 
     signal_components = averaging_signals["components"]
     signal_timestamps = averaging_signals["timestamps"]
-    mutual_information -= analyzer.log_averaged_likelihood(
+    response_entropy = -analyzer.log_averaged_likelihood(
         traj_lengths,
         signal_components,
         signal_timestamps,
@@ -200,10 +195,16 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         reaction_events,
         RESPONSE_NETWORK,
         log_p_x_zero,
+        dtype=np.single,
     )
 
-    return {"trajectory_length": traj_lengths, "mutual_information": mutual_information}
-    # np.save(OUT_PATH / "mi.{}".format(i), np.swapaxes(mutual_information, 0, 1))
+    mutual_information = response_entropy - conditional_entropy
+    return {
+        "trajectory_length": traj_lengths,
+        "mutual_information": mutual_information,
+        "conditional_entropy": conditional_entropy,
+        "response_entropy": response_entropy,
+    }
 
 
 def generate_p0_distributed_values(size, traj_length, signal_init, response_init):
@@ -364,12 +365,11 @@ def main():
     for process in workers:
         process.join()
 
-    mutual_information = np.concatenate([res["mutual_information"] for res in results])
-    np.savez(
-        OUT_PATH / "mutual_information",
-        trajectory_length=results[0]["trajectory_length"],
-        mutual_information=mutual_information,
-    )
+    output = {}
+    for key in results[0].keys():
+        output[key] = np.concatenate([res[key] for res in results])
+
+    np.savez(OUT_PATH / "mutual_information", **output)
 
     runinfo["run"]["ended"] = datetime.now(timezone.utc)
     runinfo["run"]["duration"] = str(
