@@ -230,6 +230,8 @@ def generate_p0_distributed_values(size, traj_length, signal_init, response_init
 
 
 def worker(tasks, done_queue, signal_path, kde_estimate):
+    """ The task carried out by each individual process.
+    """
     signal_distr = kde_estimate["signal"]
     pregenerated_signals = np.load(signal_path, mmap_mode="r")
     points = pregenerated_signals["components"][np.newaxis, np.newaxis, :, 0, 0]
@@ -347,8 +349,16 @@ def main():
         task_queue.put("STOP")
 
     results = []
-    for _ in range(num_responses):
+    for i in range(num_responses):
         results.append(done_queue.get())
+        if i % NUM_PROCESSES == 0:
+            with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
+                print(
+                    f"{i} / {num_responses} responses done\n"
+                    f"{i/num_responses * 100} % "
+                    f"in {datetime.now(timezone.utc) - runinfo['run']['started']}",
+                    file=progress_file,
+                )
         pbar.update(1)
 
     for process in workers:
