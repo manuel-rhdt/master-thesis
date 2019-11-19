@@ -35,6 +35,8 @@ def generate_signals_sim(count, length=100000, initial_values=None):
     else:
         raise RuntimeError("Need to specify initial values")
 
+    # use multithreading to make use of multiple cpu cores. This works because the
+    # stochastic simulation releases the Python GIL.
     if count > 1:
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=NUM_PROCESSES
@@ -248,6 +250,25 @@ def worker(tasks, done_queue, signal_path, kde_estimate):
         done_queue.put(result)
 
 
+def get_or_generate_signals(kde_estimate):
+    signal_path = pathlib.Path(
+        configuration.get().get("signal_path", OUT_PATH / "signals.npz")
+    )
+    if signal_path.exists():
+        print(f"Using signals from {signal_path}", file=sys.stderr)
+        return signal_path
+    print("generating signals...", file=sys.stderr)
+    initial_values = kde_estimate["signal"].resample(size=num_signals)
+    signal_length = configuration.get()["signal"]["length"]
+    combined_signal = generate_signals_sim(
+        num_signals, length=signal_length, initial_values=initial_values
+    )
+    np.savez(signal_path, **combined_signal)
+    del combined_signal
+    print("Done!", file=sys.stderr)
+    return signal_path
+
+
 def main():
     OUT_PATH.mkdir(exist_ok=False)
     conf = configuration.get()
@@ -269,17 +290,9 @@ def main():
         signal_init=conf["kde_estimate"]["signal"]["initial"],
         response_init=conf["kde_estimate"]["response"]["initial"],
     )
-    print("generating signals...", file=sys.stderr)
-    initial_values = kde_estimate["signal"].resample(size=num_signals)
-    signal_length = configuration.get()["signal"]["length"]
-    combined_signal = generate_signals_sim(
-        num_signals, length=signal_length, initial_values=initial_values
-    )
-    np.savez(OUT_PATH / "signals.npz", **combined_signal)
-    del combined_signal
-    print("Done!", file=sys.stderr)
+    signal_path = get_or_generate_signals(kde_estimate)
 
-    num_responses = configuration.get()["num_responses"]
+    num_responses = conf["num_responses"]
     task_queue = multiprocessing.Queue()
     for task in range(num_responses):
         task_queue.put(task)
@@ -288,7 +301,7 @@ def main():
     workers = [
         multiprocessing.Process(
             target=worker,
-            args=(task_queue, done_queue, OUT_PATH / "signals.npz", kde_estimate),
+            args=(task_queue, done_queue, signal_path, kde_estimate),
         )
         for _ in range(NUM_PROCESSES)
     ]
