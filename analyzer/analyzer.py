@@ -6,6 +6,13 @@ from numba.typed import List as TypedList
 # inspired by scipy.special.logsumexp
 @jit(nopython=True, fastmath=True, cache=True)
 def logsumexp(x):
+    """ Evaluate log-sum-exp on the outer axis.
+
+    `x` is required to be a two-dimensional array.
+
+    If `z = logsumexp(x)` then `z == log(sum(exp(x), axis = 0))` is approximately
+    true.
+    """
     x = np.asarray(x)
     _, length = x.shape
     xmax = np.empty(length, dtype=x.dtype)
