@@ -206,6 +206,12 @@ def log_likelihood_inner(
     dtype=np.dtype(np.double),
     out=None,
 ):
+    """[summary]
+
+    Returns:
+        An array of length `(len(response_timestamps) - 1)` that contains the individual
+        components of the log-likelihood.
+    """
     num_signal_comps, _ = signal_components.shape
     num_response_comps, length = response_components.shape
 
@@ -315,6 +321,7 @@ def log_averaged_likelihood(
         rc = response_components[r]
         rt = response_timestamps[r]
         tmp = np.empty((num_s, length), dtype=np.single)
+        tmp = p_zero[:, r, np.newaxis]
         indices = np.digitize(traj_lengths, rt)
         for s in range(num_s):
             sc = signal_components[s]
@@ -323,8 +330,14 @@ def log_averaged_likelihood(
             log_p = log_likelihood_inner(
                 sc, st, rc, rt, reaction_events[r], reactions, dtype=np.single
             )
-            tmp[s] = log_p[indices] + p_zero[s, r]
+            for i, index in enumerate(indices):
+                if index >= len(log_p):
+                    # the index is out of bounds... just extrapolate for now
+                    tmp[s, i] += np.mean(log_p)
+                else:
+                    tmp[s, i] += log_p[index]
 
+        # this line performes the averaging in log space (thus we need logsumexp)
         result[r] = logsumexp(tmp) - np.log(num_s)
 
     return result
