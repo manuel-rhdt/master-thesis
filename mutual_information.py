@@ -199,7 +199,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         response_timestamps,
         reaction_events,
         RESPONSE_NETWORK,
-        log_p_x_zero.T,
+        log_p_x_zero,
     )
 
     return {"trajectory_length": traj_lengths, "mutual_information": mutual_information}

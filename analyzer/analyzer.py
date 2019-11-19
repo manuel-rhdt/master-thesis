@@ -322,7 +322,7 @@ def log_averaged_likelihood(
         rt = response_timestamps[r]
         tmp = np.empty((num_s, length), dtype=np.single)
         for s in range(num_s):
-            tmp[s] = p_zero[s, r]
+            tmp[s] = p_zero[r, s]
 
         indices = np.digitize(traj_lengths, rt)
         for s in range(num_s):
