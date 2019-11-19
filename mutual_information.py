@@ -13,6 +13,7 @@ import platform
 import sys
 import toml
 import concurrent.futures
+import argparse
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
 num_signals = configuration.get()["num_signals"]
@@ -205,7 +206,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     # np.save(OUT_PATH / "mi.{}".format(i), np.swapaxes(mutual_information, 0, 1))
 
 
-def kde_estimate_p_0(size, traj_length, signal_init, response_init):
+def generate_p0_distributed_values(size, traj_length, signal_init, response_init):
     sig = generate_signals_sim(size, length=traj_length, initial_values=signal_init)
 
     components = np.empty((size, 2), dtype=np.int16)
@@ -225,12 +226,7 @@ def kde_estimate_p_0(size, traj_length, signal_init, response_init):
                 ext_components=sig["components"][i],
             )
 
-    np.save(OUT_PATH / "equilibrated", components)
-
-    return {
-        "joined": gaussian_kde(components.T),
-        "signal": gaussian_kde(components[:, 0]),
-    }
+    return components
 
 
 def worker(tasks, done_queue, signal_path, kde_estimate):
@@ -248,6 +244,32 @@ def worker(tasks, done_queue, signal_path, kde_estimate):
             log_p0_signal=log_p0_signal,
         )
         done_queue.put(result)
+
+
+def get_or_generate_distribution():
+    conf = configuration.get()
+    distribution_path = pathlib.Path(
+        conf.get("distribution_path", OUT_PATH / "distribution.npy")
+    )
+
+    if distribution_path.exists():
+        print(f"Using distribution from {distribution_path}", file=sys.stderr)
+        components = np.load(distribution_path)
+    else:
+        print("Estimate initial distribution...", file=sys.stderr)
+        components = generate_p0_distributed_values(
+            size=conf["kde_estimate"]["size"],
+            traj_length=conf["kde_estimate"]["signal"]["length"],
+            signal_init=conf["kde_estimate"]["signal"]["initial"],
+            response_init=conf["kde_estimate"]["response"]["initial"],
+        )
+        np.save(distribution_path, components)
+        print("Done!", file=sys.stderr)
+
+    return {
+        "joined": gaussian_kde(components.T),
+        "signal": gaussian_kde(components[:, 0]),
+    }
 
 
 def get_or_generate_signals(kde_estimate):
@@ -270,6 +292,14 @@ def get_or_generate_signals(kde_estimate):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--no-responses",
+        help="don't calculate the mutual information but do generate signals",
+        action="store_true",
+    )
+    arguments = parser.parse_args()
+
     OUT_PATH.mkdir(exist_ok=False)
     conf = configuration.get()
 
@@ -283,14 +313,20 @@ def main():
         f.write("\n\n")
         toml.dump(runinfo, f)
 
-    print("Estimate initial distribution...", file=sys.stderr)
-    kde_estimate = kde_estimate_p_0(
-        size=conf["kde_estimate"]["size"],
-        traj_length=conf["kde_estimate"]["signal"]["length"],
-        signal_init=conf["kde_estimate"]["signal"]["initial"],
-        response_init=conf["kde_estimate"]["response"]["initial"],
-    )
+    kde_estimate = get_or_generate_distribution()
     signal_path = get_or_generate_signals(kde_estimate)
+
+    if arguments.no_responses:
+        runinfo["run"]["ended"] = datetime.now(timezone.utc)
+        runinfo["run"]["duration"] = str(
+            runinfo["run"]["ended"] - runinfo["run"]["started"]
+        )
+        runinfo["run"]["arguments"] = "--no-responses"
+        with (OUT_PATH / "info.toml").open("w") as f:
+            f.write(conf["original"])
+            f.write("\n\n")
+            toml.dump(runinfo, f)
+        return
 
     num_responses = conf["num_responses"]
     task_queue = multiprocessing.Queue()
@@ -300,8 +336,7 @@ def main():
 
     workers = [
         multiprocessing.Process(
-            target=worker,
-            args=(task_queue, done_queue, signal_path, kde_estimate),
+            target=worker, args=(task_queue, done_queue, signal_path, kde_estimate)
         )
         for _ in range(NUM_PROCESSES)
     ]

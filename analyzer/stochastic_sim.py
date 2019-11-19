@@ -195,7 +195,7 @@ def simulate_one(
             break
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True, cache=True, nogil=True)
 def simulate_until_one(
     until, initial_values, reactions, ext_timestamps=None, ext_components=None
 ):
