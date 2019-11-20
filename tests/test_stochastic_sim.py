@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from analyzer import stochastic_sim
+from gillespie import stochastic_sim
 
 
 class TestSim(unittest.TestCase):
