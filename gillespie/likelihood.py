@@ -4,7 +4,7 @@ from numba.typed import List as TypedList
 
 
 # inspired by scipy.special.logsumexp
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=True)
 def logsumexp(x):
     """ Evaluate log-sum-exp on the outer axis.
 
@@ -27,7 +27,7 @@ def logsumexp(x):
     return out + xmax
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
     """ Accelerated reaction propensity calculation
 
@@ -59,7 +59,7 @@ def calculate_sum_of_reaction_propensities(components, reactions):
     return result
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=True)
 def calculate_selected_reaction_propensities(components, reaction_events, reactions):
     """ Accelerated reaction propensity calculation
 
@@ -93,7 +93,7 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
     return result
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, fastmath=True)
 def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None):
     """ Evaluate trajectory with events at `old_timestamps` at the times in
     `new_timestamps`.
@@ -284,7 +284,9 @@ def log_likelihood(
         sc = signal_components[r]
         st = signal_timestamps[r]
 
-        log_p = log_likelihood_inner(sc, st, rc, rt, reaction_events[r], reactions)
+        log_p = log_likelihood_inner(
+            sc, st, rc, rt, reaction_events[r], reactions, dtype=dtype
+        )
         indices = np.digitize(traj_lengths, rt)
         result[r] = log_p[indices]
 

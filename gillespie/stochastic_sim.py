@@ -35,7 +35,7 @@ def create_reaction_network(k, reactants, products):
     return network
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True)
 def calc_propensities(components, propensities, reactions):
     for n in range(reactions.size):
         propensities[n] = reactions.k[n]
@@ -46,7 +46,7 @@ def calc_propensities(components, propensities, reactions):
     return propensities
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True)
 def try_propagate_time(random_variate, timestamp, next_ext_timestamp, total_propensity):
     """
     Returns `True` if a reaction should be executed before continuing.
@@ -71,7 +71,7 @@ def try_propagate_time(random_variate, timestamp, next_ext_timestamp, total_prop
         return (True, time_step)
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True)
 def select_reaction(propensities):
     r = numpy.random.random_sample()
     propensities = numpy.asarray(propensities)
@@ -87,7 +87,7 @@ def select_reaction(propensities):
     return selected_reaction
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True)
 def update_components(selected_reaction, components, reactions):
     for reactant in reactions.reactants[selected_reaction]:
         if reactant >= 0:
@@ -97,7 +97,7 @@ def update_components(selected_reaction, components, reactions):
             components[product] += 1
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True)
 def timestep_generate(components, ext_timestamps, ext_components, reactions):
     num_ext_comps = len(ext_components) if ext_components is not None else 0
     ext_length = len(ext_timestamps) if ext_timestamps is not None else 0
