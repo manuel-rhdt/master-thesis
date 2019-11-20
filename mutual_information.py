@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
+import argparse
+import concurrent.futures
 import multiprocessing
-from analyzer import analyzer, stochastic_sim
-from analyzer import configuration
-from numba import njit
 import pathlib
-import numpy as np
-from tqdm import tqdm
-from scipy.stats import gaussian_kde
-from datetime import datetime, timezone
 import platform
 import sys
+from datetime import datetime, timezone
+
+import numpy as np
 import toml
-import concurrent.futures
-import argparse
+from numba import njit
+from scipy.stats import gaussian_kde
+from tqdm import tqdm
+
+from gillespie import configuration, likelihood, stochastic_sim
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
 num_signals = configuration.get()["num_signals"]
@@ -113,7 +114,7 @@ def log_evaluate_kde(points, dataset, inv_cov):
             tdiff = np.dot(inv_cov, diff)
             tmp[i] = -np.sum(diff * tdiff, axis=0) / 2.0
 
-        result[j] = analyzer.logsumexp(tmp) - np.log(n) - log_norm_factor
+        result[j] = likelihood.logsumexp(tmp) - np.log(n) - log_norm_factor
 
     return result
 
@@ -171,7 +172,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     reaction_events = responses["reaction_events"]
 
     conditional_entropy = -(
-        analyzer.log_likelihood(
+        likelihood.log_likelihood(
             traj_lengths,
             sig["components"],
             sig["timestamps"],
@@ -186,7 +187,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
 
     signal_components = averaging_signals["components"]
     signal_timestamps = averaging_signals["timestamps"]
-    response_entropy = -analyzer.log_averaged_likelihood(
+    response_entropy = -likelihood.log_averaged_likelihood(
         traj_lengths,
         signal_components,
         signal_timestamps,

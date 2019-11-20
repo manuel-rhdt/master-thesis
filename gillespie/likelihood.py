@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit, cuda
+from numba import cuda, jit
 from numba.typed import List as TypedList
 
 
