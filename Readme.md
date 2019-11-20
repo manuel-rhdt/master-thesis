@@ -14,6 +14,7 @@ Then from the project directory just run
 ```sh
 python3 mutual_information
 ```
+
 from the shell to execute the calculation.
 
 The configuration file format used is [TOML](https://github.com/toml-lang/toml) whichs
