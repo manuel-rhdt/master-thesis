@@ -3,6 +3,7 @@
 import argparse
 import concurrent.futures
 import multiprocessing
+import os
 import pathlib
 import platform
 import sys
@@ -21,7 +22,7 @@ num_signals = configuration.get()["num_signals"]
 try:
     NUM_PROCESSES = configuration.get()["num_processes"]
 except KeyError:
-    NUM_PROCESSES = multiprocessing.cpu_count()
+    NUM_PROCESSES = os.cpu_count()
 
 SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
 
@@ -309,6 +310,7 @@ def main():
 
     runinfo = {}
     runinfo["run"] = {"started": datetime.now(timezone.utc)}
+    runinfo["run"]["invocation"] = sys.argv
     if platform.node():
         runinfo["run"]["node"] = platform.node()
 
@@ -325,7 +327,6 @@ def main():
         runinfo["run"]["duration"] = str(
             runinfo["run"]["ended"] - runinfo["run"]["started"]
         )
-        runinfo["run"]["arguments"] = "--no-responses"
         with (OUT_PATH / "info.toml").open("w") as f:
             f.write(conf["original"])
             f.write("\n\n")

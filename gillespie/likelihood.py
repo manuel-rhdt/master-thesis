@@ -1,5 +1,5 @@
 import numpy as np
-from numba import cuda, jit
+from numba import jit
 from numba.typed import List as TypedList
 
 
@@ -91,19 +91,6 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
         result[i] = propensities[event, i]
 
     return result
-
-
-@cuda.jit
-def gpu_selected_reaction_propensities(
-    components, reaction_events, reactions, propensities
-):
-    pos = cuda.grid(1)
-    if pos < reactions.size:
-        event = reaction_events[pos]
-        propensities[pos] = reactions.k[event]
-        for j_reactant in reactions.reactants[event]:
-            if j_reactant >= 0:
-                propensities[pos] *= components[j_reactant][pos]
 
 
 @jit(nopython=True, fastmath=True, cache=True)
