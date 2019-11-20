@@ -9,12 +9,12 @@ import sys
 from datetime import datetime, timezone
 
 import numpy as np
-
 import toml
-from gillespie import configuration, likelihood, stochastic_sim
 from numba import njit
 from scipy.stats import gaussian_kde
 from tqdm import tqdm
+
+from gillespie import configuration, likelihood, stochastic_sim
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
 num_signals = configuration.get()["num_signals"]

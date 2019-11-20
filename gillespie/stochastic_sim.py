@@ -1,7 +1,6 @@
 import numpy
 import numpy.random
-
-from numba import njit, float32, int32, jitclass
+from numba import float32, int32, jitclass, njit
 
 spec = [("k", float32[:]), ("reactants", int32[:, :]), ("products", int32[:, :])]
 
