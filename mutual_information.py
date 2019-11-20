@@ -18,7 +18,7 @@ from tqdm import tqdm
 from gillespie import configuration, likelihood, stochastic_sim
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
-num_signals = configuration.get()["num_signals"]
+NUM_SIGNALS = configuration.get()["num_signals"]
 try:
     NUM_PROCESSES = configuration.get()["num_processes"]
 except KeyError:
@@ -132,11 +132,16 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     """
     if num_responses == 0:
         return
+    num_signals = len(averaging_signals)
 
     response_len = configuration.get()["response"]["length"]
 
     joined_distr = kde_estimate["joined"]
     signal_distr = kde_estimate["signal"]
+
+    # TODO: make this configurable
+    result_size = 5000
+    traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
 
     # generate responses from signals
 
@@ -157,56 +162,55 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         initial_comps[0]
     )
 
-    points = np.empty((num_responses, 2, num_signals))
-    points[:, 0, :] = averaging_signals["components"][np.newaxis, :, 0, 0]
-    points[:, 1, :] = responses["components"][:, 0, 0, np.newaxis]
-
-    log_p_x_zero = log_evaluate_kde(points, joined_distr.dataset, joined_distr.inv_cov)
-    log_p_x_zero -= log_p0_signal
-
-    # TODO: make this configurable
-    result_size = 5000
-    traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
-
-    response_components = responses["components"]
-    response_timestamps = responses["timestamps"]
-    reaction_events = responses["reaction_events"]
-
     conditional_entropy = -(
         likelihood.log_likelihood(
             traj_lengths,
             sig["components"],
             sig["timestamps"],
-            response_components,
-            response_timestamps,
-            reaction_events,
+            responses["components"],
+            responses["timestamps"],
+            responses["reaction_events"],
             reactions=RESPONSE_NETWORK,
             dtype=np.dtype(np.single),
         )
         + log_p_x_zero_this[:, np.newaxis]
     )
 
-    signal_components = averaging_signals["components"]
-    signal_timestamps = averaging_signals["timestamps"]
+    if num_signals > 0:
+        points = np.empty((num_responses, 2, num_signals))
+        points[:, 0, :] = averaging_signals["components"][np.newaxis, :, 0, 0]
+        points[:, 1, :] = responses["components"][:, 0, 0, np.newaxis]
+
+        log_p_x_zero = log_evaluate_kde(
+            points, joined_distr.dataset, joined_distr.inv_cov
+        )
+        log_p_x_zero -= log_p0_signal
+
     response_entropy = -likelihood.log_averaged_likelihood(
         traj_lengths,
-        signal_components,
-        signal_timestamps,
-        response_components,
-        response_timestamps,
-        reaction_events,
+            averaging_signals["components"],
+            averaging_signals["timestamps"],
+            responses["components"],
+            responses["timestamps"],
+            responses["reaction_events"],
         reactions=RESPONSE_NETWORK,
         p_zero=log_p_x_zero,
         dtype=np.dtype(np.single),
     )
 
+    if num_signals > 0:
     mutual_information = response_entropy - conditional_entropy
     return {
-        "trajectory_length": traj_lengths,
+            "trajectory_length": np.expand_dims(traj_lengths, axis=0),
         "mutual_information": mutual_information,
         "conditional_entropy": conditional_entropy,
         "response_entropy": response_entropy,
     }
+    else:
+        return {
+            "trajectory_length": np.expand_dims(traj_lengths, axis=0),
+            "conditional_entropy": conditional_entropy,
+        }
 
 
 def generate_p0_distributed_values(size, traj_length, signal_init, response_init):
@@ -285,10 +289,10 @@ def get_or_generate_signals(kde_estimate):
         print(f"Using signals from {signal_path}", file=sys.stderr)
         return signal_path
     print("generating signals...", file=sys.stderr)
-    initial_values = kde_estimate["signal"].resample(size=num_signals)
+    initial_values = kde_estimate["signal"].resample(size=NUM_SIGNALS)
     signal_length = configuration.get()["signal"]["length"]
     combined_signal = generate_signals_sim(
-        num_signals, length=signal_length, initial_values=initial_values
+        NUM_SIGNALS, length=signal_length, initial_values=initial_values
     )
     np.savez(signal_path, **combined_signal)
     del combined_signal
@@ -305,7 +309,7 @@ def main():
     )
     arguments = parser.parse_args()
 
-    OUT_PATH.mkdir(exist_ok=False)
+    OUT_PATH.mkdir(exist_ok=True)
     conf = configuration.get()
 
     runinfo = {}

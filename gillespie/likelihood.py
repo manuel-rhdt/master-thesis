@@ -3,7 +3,7 @@ from numba import jit
 from numba.typed import List as TypedList
 
 
-# inspired by scipy.special.logsumexp
+# inspired by scipy.special.logsumexp but only supports axis=0
 @jit(nopython=True, fastmath=True)
 def logsumexp(x):
     """ Evaluate log-sum-exp on the outer axis.
@@ -29,7 +29,7 @@ def logsumexp(x):
 
 @jit(nopython=True, fastmath=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
-    """ Accelerated reaction propensity calculation
+    """ Calculate total reaction propensities.
 
     Arguments:
     - components {np.ndarray} -- an array of shape (num_components,
@@ -45,7 +45,7 @@ def calculate_sum_of_reaction_propensities(components, reactions):
     result = np.empty_like(components[0])
 
     for n_reaction in range(reactions.size):
-        tmp = np.full_like(components[0], reactions.k[n_reaction])
+        tmp = np.full_like(result, reactions.k[n_reaction])
 
         for j_reactant in reactions.reactants[n_reaction]:
             if j_reactant >= 0:
@@ -150,10 +150,10 @@ def time_average(
     Returns a list of averages of size `len(new_timestamps) - 1`.
 
               |                                    |
-              |        +---------------------------|
+              |        +---------------------------| <-- trajectory[k + 1]
               |========|===========================| <== average[i]
               |        |                           |
-              |--------+                           |
+              |--------+                           | <-- trajectory[k]
               |                                    |
               +------------------------------------+---> time
         old_timestamps[i]                  old_timestamps[i+1]
@@ -212,7 +212,7 @@ def log_likelihood_inner(
     if out is not None:
         dtype = out.dtype
 
-    # resampled signal components
+    # time-averaged signal components
     rsc = np.empty((num_signal_comps, 2, length - 1), dtype=dtype)
     for i in range(num_signal_comps):
         time_average(
@@ -288,7 +288,12 @@ def log_likelihood(
             sc, st, rc, rt, reaction_events[r], reactions, dtype=dtype
         )
         indices = np.digitize(traj_lengths, rt)
-        result[r] = log_p[indices]
+        for i, index in enumerate(indices):
+            if index >= len(log_p):
+                # the index is out of bounds... just extrapolate for now
+                result[r, i] = result[r, i - 1] + np.mean(log_p)
+            else:
+                result[r, i] = log_p[index]
 
     return result
 
@@ -337,7 +342,7 @@ def log_averaged_likelihood(
             for i, index in enumerate(indices):
                 if index >= len(log_p):
                     # the index is out of bounds... just extrapolate for now
-                    tmp[s, i] += np.mean(log_p)
+                    tmp[s, i] += tmp[s, i - 1] + np.mean(log_p)
                 else:
                     tmp[s, i] += log_p[index]
 
