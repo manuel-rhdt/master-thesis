@@ -179,7 +179,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
             response_timestamps,
             reaction_events,
             RESPONSE_NETWORK,
-            dtype=np.single,
+            dtype=np.dtype(np.single),
         )
         + log_p_x_zero_this[:, np.newaxis]
     )
@@ -195,7 +195,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         reaction_events,
         RESPONSE_NETWORK,
         log_p_x_zero,
-        dtype=np.single,
+        dtype=np.dtype(np.single),
     )
 
     mutual_information = response_entropy - conditional_entropy

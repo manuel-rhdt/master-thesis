@@ -290,14 +290,6 @@ def log_likelihood(
 
     assert num_r == num_s
 
-    if dtype is None:
-        if out is not None:
-            dtype = out.dtype
-        else:
-            dtype = np.dtype(np.double)
-    else:
-        dtype = np.dtype(dtype)
-
     result = out if out is not None else np.empty((num_r, length), dtype=dtype)
     for r in range(num_r):
         rc = response_components[r]
@@ -336,10 +328,6 @@ def log_averaged_likelihood(
     if dtype is None:
         if out is not None:
             dtype = out.dtype
-        else:
-            dtype = np.dtype(np.double)
-    else:
-        dtype = np.dtype(dtype)
 
     result = out if out is not None else np.empty((num_r, length), dtype=dtype)
     for r in range(num_r):
