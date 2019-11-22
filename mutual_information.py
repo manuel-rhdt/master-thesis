@@ -171,7 +171,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
             responses["timestamps"],
             responses["reaction_events"],
             reactions=RESPONSE_NETWORK,
-            dtype=np.dtype(np.single),
+            dtype=np.single,
         )
         + log_p_x_zero_this[:, np.newaxis]
     )
@@ -186,26 +186,26 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
         )
         log_p_x_zero -= log_p0_signal
 
-    response_entropy = -likelihood.log_averaged_likelihood(
-        traj_lengths,
+        response_entropy = -likelihood.log_averaged_likelihood(
+            traj_lengths,
             averaging_signals["components"],
             averaging_signals["timestamps"],
             responses["components"],
             responses["timestamps"],
             responses["reaction_events"],
-        reactions=RESPONSE_NETWORK,
-        p_zero=log_p_x_zero,
-        dtype=np.dtype(np.single),
-    )
+            reactions=RESPONSE_NETWORK,
+            p_zero=log_p_x_zero,
+            dtype=np.single,
+        )
 
     if num_signals > 0:
-    mutual_information = response_entropy - conditional_entropy
-    return {
+        mutual_information = response_entropy - conditional_entropy
+        return {
             "trajectory_length": np.expand_dims(traj_lengths, axis=0),
-        "mutual_information": mutual_information,
-        "conditional_entropy": conditional_entropy,
-        "response_entropy": response_entropy,
-    }
+            "mutual_information": mutual_information,
+            "conditional_entropy": conditional_entropy,
+            "response_entropy": response_entropy,
+        }
     else:
         return {
             "trajectory_length": np.expand_dims(traj_lengths, axis=0),
