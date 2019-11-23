@@ -132,7 +132,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     """
     if num_responses == 0:
         return
-    num_signals = len(averaging_signals)
+    num_signals = len(averaging_signals['timestamps'])
 
     response_len = configuration.get()["response"]["length"]
 
@@ -236,11 +236,15 @@ def generate_p0_distributed_values(size, traj_length, signal_init, response_init
     return components
 
 
-def worker(tasks, done_queue, signal_path, kde_estimate):
+def worker(tasks, done_queue, signals, kde_estimate):
     """ The task carried out by each individual process.
     """
     signal_distr = kde_estimate["signal"]
-    pregenerated_signals = np.load(signal_path, mmap_mode="r")
+
+    pregenerated_signals = {}
+    for key, path in signals.items():
+        pregenerated_signals[key] = np.load(path, mmap_mode="r")
+
     points = pregenerated_signals["components"][np.newaxis, np.newaxis, :, 0, 0]
     log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
 
@@ -294,10 +298,20 @@ def get_or_generate_signals(kde_estimate):
     combined_signal = generate_signals_sim(
         NUM_SIGNALS, length=signal_length, initial_values=initial_values
     )
-    np.savez(signal_path, **combined_signal)
+    np.savez_compressed(signal_path, **combined_signal)
     del combined_signal
     print("Done!", file=sys.stderr)
     return signal_path
+
+
+def signal_share_mem(signal_path):
+    shared_mem_sig = {}
+    with np.load(signal_path, allow_pickle=False) as signal:
+        for key, value in signal.items():
+            path = f'/dev/shm/signal_{key}.npy'
+            np.save(path, value)
+            shared_mem_sig[key] = path
+    return shared_mem_sig
 
 
 def main():
@@ -325,6 +339,7 @@ def main():
 
     kde_estimate = get_or_generate_distribution()
     signal_path = get_or_generate_signals(kde_estimate)
+    signals_shared = signal_share_mem(signal_path)
 
     if arguments.no_responses:
         runinfo["run"]["ended"] = datetime.now(timezone.utc)
@@ -345,7 +360,7 @@ def main():
 
     workers = [
         multiprocessing.Process(
-            target=worker, args=(task_queue, done_queue, signal_path, kde_estimate)
+            target=worker, args=(task_queue, done_queue, signals_shared, kde_estimate)
         )
         for _ in range(NUM_PROCESSES)
     ]
