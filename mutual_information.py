@@ -27,6 +27,15 @@ except KeyError:
 SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
 
 
+# prevent more threads from being created!
+try:
+    import mkl
+except ImportError:
+    print("WARNING: Not using MKL!", file=sys.stderr)
+else:
+    mkl.set_num_threads(1)
+
+
 def generate_signals_sim(count, length=100000, initial_values=None):
     timestamps = np.zeros((count, length), dtype=np.single)
     trajectory = np.zeros((count, 1, length), dtype=np.int16)
@@ -132,7 +141,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     """
     if num_responses == 0:
         return
-    num_signals = len(averaging_signals['timestamps'])
+    num_signals = len(averaging_signals["timestamps"])
 
     response_len = configuration.get()["response"]["length"]
 
@@ -308,7 +317,7 @@ def signal_share_mem(signal_path):
     shared_mem_sig = {}
     with np.load(signal_path, allow_pickle=False) as signal:
         for key, value in signal.items():
-            path = f'/dev/shm/signal_{key}.npy'
+            path = f"/dev/shm/signal_{key}.npy"
             np.save(path, value)
             shared_mem_sig[key] = path
     return shared_mem_sig
