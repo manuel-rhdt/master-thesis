@@ -314,6 +314,18 @@ def signal_share_mem(signal_path):
     return shared_mem_sig
 
 
+def endrun(runinfo):
+    conf = configuration.get()
+    runinfo["run"]["ended"] = datetime.now(timezone.utc)
+    runinfo["run"]["duration"] = str(
+        runinfo["run"]["ended"] - runinfo["run"]["started"]
+    )
+    with (OUT_PATH / "info.toml").open("w") as f:
+        f.write(conf["original"])
+        f.write("\n\n")
+        toml.dump(runinfo, f)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -342,14 +354,7 @@ def main():
     signals_shared = signal_share_mem(signal_path)
 
     if arguments.no_responses:
-        runinfo["run"]["ended"] = datetime.now(timezone.utc)
-        runinfo["run"]["duration"] = str(
-            runinfo["run"]["ended"] - runinfo["run"]["started"]
-        )
-        with (OUT_PATH / "info.toml").open("w") as f:
-            f.write(conf["original"])
-            f.write("\n\n")
-            toml.dump(runinfo, f)
+        endrun(runinfo)
         return
 
     num_responses = conf["num_responses"]
@@ -391,15 +396,7 @@ def main():
         output[key] = np.concatenate([res[key] for res in results])
 
     np.savez(OUT_PATH / "mutual_information", **output)
-
-    runinfo["run"]["ended"] = datetime.now(timezone.utc)
-    runinfo["run"]["duration"] = str(
-        runinfo["run"]["ended"] - runinfo["run"]["started"]
-    )
-    with (OUT_PATH / "info.toml").open("w") as f:
-        f.write(conf["original"])
-        f.write("\n\n")
-        toml.dump(runinfo, f)
+    endrun(runinfo)
 
 
 if __name__ == "__main__":
