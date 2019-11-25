@@ -245,7 +245,10 @@ def generate_p0_distributed_values(size, traj_length, signal_init, response_init
     return components
 
 
-def worker(tasks, done_queue, signals, kde_estimate):
+WORKER_VARS = {}
+
+
+def worker_init(signals, kde_estimate):
     """ The task carried out by each individual process.
     """
     signal_distr = kde_estimate["signal"]
@@ -257,15 +260,20 @@ def worker(tasks, done_queue, signals, kde_estimate):
     points = pregenerated_signals["components"][np.newaxis, np.newaxis, :, 0, 0]
     log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
 
-    for i in iter(tasks.get, "STOP"):
-        result = calculate(
-            i,
-            num_responses=1,
-            averaging_signals=pregenerated_signals,
-            kde_estimate=kde_estimate,
-            log_p0_signal=log_p0_signal,
-        )
-        done_queue.put(result)
+    global WORKER_VARS
+    WORKER_VARS["signal"] = pregenerated_signals
+    WORKER_VARS["kde_estimate"] = kde_estimate
+    WORKER_VARS["log_p0_signal"] = log_p0_signal
+
+
+def worker_work(i):
+    return calculate(
+        i,
+        num_responses=1,
+        averaging_signals=WORKER_VARS["signal"],
+        kde_estimate=WORKER_VARS["kde_estimate"],
+        log_p0_signal=WORKER_VARS["log_p0_signal"],
+    )
 
 
 def get_or_generate_distribution():
@@ -367,38 +375,26 @@ def main():
         return
 
     num_responses = conf["num_responses"]
-    task_queue = multiprocessing.Queue()
-    for task in range(num_responses):
-        task_queue.put(task)
-    done_queue = multiprocessing.Queue()
-
-    workers = [
-        multiprocessing.Process(
-            target=worker, args=(task_queue, done_queue, signals_shared, kde_estimate)
-        )
-        for _ in range(NUM_PROCESSES)
-    ]
-
-    pbar = tqdm(total=num_responses, smoothing=0.1, desc="simulated responses")
-    for process in workers:
-        process.start()
-        task_queue.put("STOP")
-
-    results = []
-    for i in range(num_responses):
-        results.append(done_queue.get())
-        if i % NUM_PROCESSES == 0:
-            with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
-                print(
-                    f"{i} / {num_responses} responses done\n"
-                    f"{i/num_responses * 100} % "
-                    f"in {datetime.now(timezone.utc) - runinfo['run']['started']}",
-                    file=progress_file,
-                )
-        pbar.update(1)
-
-    for process in workers:
-        process.join()
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=NUM_PROCESSES,
+        mp_context=multiprocessing.get_context("spawn"),
+        initializer=worker_init,
+        initargs=(signals_shared, kde_estimate),
+    ) as executor:
+        pbar = tqdm(total=num_responses, smoothing=0.1, desc="simulated responses")
+        results = []
+        for res in executor.map(worker_work, range(num_responses)):
+            results.append(res)
+            if len(results) % NUM_PROCESSES == 0:
+                i = len(results)
+                with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
+                    print(
+                        f"{i} / {num_responses} responses done\n"
+                        f"{i/num_responses * 100} % "
+                        f"in {datetime.now(timezone.utc) - runinfo['run']['started']}",
+                        file=progress_file,
+                    )
+            pbar.update(1)
 
     output = {}
     for key in results[0].keys():
