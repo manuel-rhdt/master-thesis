@@ -394,12 +394,13 @@ def main():
         runinfo["run"]["error"] = repr(error)
         raise
     finally:
-        output = {}
         runinfo["run"]["completed_responses"] = len(results)
-        for key in results[0].keys():
-            output[key] = np.concatenate([res[key] for res in results])
+        if results:
+            output = {}
+            for key in results[0].keys():
+                output[key] = np.concatenate([res[key] for res in results])
 
-        np.savez(OUT_PATH / "mutual_information", **output)
+            np.savez(OUT_PATH / "mutual_information", **output)
         endrun(runinfo)
 
 
