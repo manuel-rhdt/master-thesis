@@ -14,7 +14,6 @@ import numpy as np
 import toml
 from numba import njit
 from scipy.stats import gaussian_kde
-from tqdm import tqdm
 
 from gillespie import configuration, likelihood, stochastic_sim
 
