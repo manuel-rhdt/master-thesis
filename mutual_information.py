@@ -368,33 +368,39 @@ def main():
         return
 
     num_responses = conf["num_responses"]
-    with concurrent.futures.ProcessPoolExecutor(
-        max_workers=NUM_PROCESSES,
-        mp_context=multiprocessing.get_context("spawn"),
-        initializer=worker_init,
-        initargs=(signals_shared, kde_estimate),
-    ) as executor:
-        pbar = tqdm(total=num_responses, smoothing=0.1, desc="simulated responses")
-        results = []
-        for res in executor.map(worker_work, range(num_responses)):
-            results.append(res)
-            if len(results) % NUM_PROCESSES == 0:
-                i = len(results)
-                with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
-                    print(
-                        f"{i} / {num_responses} responses done\n"
-                        f"{i/num_responses * 100} % "
-                        f"in {datetime.now(timezone.utc) - runinfo['run']['started']}",
-                        file=progress_file,
-                    )
-            pbar.update(1)
+    pbar = tqdm(total=num_responses, smoothing=0.1, desc="simulated responses")
+    results = []
+    try:
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=NUM_PROCESSES,
+            mp_context=multiprocessing.get_context("spawn"),
+            initializer=worker_init,
+            initargs=(signals_shared, kde_estimate),
+        ) as executor:
+            for res in executor.map(worker_work, range(num_responses)):
+                results.append(res)
+                if len(results) % NUM_PROCESSES == 0:
+                    i = len(results)
+                    with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
+                        print(
+                            f"{i} / {num_responses} responses done\n"
+                            f"{i/num_responses * 100} % "
+                            f"in {datetime.now(timezone.utc) - runinfo['run']['started']}",
+                            file=progress_file,
+                        )
+                pbar.update(1)
+    except BaseException as error:
+        pbar.write("Aborting calculation due to exception.")
+        runinfo["run"]["error"] = repr(error)
+        raise
+    finally:
+        output = {}
+        runinfo["run"]["completed_responses"] = len(results)
+        for key in results[0].keys():
+            output[key] = np.concatenate([res[key] for res in results])
 
-    output = {}
-    for key in results[0].keys():
-        output[key] = np.concatenate([res[key] for res in results])
-
-    np.savez(OUT_PATH / "mutual_information", **output)
-    endrun(runinfo)
+        np.savez(OUT_PATH / "mutual_information", **output)
+        endrun(runinfo)
 
 
 if __name__ == "__main__":
