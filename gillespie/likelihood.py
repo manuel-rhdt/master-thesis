@@ -3,7 +3,8 @@ from numba import jit
 from numba.typed import List as TypedList
 
 
-# inspired by scipy.special.logsumexp but only supports axis=0
+# inspired by scipy.special.logsumexp but only supports two-dimensional arrays and
+# axis=0
 @jit(nopython=True, fastmath=True)
 def logsumexp(x):
     """ Evaluate log-sum-exp on the outer axis.
@@ -22,9 +23,9 @@ def logsumexp(x):
     tmp = np.exp(x - xmax)
 
     s = np.sum(tmp, axis=0)
-    out = np.log(s)
+    out = np.log(s) + xmax
 
-    return out + xmax
+    return out
 
 
 @jit(nopython=True, fastmath=True)

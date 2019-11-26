@@ -129,7 +129,7 @@ def log_evaluate_kde(points, dataset, inv_cov):
     return result
 
 
-def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
+def calculate(i, averaging_signals, kde_estimate, log_p0_signal):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
     This function does the following:
@@ -139,8 +139,6 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     4. calculate the log marginal probabilities of the responses
     5. use both quantities to estimate the mutual information
     """
-    if num_responses == 0:
-        return
     num_signals = len(averaging_signals["timestamps"])
 
     response_len = configuration.get()["response"]["length"]
@@ -155,12 +153,10 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     # generate responses from signals
 
     # first we sample the initial points from the joined distribution
-    initial_comps = joined_distr.resample(num_responses)
-    sig = generate_signals_sim(
-        num_responses, length=response_len, initial_values=initial_comps[0]
-    )
+    initial_comps = joined_distr.resample(1)
+    sig = generate_signals_sim(1, length=response_len, initial_values=initial_comps[0])
     responses = generate_responses(
-        num_responses,
+        1,
         sig["timestamps"],
         sig["components"],
         length=response_len,
@@ -186,14 +182,12 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
     )
 
     if num_signals > 0:
-        points = np.empty((num_responses, 2, num_signals))
-        points[:, 0, :] = averaging_signals["components"][np.newaxis, :, 0, 0]
-        points[:, 1, :] = responses["components"][:, 0, 0, np.newaxis]
+        points = np.empty((2, num_signals))
+        points[0, :] = averaging_signals["components"][:, 0, 0]
+        points[1, :] = responses["components"][0, 0, 0, np.newaxis]
 
-        log_p_x_zero = log_evaluate_kde(
-            points, joined_distr.dataset, joined_distr.inv_cov
-        )
-        log_p_x_zero -= log_p0_signal
+        # calculate conditional distribution
+        log_p_x_zero = joined_distr.logpdf(points) - log_p0_signal
 
         response_entropy = -likelihood.log_averaged_likelihood(
             traj_lengths,
@@ -203,7 +197,7 @@ def calculate(i, num_responses, averaging_signals, kde_estimate, log_p0_signal):
             responses["timestamps"],
             responses["reaction_events"],
             reactions=RESPONSE_NETWORK,
-            p_zero=log_p_x_zero,
+            p_zero=np.expand_dims(log_p_x_zero, 0),
             dtype=np.single,
         )
 
@@ -257,8 +251,8 @@ def worker_init(signals, kde_estimate):
     for key, path in signals.items():
         pregenerated_signals[key] = np.load(path, mmap_mode="r")
 
-    points = pregenerated_signals["components"][np.newaxis, np.newaxis, :, 0, 0]
-    log_p0_signal = log_evaluate_kde(points, signal_distr.dataset, signal_distr.inv_cov)
+    points = pregenerated_signals["components"][:, 0, 0]
+    log_p0_signal = signal_distr.logpdf(points)
 
     global WORKER_VARS
     WORKER_VARS["signal"] = pregenerated_signals
@@ -269,7 +263,6 @@ def worker_init(signals, kde_estimate):
 def worker_work(i):
     return calculate(
         i,
-        num_responses=1,
         averaging_signals=WORKER_VARS["signal"],
         kde_estimate=WORKER_VARS["kde_estimate"],
         log_p0_signal=WORKER_VARS["log_p0_signal"],
