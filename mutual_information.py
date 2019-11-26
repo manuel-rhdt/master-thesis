@@ -2,6 +2,7 @@
 
 import argparse
 import concurrent.futures
+import logging
 import multiprocessing
 import os
 import pathlib
@@ -25,15 +26,6 @@ except KeyError:
     NUM_PROCESSES = os.cpu_count()
 
 SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
-
-
-# prevent more threads from being created!
-try:
-    import mkl
-except ImportError:
-    print("WARNING: Not using MKL!", file=sys.stderr)
-else:
-    mkl.set_num_threads(1)
 
 
 def generate_signals_sim(count, length=100000, initial_values=None):
@@ -245,6 +237,14 @@ WORKER_VARS = {}
 def worker_init(signals, kde_estimate):
     """ The task carried out by each individual process.
     """
+    # prevent more threads from being created!
+    try:
+        import mkl
+    except ImportError:
+        logging.warn("Not using MKL!")
+    else:
+        mkl.set_num_threads(1)
+
     signal_distr = kde_estimate["signal"]
 
     pregenerated_signals = {}
@@ -276,10 +276,10 @@ def get_or_generate_distribution():
     )
 
     if distribution_path.exists():
-        print(f"Using distribution from {distribution_path}", file=sys.stderr)
+        logging.info(f"Using distribution from {distribution_path}")
         components = np.load(distribution_path)
     else:
-        print("Estimate initial distribution...", file=sys.stderr)
+        logging.info("Estimate initial distribution...")
         components = generate_p0_distributed_values(
             size=conf["kde_estimate"]["size"],
             traj_length=conf["kde_estimate"]["signal"]["length"],
@@ -287,7 +287,7 @@ def get_or_generate_distribution():
             response_init=conf["kde_estimate"]["response"]["initial"],
         )
         np.save(distribution_path, components)
-        print("Done!", file=sys.stderr)
+        logging.info("...Done")
 
     return {
         "joined": gaussian_kde(components.T),
@@ -300,9 +300,9 @@ def get_or_generate_signals(kde_estimate):
         configuration.get().get("signal_path", OUT_PATH / "signals.npz")
     )
     if signal_path.exists():
-        print(f"Using signals from {signal_path}", file=sys.stderr)
+        logging.info(f"Using signals from {signal_path}")
         return signal_path
-    print("generating signals...", file=sys.stderr)
+    logging.info("Generate signals...")
     initial_values = kde_estimate["signal"].resample(size=NUM_SIGNALS)
     signal_length = configuration.get()["signal"]["length"]
     combined_signal = generate_signals_sim(
@@ -310,7 +310,7 @@ def get_or_generate_signals(kde_estimate):
     )
     np.savez_compressed(signal_path, **combined_signal)
     del combined_signal
-    print("Done!", file=sys.stderr)
+    logging.info("...Done")
     return signal_path
 
 
@@ -368,7 +368,6 @@ def main():
         return
 
     num_responses = conf["num_responses"]
-    pbar = tqdm(total=num_responses, smoothing=0.1, desc="simulated responses")
     results = []
     try:
         with concurrent.futures.ProcessPoolExecutor(
@@ -381,16 +380,17 @@ def main():
                 results.append(res)
                 if len(results) % NUM_PROCESSES == 0:
                     i = len(results)
+                    logging.info(f"{i}/{num_responses} = {i/num_responses*100} % done")
+                    timediff = datetime.now(timezone.utc) - runinfo["run"]["started"]
                     with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
                         print(
                             f"{i} / {num_responses} responses done\n"
                             f"{i/num_responses * 100} % "
-                            f"in {datetime.now(timezone.utc) - runinfo['run']['started']}",
+                            f"in {str(timediff)}",
                             file=progress_file,
                         )
-                pbar.update(1)
     except BaseException as error:
-        pbar.write("Aborting calculation due to exception.")
+        logging.error("Aborting calculation due to exception.")
         runinfo["run"]["error"] = repr(error)
         raise
     finally:
