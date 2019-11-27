@@ -7,14 +7,12 @@ from numba.typed import List as TypedList
 # axis=0
 @jit(nopython=True, fastmath=True)
 def logsumexp(x):
-    """ Evaluate log-sum-exp on the outer axis.
-
-    `x` is required to be a two-dimensional array.
+    """ Evaluate log-sum-exp on the outer axis of a 2d array.
 
     If `z = logsumexp(x)` then `z == log(sum(exp(x), axis = 0))` is approximately
     true.
     """
-    x = np.asarray(x)
+    x = np.atleast_2d(np.asarray(x))
     _, length = x.shape
     xmax = np.empty(length, dtype=x.dtype)
     for i in range(length):

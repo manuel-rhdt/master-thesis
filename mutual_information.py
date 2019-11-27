@@ -12,10 +12,9 @@ from datetime import datetime, timezone
 
 import numpy as np
 import toml
-from numba import njit
-from scipy.stats import gaussian_kde
 
 from gillespie import configuration, likelihood, stochastic_sim
+from gillespie.kernel_density_estimate import estimate_log_density
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
 NUM_SIGNALS = configuration.get()["num_signals"]
@@ -96,31 +95,7 @@ def generate_responses(
     }
 
 
-@njit(fastmath=True, cache=True)
-def log_evaluate_kde(points, dataset, inv_cov):
-    d, n = dataset.shape
-    num_r, _, m = points.shape
-    assert len(inv_cov.shape) == 2
-
-    log_norm_factor = -0.5 * np.log(np.linalg.det(inv_cov / (2 * np.pi)))
-
-    result = np.empty((num_r, m))
-    for j in range(num_r):
-        tmp = np.zeros((n, m))
-        for i in range(n):
-            diff = np.empty((d, m))
-            for k in range(m):
-                for l in range(d):
-                    diff[l, k] = dataset[l, i] - points[j, l, k]
-            tdiff = np.dot(inv_cov, diff)
-            tmp[i] = -np.sum(diff * tdiff, axis=0) / 2.0
-
-        result[j] = likelihood.logsumexp(tmp) - np.log(n) - log_norm_factor
-
-    return result
-
-
-def calculate(i, averaging_signals, kde_estimate, log_p0_signal):
+def calculate(i, averaging_signals, distribution, log_p0_signal):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
     This function does the following:
@@ -134,9 +109,6 @@ def calculate(i, averaging_signals, kde_estimate, log_p0_signal):
 
     response_len = configuration.get()["response"]["length"]
 
-    joined_distr = kde_estimate["joined"]
-    signal_distr = kde_estimate["signal"]
-
     # TODO: make this configurable
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
@@ -144,7 +116,8 @@ def calculate(i, averaging_signals, kde_estimate, log_p0_signal):
     # generate responses from signals
 
     # first we sample the initial points from the joined distribution
-    initial_comps = joined_distr.resample(1)
+    initial_comps = distribution.take(i, axis=1, mode="wrap")
+    assert initial_comps.shape[0] == 2
     sig = generate_signals_sim(1, length=response_len, initial_values=initial_comps[0])
     responses = generate_responses(
         1,
@@ -154,9 +127,9 @@ def calculate(i, averaging_signals, kde_estimate, log_p0_signal):
         initial_values=initial_comps[1],
     )
 
-    log_p_x_zero_this = joined_distr.logpdf(initial_comps) - signal_distr.logpdf(
-        initial_comps[0]
-    )
+    log_p_x_zero_this = estimate_log_density(
+        np.expand_dims(initial_comps, 1), distribution
+    ) - estimate_log_density(initial_comps[0], distribution[0])
 
     conditional_entropy = -(
         likelihood.log_likelihood(
@@ -178,7 +151,7 @@ def calculate(i, averaging_signals, kde_estimate, log_p0_signal):
         points[1, :] = responses["components"][0, 0, 0, np.newaxis]
 
         # calculate conditional distribution
-        log_p_x_zero = joined_distr.logpdf(points) - log_p0_signal
+        log_p_x_zero = estimate_log_density(points, distribution) - log_p0_signal
 
         response_entropy = -likelihood.log_averaged_likelihood(
             traj_lengths,
@@ -233,7 +206,7 @@ def generate_p0_distributed_values(size, traj_length, signal_init, response_init
 WORKER_VARS = {}
 
 
-def worker_init(signals, kde_estimate):
+def worker_init(signals, distribution):
     """ The task carried out by each individual process.
     """
     # prevent more threads from being created!
@@ -244,18 +217,17 @@ def worker_init(signals, kde_estimate):
     else:
         mkl.set_num_threads(1)
 
-    signal_distr = kde_estimate["signal"]
-
     pregenerated_signals = {}
     for key, path in signals.items():
         pregenerated_signals[key] = np.load(path, mmap_mode="r")
 
     points = pregenerated_signals["components"][:, 0, 0]
-    log_p0_signal = signal_distr.logpdf(points)
+
+    log_p0_signal = estimate_log_density(points, distribution[0])
 
     global WORKER_VARS
     WORKER_VARS["signal"] = pregenerated_signals
-    WORKER_VARS["kde_estimate"] = kde_estimate
+    WORKER_VARS["distribution"] = distribution
     WORKER_VARS["log_p0_signal"] = log_p0_signal
 
 
@@ -263,7 +235,7 @@ def worker_work(i):
     return calculate(
         i,
         averaging_signals=WORKER_VARS["signal"],
-        kde_estimate=WORKER_VARS["kde_estimate"],
+        distribution=WORKER_VARS["distribution"],
         log_p0_signal=WORKER_VARS["log_p0_signal"],
     )
 
@@ -288,13 +260,10 @@ def get_or_generate_distribution():
         np.save(distribution_path, components)
         logging.info("...Done")
 
-    return {
-        "joined": gaussian_kde(components.T),
-        "signal": gaussian_kde(components[:, 0]),
-    }
+    return components.T
 
 
-def get_or_generate_signals(kde_estimate):
+def get_or_generate_signals(distribution):
     signal_path = pathlib.Path(
         configuration.get().get("signal_path", OUT_PATH / "signals.npz")
     )
@@ -302,7 +271,7 @@ def get_or_generate_signals(kde_estimate):
         logging.info(f"Using signals from {signal_path}")
         return signal_path
     logging.info("Generate signals...")
-    initial_values = kde_estimate["signal"].resample(size=NUM_SIGNALS)
+    initial_values = distribution[0].take(np.arange(NUM_SIGNALS), mode="wrap")
     signal_length = configuration.get()["signal"]["length"]
     combined_signal = generate_signals_sim(
         NUM_SIGNALS, length=signal_length, initial_values=initial_values
@@ -337,7 +306,7 @@ def endrun(runinfo):
 
 def main():
     logging.basicConfig(
-        level=logging.DEBUG, format="%(levelname)s:%(asctime)s %(message)s"
+        level=logging.DEBUG, format="%(levelname)s: %(asctime)s %(message)s"
     )
 
     parser = argparse.ArgumentParser()
@@ -362,8 +331,8 @@ def main():
         f.write("\n\n")
         toml.dump(runinfo, f)
 
-    kde_estimate = get_or_generate_distribution()
-    signal_path = get_or_generate_signals(kde_estimate)
+    distribution = get_or_generate_distribution()
+    signal_path = get_or_generate_signals(distribution)
     signals_shared = signal_share_mem(signal_path)
 
     if arguments.no_responses:
@@ -377,13 +346,22 @@ def main():
             max_workers=NUM_PROCESSES,
             mp_context=multiprocessing.get_context("spawn"),
             initializer=worker_init,
-            initargs=(signals_shared, kde_estimate),
+            initargs=(signals_shared, distribution),
         ) as executor:
+            last_time = datetime.now()
             for res in executor.map(worker_work, range(num_responses)):
                 results.append(res)
                 if len(results) % NUM_PROCESSES == 0:
                     i = len(results)
-                    logging.info(f"{i}/{num_responses} = {i/num_responses*100} % done")
+
+                    time_per_iteration = (datetime.now() - last_time) / NUM_PROCESSES
+                    last_time = datetime.now()
+
+                    logging.info(
+                        "response "
+                        f"{i}/{num_responses} = {i/num_responses*100:.1f} % done. "
+                        f"{time_per_iteration.total_seconds():.2f} s/it"
+                    )
                     timediff = datetime.now(timezone.utc) - runinfo["run"]["started"]
                     with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
                         print(
@@ -397,6 +375,9 @@ def main():
         runinfo["run"]["error"] = repr(error)
         raise
     finally:
+        for path in signals_shared.values():
+            os.remove(path)
+
         runinfo["run"]["completed_responses"] = len(results)
         if results:
             output = {}
