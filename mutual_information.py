@@ -336,6 +336,10 @@ def endrun(runinfo):
 
 
 def main():
+    logging.basicConfig(
+        level=logging.DEBUG, format="%(levelname)s:%(asctime)s %(message)s"
+    )
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--no-responses",
