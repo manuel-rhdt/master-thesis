@@ -93,30 +93,6 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
 
 
 @jit(nopython=True, fastmath=True)
-def evaluate_trajectory_at(trajectory, old_timestamps, new_timestamps, out=None):
-    """ Evaluate trajectory with events at `old_timestamps` at the times in
-    `new_timestamps`.
-
-    Note: This function assumes that both `old_timestamps` and `new_timestamps` are
-    ordered.
-    """
-    if out is None:
-        out = np.empty(new_timestamps.shape, trajectory.dtype)
-    new_idx = 0
-    for old_idx, ts in enumerate(old_timestamps):
-        while new_timestamps[new_idx] < ts and new_idx < len(out):
-            out[new_idx] = trajectory[max(old_idx - 1, 0)]
-            new_idx += 1
-        if new_idx >= len(out):
-            break
-
-    while new_idx < len(out):
-        out[new_idx] = trajectory[-1]
-        new_idx += 1
-    return out
-
-
-@jit(nopython=True, fastmath=True)
 def time_average(
     trajectory,
     old_timestamps,
@@ -345,7 +321,7 @@ def log_averaged_likelihood(
                 else:
                     tmp[s, i] += log_p[index]
 
-        # this line performes the averaging in log space (thus we need logsumexp)
+        # this line performs the averaging in log space (thus we need logsumexp)
         result[r] = logsumexp(tmp) - np.log(num_s)
 
     return result

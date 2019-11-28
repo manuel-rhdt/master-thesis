@@ -257,7 +257,8 @@ def get_or_generate_distribution():
             signal_init=conf["kde_estimate"]["signal"]["initial"],
             response_init=conf["kde_estimate"]["response"]["initial"],
         )
-        np.save(distribution_path, components)
+        with distribution_path.open("w") as dist_file:
+            np.save(dist_file, components)
         logging.info("...Done")
 
     return components.T
@@ -276,7 +277,8 @@ def get_or_generate_signals(distribution):
     combined_signal = generate_signals_sim(
         NUM_SIGNALS, length=signal_length, initial_values=initial_values
     )
-    np.savez_compressed(signal_path, **combined_signal)
+    with signal_path.open("w") as signal_file:
+        np.savez_compressed(signal_file, **combined_signal)
     del combined_signal
     logging.info("...Done")
     return signal_path
@@ -287,7 +289,8 @@ def signal_share_mem(signal_path):
     with np.load(signal_path, allow_pickle=False) as signal:
         for key, value in signal.items():
             path = f"/dev/shm/signal_{key}.npy"
-            np.save(path, value)
+            with open(path, "w") as file:
+                np.save(file, value)
             shared_mem_sig[key] = path
     return shared_mem_sig
 
@@ -384,7 +387,7 @@ def main():
             for key in results[0].keys():
                 output[key] = np.concatenate([res[key] for res in results])
 
-            np.savez(OUT_PATH / "mutual_information", **output)
+            np.savez_compressed(OUT_PATH / "mutual_information", **output)
         endrun(runinfo)
 
 

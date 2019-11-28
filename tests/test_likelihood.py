@@ -29,22 +29,6 @@ class TestAnalyzer(unittest.TestCase):
 
         self.assertListEqual(result.tolist(), [5 + 1 * 2, 5 + 2 * 2])
 
-    def test_evaluate_trajectory(self):
-        old_ts = np.array([1.0, 2.0, 3.0])
-        traj = np.array([10.0, 15.0, 10.0])
-        new_ts = np.array([0.0, 1.5, 2.5, 4.0])
-
-        result = likelihood.evaluate_trajectory_at(traj, old_ts, new_ts)
-        self.assertListEqual(result.tolist(), [10.0, 10.0, 15.0, 10.0])
-
-    def test_resample_trajectory2(self):
-        old_ts = np.array([1.0, 2.0, 3.0])
-        traj = np.array([10.0, 15.0, 10.0])
-        new_ts = np.array([0.0, 1.5, 2.5, 4.0])
-
-        result = likelihood.evaluate_trajectory_at(traj, old_ts, new_ts)
-        self.assertListEqual(result.tolist(), [10.0, 10.0, 15.0, 10.0])
-
     def test_time_average_trajectory_trivial(self):
         old_ts = np.array([1.0, 2.0, 3.0])
         traj = np.array([10.0, 15.0, 10.0])
