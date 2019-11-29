@@ -1,0 +1,53 @@
+num_signals = 1000
+num_responses = 1000
+
+output = '{{ env.HOME }}/testrun'
+signal_path = '{{ env.HOME }}/test_signal.npz'
+distribution_path = '{{ env.HOME }}/test_distribution.npy'
+
+description = """
+This is the default configuration. The description is not read or modified in any way
+and you can use it for any information you want to store with your results.
+"""
+
+{# you can use jinja templating to define variables #}
+{% set kappa = 20.0 %}
+{% set lambda = 0.005 %}
+{% set rho = 0.005 %}
+{% set mu = 0.02 %}
+
+[kde_estimate]
+  size = 15_000
+  signal.length = 4_000
+  signal.initial = 4_000
+  response.initial = 1_000
+
+[signal]
+  length = 50_000
+
+  components = ['S']
+
+  [[signal.reactions]]
+  k = {{ kappa }} # use the previously defined variable
+  reactants = []
+  products = ['S']
+
+  [[signal.reactions]]
+  k = {{ lambda }}
+  reactants = ['S']
+  products = []
+
+[response]
+  length = 50_000
+
+  components = ['X']
+
+  [[response.reactions]]
+  k = {{ rho }}
+  reactants = ['S']
+  products = ['S', 'X']
+
+  [[response.reactions]]
+  k = {{ mu }}
+  reactants = ['X']
+  products = []

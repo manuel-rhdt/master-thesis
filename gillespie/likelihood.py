@@ -1,5 +1,5 @@
 import numpy as np
-from numba import jit
+from numba import generated_jit, jit, types
 from numba.typed import List as TypedList
 
 
@@ -28,19 +28,6 @@ def logsumexp(x):
 
 @jit(nopython=True, fastmath=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
-    """ Calculate total reaction propensities.
-
-    Arguments:
-    - components {np.ndarray} -- an array of shape (num_components,
-        num_trajectories, num_events_per_trajectory)
-
-    - reaction_k {np.ndarray} --
-        [description]
-    - reaction_reactants {np.ndarray} -- a two-dimensional array
-        (num_reactions, num_reactants)
-
-    Returns: [type] -- [description]
-    """
     result = np.empty_like(components[0])
 
     for n_reaction in range(reactions.size):
@@ -51,7 +38,7 @@ def calculate_sum_of_reaction_propensities(components, reactions):
                 tmp *= components[j_reactant]
 
         if n_reaction == 0:
-            result = tmp
+            result[:] = tmp
         else:
             result += tmp
 
@@ -128,7 +115,8 @@ def time_average(
               |        +---------------------------| <-- trajectory[k + 1]
               |========|===========================| <== average[i]
               |        |                           |
-              |--------+                           | <-- trajectory[k]
+           ---|--------+                           | <-- trajectory[k]
+              | new_timestamps[k]                  |
               |                                    |
               +------------------------------------+---> time
         old_timestamps[i]                  old_timestamps[i+1]
@@ -218,20 +206,28 @@ def log_likelihood_inner(
     # return the logarithm of `np.cumprod(instantaneous_rates * np.exp(-averaged_rates \
     # * dt))`
 
-    # perform the operations in-place (reuse the output array for the dt's)
-    dt = out if out is not None else np.empty(length - 1, dtype=dtype)
-    for i in range(length - 1):
-        dt[i] = response_timestamps[i + 1] - response_timestamps[i]
+    dt = response_timestamps[1:] - response_timestamps[:-1]
     likelihoods = np.log(instantaneous_rates)
     likelihoods -= averaged_rates * dt
 
-    result = dt
+    result = out if out is not None else np.empty(length - 1, dtype=dtype)
     accumulator = 0.0
     for i in range(length - 1):
         accumulator += likelihoods[i]
         result[i] = accumulator
 
     return result
+
+
+@generated_jit(nopython=True)
+def expand_3d(array):
+    if isinstance(array, types.Array):
+        if array.ndim == 1:
+            return lambda array: array.reshape((1, 1, -1))
+        elif array.ndim == 2:
+            return lambda array: np.expand_dims(array, 0)
+        else:
+            return lambda array: array
 
 
 @jit(nopython=True, fastmath=True, cache=True)
@@ -246,13 +242,19 @@ def log_likelihood(
     dtype=None,
     out=None,
 ):
+    response_components = expand_3d(response_components)
+    signal_components = expand_3d(signal_components)
+    response_timestamps = np.atleast_2d(response_timestamps)
+    signal_timestamps = np.atleast_2d(signal_timestamps)
+    reaction_events = np.atleast_2d(reaction_events)
+
     num_r, _, _ = response_components.shape
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
 
     assert num_r == num_s
 
-    result = out if out is not None else np.empty((num_r, length), dtype=dtype)
+    result = out if out is not None else np.zeros((num_r, length), dtype=dtype)
     for r in range(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
@@ -290,6 +292,12 @@ def log_averaged_likelihood(
     Calculates the log likelihoods of the responses for various signals and averages
     over the signals.
     """
+    response_components = expand_3d(response_components)
+    signal_components = expand_3d(signal_components)
+    response_timestamps = np.atleast_2d(response_timestamps)
+    signal_timestamps = np.atleast_2d(signal_timestamps)
+    reaction_events = np.atleast_2d(reaction_events)
+
     num_r, _, _ = response_components.shape
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
