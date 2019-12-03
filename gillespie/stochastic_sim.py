@@ -2,6 +2,8 @@ import numpy
 import numpy.random
 from numba import float32, int32, jitclass, njit
 
+from .likelihood import expand_3d
+
 spec = [("k", float32[:]), ("reactants", int32[:, :]), ("products", int32[:, :])]
 
 
@@ -147,27 +149,13 @@ def simulate_one(
     ext_components=None,
 ):
     """Simulate one trajectory
-
-    Arguments:
-        timestamps {numpy.ndarray} -- [description]
-        initial_components {[type]} -- [description]
-        signal_components {[type]} -- [description]
-        signal_timestamps {[type]} -- [description]
-        response_components {[type]} -- [description]
-        reaction_k {[type]} -- [description]
-        reaction_reactants {[type]} -- [description]
-        reaction_products {[type]} -- [description]
-        reaction_events {[type]} -- [description]
-
-    Returns:
-        [type] -- [description]
     """
     length = len(timestamps)
     if length < 2:
         return
 
-    num_comps = len(trajectory)
-    num_ext_comps = len(ext_components) if ext_components is not None else 0
+    num_comps, _ = trajectory.shape
+    num_ext_comps, _ = ext_components.shape if ext_components is not None else (0, 0)
 
     # set the trajectory's initial values
     timestamps[0] = 0.0
@@ -239,21 +227,27 @@ def simulate(
     ext_timestamps=None,
     ext_components=None,
 ):
-    assert len(timestamps.shape) == 2
-    assert len(trajectory.shape) == 3
-    assert len(reaction_events.shape) == 2
+    timestamps = numpy.atleast_2d(timestamps)
+    reaction_events = numpy.atleast_2d(reaction_events)
+    trajectory = expand_3d(trajectory)
+
+    ext_timestamps = numpy.atleast_2d(ext_timestamps)
+    ext_components = expand_3d(ext_components)
 
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
 
     for r in range(timestamps.shape[0]):
-        if ext_components is not None:
-            simulate_one(
-                timestamps[r],
-                trajectory[r],
-                reaction_events[r],
-                reactions,
-                ext_timestamps[r],
-                ext_components[r],
-            )
+        if ext_timestamps.shape[0] == 1:
+            ext_t = ext_timestamps[0]
+            ext_c = ext_components[0]
         else:
-            simulate_one(timestamps[r], trajectory[r], reaction_events[r], reactions)
+            ext_t = ext_timestamps[r]
+            ext_c = ext_components[r]
+
+        t = timestamps[r]
+        c = trajectory[r]
+        events = reaction_events[r]
+        if ext_components is not None:
+            simulate_one(t, c, events, reactions, ext_t, ext_c)
+        else:
+            simulate_one(t, c, events, reactions)
