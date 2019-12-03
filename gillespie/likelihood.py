@@ -28,7 +28,7 @@ def logsumexp(x):
 
 @jit(nopython=True, fastmath=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
-    result = np.empty_like(components[0])
+    result = np.empty_like(components[0], dtype=np.double)
 
     for n_reaction in range(reactions.size):
         tmp = np.full_like(result, reactions.k[n_reaction])
@@ -61,9 +61,7 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
     (length,) = components[0].shape
     assert length == reaction_events.shape[-1]
 
-    propensities = np.empty(
-        reactions.k.shape + components[0].shape, dtype=components[0].dtype
-    )
+    propensities = np.empty(reactions.k.shape + components[0].shape, dtype=np.double)
     for n_reaction in range(reactions.size):
         propensities[n_reaction] = reactions.k[n_reaction]
 
@@ -71,7 +69,7 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
             if j_reactant >= 0:
                 propensities[n_reaction] *= components[j_reactant]
 
-    result = np.empty_like(components[0])
+    result = np.empty_like(propensities[0])
     for i in range(length):
         event = reaction_events[i]
         result[i] = propensities[event, i]
@@ -137,6 +135,7 @@ def time_average(
     old_idx += 1
     for idx, (low, high) in enumerate(zip(new_timestamps[:-1], new_timestamps[1:])):
         delta_t = high - low
+        assert delta_t > 0.0
         acc = 0.0
         while low < high:
             while next_trajectory_change <= low:
@@ -252,18 +251,24 @@ def log_likelihood(
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
 
-    assert num_r == num_s
+    assert num_r == num_s or num_s == 1
 
     result = out if out is not None else np.zeros((num_r, length), dtype=dtype)
+
     for r in range(num_r):
         rc = response_components[r]
         rt = response_timestamps[r]
-        sc = signal_components[r]
-        st = signal_timestamps[r]
+        if num_s == 1:
+            sc = signal_components[0]
+            st = signal_timestamps[0]
+        else:
+            sc = signal_components[r]
+            st = signal_timestamps[r]
 
         log_p = log_likelihood_inner(
             sc, st, rc, rt, reaction_events[r], reactions, dtype=dtype
         )
+
         indices = np.digitize(traj_lengths, rt)
         for i, index in enumerate(indices):
             if index >= len(log_p):
