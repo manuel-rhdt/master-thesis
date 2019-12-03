@@ -105,7 +105,10 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
     4. calculate the log marginal probabilities of the responses
     5. use both quantities to estimate the mutual information
     """
+    conf = configuration.get()
+
     num_signals = len(averaging_signals["timestamps"])
+    num_responses = conf["response"].get("batch_size", 1)
 
     response_len = configuration.get()["response"]["length"]
 
@@ -113,14 +116,12 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
 
-    # generate responses from signals
-
     # first we sample the initial points from the joined distribution
     initial_comps = distribution.take(i, axis=1, mode="wrap")
     assert initial_comps.shape[0] == 2
     sig = generate_signals_sim(1, length=response_len, initial_values=initial_comps[0])
     responses = generate_responses(
-        1,
+        num_responses,
         sig["timestamps"],
         sig["components"],
         length=response_len,
@@ -147,11 +148,14 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
 
     if num_signals > 0:
         points = np.empty((2, num_signals))
-        points[0, :] = averaging_signals["components"][:, 0, 0]
-        points[1, :] = responses["components"][0, 0, 0, np.newaxis]
+        log_p_x_zero = np.zeros((num_responses, num_signals))
 
-        # calculate conditional distribution
-        log_p_x_zero = estimate_log_density(points, distribution) - log_p0_signal
+        for r in range(num_responses):
+            points[0, :] = averaging_signals["components"][:, 0, 0]
+            points[1, :] = responses["components"][r, 0, 0, np.newaxis]
+
+            # calculate conditional distribution
+            log_p_x_zero[r] = estimate_log_density(points, distribution) - log_p0_signal
 
         response_entropy = -likelihood.log_averaged_likelihood(
             traj_lengths,
@@ -161,7 +165,7 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
             responses["timestamps"],
             responses["reaction_events"],
             reactions=RESPONSE_NETWORK,
-            p_zero=np.expand_dims(log_p_x_zero, 0),
+            p_zero=log_p_x_zero,
             dtype=np.single,
         )
 

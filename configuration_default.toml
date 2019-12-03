@@ -1,6 +1,8 @@
 num_signals = 5000
 num_responses = 1000
 
+# num_processes = 16
+
 output = '{{ env.HOME }}/testrun'
 
 description = """
@@ -37,6 +39,7 @@ and you can use it for any information you want to store with your results.
 
 [response]
   length = 50_000
+  batch_size = 100
 
   components = ['X']
 

@@ -307,6 +307,9 @@ def log_averaged_likelihood(
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
 
+    assert num_r == p_zero.shape[0]
+    assert num_s == p_zero.shape[1]
+
     if dtype is None:
         if out is not None:
             dtype = out.dtype
