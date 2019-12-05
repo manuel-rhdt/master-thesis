@@ -26,7 +26,7 @@ except KeyError:
 SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
 
 
-def generate_signals_sim(count, length=100000, initial_values=None):
+def generate_signals_sim(count, length=100000, initial_values=None, threads=True):
     timestamps = np.zeros((count, length), dtype=np.single)
     trajectory = np.zeros((count, 1, length), dtype=np.int16)
     reaction_events = np.zeros((count, length - 1), dtype=np.uint8)
@@ -39,9 +39,9 @@ def generate_signals_sim(count, length=100000, initial_values=None):
 
     # use multithreading to make use of multiple cpu cores. This works because the
     # stochastic simulation releases the Python GIL.
-    if count > 1:
+    if count > 1 and threads:
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=NUM_PROCESSES
+            max_workers=min(NUM_PROCESSES, count)
         ) as executor:
             for i in range(count):
                 executor.submit(
@@ -52,12 +52,13 @@ def generate_signals_sim(count, length=100000, initial_values=None):
                     reactions=SIGNAL_NETWORK,
                 )
     else:
-        stochastic_sim.simulate_one(
-            timestamps[0],
-            trajectory[0],
-            reaction_events=reaction_events[0],
-            reactions=SIGNAL_NETWORK,
-        )
+        for i in range(count):
+            stochastic_sim.simulate_one(
+                timestamps[i],
+                trajectory[i],
+                reaction_events=reaction_events[i],
+                reactions=SIGNAL_NETWORK,
+            )
 
     return {
         "timestamps": timestamps,
@@ -95,7 +96,44 @@ def generate_responses(
     }
 
 
-def calculate(i, averaging_signals, distribution, log_p0_signal):
+def generate_response_distribution_from_past_signals(
+    num_signals, traj_length, signal_init, response_init
+):
+    """ Returns sampled response values for signal trajectories ending at `signal_init`.
+    """
+    # for now we exploit that the signal is time-symmetric
+    sig = generate_signals_sim(
+        num_signals, length=traj_length, initial_values=signal_init, threads=False
+    )
+
+    # reverse the trajectory
+    sig["timestamps"] = (
+        -sig["timestamps"][..., ::-1] + sig["timestamps"][..., -1, np.newaxis]
+    )
+    sig["components"] = sig["components"][..., ::-1]
+
+    _, num_signal_components, _ = sig["components"].shape
+
+    # TODO: generate multiple responses per signal
+    components = np.empty((num_signals, 2), dtype=np.int16)
+    components[:, 0] = sig["components"][:, 0, 0]
+    components[:, 1] = response_init
+
+    until = sig["timestamps"][:, -1]
+
+    for i in range(num_signals):
+        stochastic_sim.simulate_until_one(
+            until[i],
+            components[i],
+            reactions=RESPONSE_NETWORK,
+            ext_timestamps=sig["timestamps"][i],
+            ext_components=sig["components"][i],
+        )
+
+    return components[:, num_signal_components:]
+
+
+def calculate(i, averaging_signals, signal_stationary_distr, log_p0_signal):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
     This function does the following:
@@ -107,30 +145,35 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
     """
     conf = configuration.get()
 
-    num_signals = len(averaging_signals["timestamps"])
-    num_responses = conf["response"].get("batch_size", 1)
-
-    response_len = configuration.get()["response"]["length"]
-
     # TODO: make this configurable
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
 
+    num_responses = conf["response"].get("batch_size", 1)
+    response_len = configuration.get()["response"]["length"]
+
     # first we sample the initial points from the joined distribution
-    initial_comps = distribution.take(i, axis=1, mode="wrap")
-    assert initial_comps.shape[0] == 2
-    sig = generate_signals_sim(1, length=response_len, initial_values=initial_comps[0])
+    sig0 = signal_stationary_distr.take(i, axis=0, mode="wrap")[0]
+    sig = generate_signals_sim(1, length=response_len, initial_values=sig0)
+
+    response_distribution = generate_response_distribution_from_past_signals(
+        num_responses * 5,
+        5000,
+        sig["components"][0, 0, 0],
+        conf["kde_estimate"]["response"]["initial"],
+    )
+
     responses = generate_responses(
         num_responses,
         sig["timestamps"],
         sig["components"],
         length=response_len,
-        initial_values=initial_comps[1],
+        initial_values=response_distribution[:num_responses, 0],
     )
 
     log_p_x_zero_this = estimate_log_density(
-        np.expand_dims(initial_comps, 1), distribution
-    ) - estimate_log_density(initial_comps[0], distribution[0])
+        response_distribution[:num_responses, 0], response_distribution[:, 0]
+    )
 
     conditional_entropy = -(
         likelihood.log_likelihood(
@@ -146,6 +189,7 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
         + log_p_x_zero_this[:, np.newaxis]
     )
 
+    num_signals = len(averaging_signals["timestamps"])
     if num_signals > 0:
         points = np.empty((2, num_signals))
         log_p_x_zero = np.zeros((num_responses, num_signals))
@@ -182,6 +226,14 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
             "trajectory_length": np.expand_dims(traj_lengths, axis=0),
             "conditional_entropy": conditional_entropy,
         }
+
+
+def generate_signal_stationary_distribution(num_signals, traj_length, signal_init):
+    sig = generate_signals_sim(
+        num_signals, length=traj_length, initial_values=signal_init
+    )
+
+    return sig["components"][..., -1]
 
 
 def generate_p0_distributed_values(size, traj_length, signal_init, response_init):
