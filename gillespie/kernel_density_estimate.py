@@ -26,12 +26,12 @@ def silverman_factor(n, dimensions):
 def estimate_log_density(points, dataset):
     """Calculates a log probability estimate for every point in `points` where the
     probability estimate is based on gaussian kernel density estimation from `dataset`.
-    
+
     Arguments:
         points {numpy.ndarray} -- The points for which the density estimate is
                                   evaluated.
         dataset {numpy.ndarray} -- The dataset used for the density estimation
-    
+
     Returns:
         numpy.ndarray -- An array of log probabilities
     """
