@@ -125,7 +125,7 @@ def calculate(i, averaging_signals, distribution, log_p0_signal):
         sig["timestamps"],
         sig["components"],
         length=response_len,
-        initial_values=initial_comps[1],
+        initial_values=np.random.choice(distribution[1], size=num_responses),
     )
 
     log_p_x_zero_this = estimate_log_density(
