@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
 import argparse
+import base64
 import concurrent.futures
+import hashlib
 import logging
 import multiprocessing
 import os
@@ -52,13 +54,12 @@ def generate_signals_sim(count, length=100000, initial_values=None, threads=True
                     reactions=SIGNAL_NETWORK,
                 )
     else:
-        for i in range(count):
-            stochastic_sim.simulate_one(
-                timestamps[i],
-                trajectory[i],
-                reaction_events=reaction_events[i],
-                reactions=SIGNAL_NETWORK,
-            )
+        stochastic_sim.simulate(
+            timestamps,
+            trajectory,
+            reaction_events=reaction_events,
+            reactions=SIGNAL_NETWORK,
+        )
 
     return {
         "timestamps": timestamps,
@@ -121,19 +122,18 @@ def generate_response_distribution_from_past_signals(
 
     until = sig["timestamps"][:, -1]
 
-    for i in range(num_signals):
-        stochastic_sim.simulate_until_one(
-            until[i],
-            components[i],
-            reactions=RESPONSE_NETWORK,
-            ext_timestamps=sig["timestamps"][i],
-            ext_components=sig["components"][i],
-        )
+    stochastic_sim.simulate_until(
+        until,
+        components,
+        reactions=RESPONSE_NETWORK,
+        ext_timestamps=sig["timestamps"],
+        ext_components=sig["components"],
+    )
 
     return components[:, num_signal_components:]
 
 
-def calculate(i, averaging_signals, signal_stationary_distr, log_p0_signal):
+def calculate(i, averaging_signals, signal_stationary_distr):
     """ Calculates and stores the mutual information for `num_responses` respones.
 
     This function does the following:
@@ -191,15 +191,15 @@ def calculate(i, averaging_signals, signal_stationary_distr, log_p0_signal):
 
     num_signals = len(averaging_signals["timestamps"])
     if num_signals > 0:
-        points = np.empty((2, num_signals))
+        points = responses["components"][:, 0, 0]
         log_p_x_zero = np.zeros((num_responses, num_signals))
+        conditional_distribution = averaging_signals["conditional_distribution"]
 
-        for r in range(num_responses):
-            points[0, :] = averaging_signals["components"][:, 0, 0]
-            points[1, :] = responses["components"][r, 0, 0, np.newaxis]
-
+        for s in range(num_signals):
             # calculate conditional distribution
-            log_p_x_zero[r] = estimate_log_density(points, distribution) - log_p0_signal
+            log_p_x_zero[:, s] = estimate_log_density(
+                points, conditional_distribution[s, :, 0]
+            )
 
         response_entropy = -likelihood.log_averaged_likelihood(
             traj_lengths,
@@ -277,22 +277,16 @@ def worker_init(signals, distribution):
     for key, path in signals.items():
         pregenerated_signals[key] = np.load(path, mmap_mode="r")
 
-    points = pregenerated_signals["components"][:, 0, 0]
-
-    log_p0_signal = estimate_log_density(points, distribution[0])
-
     global WORKER_VARS
     WORKER_VARS["signal"] = pregenerated_signals
     WORKER_VARS["distribution"] = distribution
-    WORKER_VARS["log_p0_signal"] = log_p0_signal
 
 
 def worker_work(i):
     return calculate(
         i,
         averaging_signals=WORKER_VARS["signal"],
-        distribution=WORKER_VARS["distribution"],
-        log_p0_signal=WORKER_VARS["log_p0_signal"],
+        signal_stationary_distr=WORKER_VARS["distribution"],
     )
 
 
@@ -315,38 +309,70 @@ def get_or_generate_distribution():
         )
         with distribution_path.open("wb") as dist_file:
             np.save(dist_file, components)
+            logging.info(f"Saving distribution in {distribution_path}")
         logging.info("...Done")
 
     return components.T
 
 
 def get_or_generate_signals(distribution):
-    signal_path = pathlib.Path(
-        configuration.get().get("signal_path", OUT_PATH / "signals.npz")
-    )
+    conf = configuration.get()
+    signal_path = pathlib.Path(conf.get("signal_path", OUT_PATH / "signals.npz"))
     if signal_path.exists():
         logging.info(f"Using signals from {signal_path}")
         return signal_path
     logging.info("Generate signals...")
     initial_values = distribution[0].take(np.arange(NUM_SIGNALS), mode="wrap")
     signal_length = configuration.get()["signal"]["length"]
-    combined_signal = generate_signals_sim(
+    signals = generate_signals_sim(
         NUM_SIGNALS, length=signal_length, initial_values=initial_values
     )
+    _, num_signal_components, _ = signals["components"].shape
+    logging.info(f"Generated {NUM_SIGNALS} signals.")
+
+    num_past_trajectories = 250
+    conditional_distribution = np.zeros(
+        (NUM_SIGNALS, num_past_trajectories, num_signal_components)
+    )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=NUM_PROCESSES) as executor:
+
+        def gen(args):
+            i, s0 = args
+            result = generate_response_distribution_from_past_signals(
+                num_past_trajectories,
+                5000,
+                s0,
+                conf["kde_estimate"]["response"]["initial"],
+            )
+            conditional_distribution[i] = result
+
+        executor.map(gen, enumerate(signals["components"][:, 0, 0]))
+
+    signals["conditional_distribution"] = conditional_distribution
+    logging.info(f"Generated conditional distribution of response.")
+
     with signal_path.open("wb") as signal_file:
-        np.savez_compressed(signal_file, **combined_signal)
-    del combined_signal
-    logging.info("...Done")
+        np.savez_compressed(signal_file, **signals)
+        logging.info(f"Written signals to {signal_path}")
+    del signals
     return signal_path
 
 
 def signal_share_mem(signal_path):
     shared_mem_sig = {}
+    conf = configuration.get()
+    hasher = hashlib.sha256()
+    hasher.update(str(conf).encode("utf-8"))
+    digest = hasher.digest()
+    digest = base64.urlsafe_b64encode(digest)[:8]
+
     with np.load(signal_path, allow_pickle=False) as signal:
         for key, value in signal.items():
-            path = f"/dev/shm/signal_{key}.npy"
+            path = f"/dev/shm/signal_{key}_{digest.decode('ascii')}.npy"
             with open(path, "xb") as file:
                 np.save(file, value)
+                logging.info(f"Created file in shared memory: {path}")
             shared_mem_sig[key] = path
     return shared_mem_sig
 
@@ -392,12 +418,12 @@ def main():
 
     distribution = get_or_generate_distribution()
     signal_path = get_or_generate_signals(distribution)
-    signals_shared = signal_share_mem(signal_path)
 
     if arguments.no_responses:
         endrun(runinfo)
         return
 
+    signals_shared = signal_share_mem(signal_path)
     num_responses = conf["num_responses"]
     results = []
     try:
@@ -435,7 +461,11 @@ def main():
         raise
     finally:
         for path in signals_shared.values():
-            os.remove(path)
+            try:
+                os.remove(path)
+                logging.info(f"Removed {path}")
+            except Exception as e:
+                logging.error(f"Could not remove {path}: {e}")
 
         runinfo["run"]["completed_responses"] = len(results)
         if results:
@@ -444,6 +474,7 @@ def main():
                 output[key] = np.concatenate([res[key] for res in results])
 
             np.savez_compressed(OUT_PATH / "mutual_information", **output)
+            logging.info(f"Saved results to {OUT_PATH / 'mutual_information'}")
         endrun(runinfo)
 
 

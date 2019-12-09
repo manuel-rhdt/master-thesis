@@ -199,7 +199,7 @@ def simulate_until_one(
         prev_components = components
 
 
-@njit(fastmath=True, cache=True)
+@njit(fastmath=True, cache=True, nogil=True)
 def simulate_until(
     until, initial_values, reactions, ext_timestamps=None, ext_components=None
 ):
@@ -218,7 +218,7 @@ def simulate_until(
             simulate_until_one(until[r], initial_values[r], reactions)
 
 
-# @njit(fastmath=True, cache=True, nogil=True)
+@njit(fastmath=True, cache=True, nogil=True)
 def simulate(
     timestamps,
     trajectory,
