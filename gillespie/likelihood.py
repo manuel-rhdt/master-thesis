@@ -28,7 +28,7 @@ def logsumexp(x):
 
 @jit(nopython=True, fastmath=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
-    result = np.empty_like(components[0], dtype=np.double)
+    result = np.empty_like(components[0], dtype=np.single)
 
     for n_reaction in range(reactions.size):
         tmp = np.full_like(result, reactions.k[n_reaction])
@@ -61,7 +61,7 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
     (length,) = components[0].shape
     assert length == reaction_events.shape[-1]
 
-    propensities = np.empty(reactions.k.shape + components[0].shape, dtype=np.double)
+    propensities = np.empty(reactions.k.shape + components[0].shape, dtype=np.single)
     for n_reaction in range(reactions.size):
         propensities[n_reaction] = reactions.k[n_reaction]
 
@@ -122,8 +122,6 @@ def time_average(
     if out is None:
         out = np.empty(len(new_timestamps) - 1, dtype=dtype)
 
-    old_idx = 0
-
     def iter_trajectory(old_idx):
         old_idx += 1
         if old_idx > len(old_timestamps) - 1:
@@ -131,6 +129,7 @@ def time_average(
         else:
             return old_timestamps[old_idx], trajectory[old_idx - 1]
 
+    old_idx = 0
     next_trajectory_change, trajectory_value = iter_trajectory(old_idx)
     old_idx += 1
     for idx, (low, high) in enumerate(zip(new_timestamps[:-1], new_timestamps[1:])):
