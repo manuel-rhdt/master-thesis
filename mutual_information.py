@@ -301,11 +301,10 @@ def get_or_generate_distribution():
         components = np.load(distribution_path)
     else:
         logging.info("Estimate initial distribution...")
-        components = generate_p0_distributed_values(
-            size=conf["kde_estimate"]["size"],
+        components = generate_signal_stationary_distribution(
+            num_signals=conf["kde_estimate"]["size"],
             traj_length=conf["kde_estimate"]["signal"]["length"],
             signal_init=conf["kde_estimate"]["signal"]["initial"],
-            response_init=conf["kde_estimate"]["response"]["initial"],
         )
         with distribution_path.open("wb") as dist_file:
             np.save(dist_file, components)
