@@ -37,7 +37,7 @@ def create_reaction_network(k, reactants, products):
     return network
 
 
-@njit(fastmath=True)
+@njit
 def calc_propensities(components, propensities, reactions):
     for n in range(reactions.size):
         propensities[n] = reactions.k[n]
@@ -48,7 +48,7 @@ def calc_propensities(components, propensities, reactions):
     return propensities
 
 
-@njit(fastmath=True)
+@njit
 def try_propagate_time(random_variate, timestamp, next_ext_timestamp, total_propensity):
     """
     Returns `True` if a reaction should be executed before continuing.
@@ -73,7 +73,7 @@ def try_propagate_time(random_variate, timestamp, next_ext_timestamp, total_prop
         return (True, time_step)
 
 
-@njit(fastmath=True)
+@njit
 def select_reaction(propensities):
     r = numpy.random.random_sample()
     propensities = numpy.asarray(propensities)
@@ -89,7 +89,7 @@ def select_reaction(propensities):
     return selected_reaction
 
 
-@njit(fastmath=True)
+@njit
 def update_components(selected_reaction, components, reactions):
     for reactant in reactions.reactants[selected_reaction]:
         if reactant >= 0:
@@ -99,7 +99,7 @@ def update_components(selected_reaction, components, reactions):
             components[product] += 1
 
 
-@njit(fastmath=True)
+@njit
 def timestep_generate(components, ext_timestamps, ext_components, reactions):
     num_ext_comps = len(ext_components) if ext_components is not None else 0
     ext_length = len(ext_timestamps) if ext_timestamps is not None else 0
@@ -139,7 +139,7 @@ def timestep_generate(components, ext_timestamps, ext_components, reactions):
                     ]
 
 
-@njit(fastmath=True, cache=True, nogil=True)
+@njit(cache=True, nogil=True)
 def simulate_one(
     timestamps,
     trajectory,
@@ -182,7 +182,7 @@ def simulate_one(
             break
 
 
-@njit(fastmath=True, cache=True, nogil=True)
+@njit(cache=True, nogil=True)
 def simulate_until_one(
     until, initial_values, reactions, ext_timestamps=None, ext_components=None
 ):
@@ -199,7 +199,7 @@ def simulate_until_one(
         prev_components = components
 
 
-@njit(fastmath=True, cache=True, nogil=True)
+@njit(cache=True, nogil=True)
 def simulate_until(
     until, initial_values, reactions, ext_timestamps=None, ext_components=None
 ):
@@ -218,7 +218,7 @@ def simulate_until(
             simulate_until_one(until[r], initial_values[r], reactions)
 
 
-@njit(fastmath=True, cache=True, nogil=True)
+@njit(cache=True, nogil=True)
 def simulate(timestamps, trajectory, reaction_events, reactions):
     timestamps = numpy.atleast_2d(timestamps)
     reaction_events = numpy.atleast_2d(reaction_events)
@@ -233,7 +233,7 @@ def simulate(timestamps, trajectory, reaction_events, reactions):
         simulate_one(t, c, events, reactions)
 
 
-@njit(fastmath=True, cache=True, nogil=True)
+@njit(cache=True, nogil=True)
 def simulate_ext(
     timestamps, trajectory, reaction_events, reactions, ext_timestamps, ext_components
 ):

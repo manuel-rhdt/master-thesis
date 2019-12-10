@@ -5,7 +5,7 @@ from numba.typed import List as TypedList
 
 # inspired by scipy.special.logsumexp but only supports two-dimensional arrays and
 # axis=0
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True)
 def logsumexp(x):
     """ Evaluate log-sum-exp on the outer axis of a 2d array.
 
@@ -26,7 +26,7 @@ def logsumexp(x):
     return out
 
 
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
     result = np.empty_like(components[0], dtype=np.single)
 
@@ -45,7 +45,7 @@ def calculate_sum_of_reaction_propensities(components, reactions):
     return result
 
 
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True)
 def calculate_selected_reaction_propensities(components, reaction_events, reactions):
     """ Accelerated reaction propensity calculation
 
@@ -77,7 +77,7 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
     return result
 
 
-@jit(nopython=True, fastmath=True)
+@jit(nopython=True)
 def time_average(
     trajectory,
     old_timestamps,
@@ -150,7 +150,7 @@ def time_average(
     return out
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def log_likelihood_inner(
     signal_components,
     signal_timestamps,
@@ -228,7 +228,7 @@ def expand_3d(array):
             return lambda array: array
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def log_likelihood(
     traj_lengths,
     signal_components,
@@ -279,7 +279,7 @@ def log_likelihood(
     return result
 
 
-@jit(nopython=True, fastmath=True, cache=True)
+@jit(nopython=True, cache=True)
 def log_averaged_likelihood(
     traj_lengths,
     signal_components,

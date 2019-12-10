@@ -11,7 +11,7 @@ from numba import njit
 from . import likelihood
 
 
-@njit(fastmath=True)
+@njit
 def silverman_factor(n, dimensions):
     """Compute the Silverman factor.
     Returns
@@ -22,7 +22,7 @@ def silverman_factor(n, dimensions):
     return numpy.power(n * (dimensions + 2) / 4, -1 / (dimensions + 4))
 
 
-@njit(fastmath=True, cache=True)
+@njit(cache=True)
 def estimate_log_density(points, dataset):
     """Calculates a log probability estimate for every point in `points` where the
     probability estimate is based on gaussian kernel density estimation from `dataset`.
