@@ -219,13 +219,23 @@ def simulate_until(
 
 
 @njit(fastmath=True, cache=True, nogil=True)
-def simulate(
-    timestamps,
-    trajectory,
-    reaction_events,
-    reactions,
-    ext_timestamps=None,
-    ext_components=None,
+def simulate(timestamps, trajectory, reaction_events, reactions):
+    timestamps = numpy.atleast_2d(timestamps)
+    reaction_events = numpy.atleast_2d(reaction_events)
+    trajectory = expand_3d(trajectory)
+
+    assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
+
+    for r in range(timestamps.shape[0]):
+        t = timestamps[r]
+        c = trajectory[r]
+        events = reaction_events[r]
+        simulate_one(t, c, events, reactions)
+
+
+@njit(fastmath=True, cache=True, nogil=True)
+def simulate_ext(
+    timestamps, trajectory, reaction_events, reactions, ext_timestamps, ext_components
 ):
     timestamps = numpy.atleast_2d(timestamps)
     reaction_events = numpy.atleast_2d(reaction_events)
@@ -237,17 +247,13 @@ def simulate(
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
 
     for r in range(timestamps.shape[0]):
+        t = timestamps[r]
+        c = trajectory[r]
+        events = reaction_events[r]
         if ext_timestamps.shape[0] == 1:
             ext_t = ext_timestamps[0]
             ext_c = ext_components[0]
         else:
             ext_t = ext_timestamps[r]
             ext_c = ext_components[r]
-
-        t = timestamps[r]
-        c = trajectory[r]
-        events = reaction_events[r]
-        if ext_components is not None:
-            simulate_one(t, c, events, reactions, ext_t, ext_c)
-        else:
-            simulate_one(t, c, events, reactions)
+        simulate_one(t, c, events, reactions, ext_t, ext_c)

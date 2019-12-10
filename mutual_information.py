@@ -81,7 +81,7 @@ def generate_responses(
     else:
         raise RuntimeError("Need to specify initial values")
 
-    stochastic_sim.simulate(
+    stochastic_sim.simulate_ext(
         timestamps,
         trajectory,
         reaction_events=reaction_events,
@@ -129,6 +129,7 @@ def generate_response_distribution_from_past_signals(
         ext_timestamps=sig["timestamps"],
         ext_components=sig["components"],
     )
+    del sig
 
     return components[:, num_signal_components:]
 
