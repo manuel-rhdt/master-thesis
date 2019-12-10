@@ -19,7 +19,6 @@ from gillespie import configuration, likelihood, stochastic_sim
 from gillespie.kernel_density_estimate import estimate_log_density
 
 OUT_PATH = pathlib.Path(configuration.get()["output"])
-NUM_SIGNALS = configuration.get()["num_signals"]
 try:
     NUM_PROCESSES = configuration.get()["num_processes"]
 except KeyError:
@@ -190,7 +189,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
         + log_p_x_zero_this[:, np.newaxis]
     )
 
-    num_signals = len(averaging_signals["timestamps"])
+    num_signals = conf["num_signals"]
     if num_signals > 0:
         points = responses["components"][:, 0, 0]
         log_p_x_zero = np.zeros((num_responses, num_signals))
@@ -318,22 +317,23 @@ def get_or_generate_distribution():
 
 def get_or_generate_signals(distribution):
     conf = configuration.get()
+    num_signals = conf["num_signals"]
     signal_path = pathlib.Path(conf.get("signal_path", OUT_PATH / "signals.npz"))
     if signal_path.exists():
         logging.info(f"Using signals from {signal_path}")
         return signal_path
     logging.info("Generate signals...")
-    initial_values = distribution[0].take(np.arange(NUM_SIGNALS), mode="wrap")
+    initial_values = distribution[0].take(np.arange(num_signals), mode="wrap")
     signal_length = configuration.get()["signal"]["length"]
     signals = generate_signals_sim(
-        NUM_SIGNALS, length=signal_length, initial_values=initial_values
+        num_signals, length=signal_length, initial_values=initial_values
     )
     _, num_signal_components, _ = signals["components"].shape
-    logging.info(f"Generated {NUM_SIGNALS} signals.")
+    logging.info(f"Generated {num_signals} signals.")
 
     num_past_trajectories = 250
     conditional_distribution = np.zeros(
-        (NUM_SIGNALS, num_past_trajectories, num_signal_components)
+        (num_signals, num_past_trajectories, num_signal_components)
     )
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=NUM_PROCESSES) as executor:
@@ -369,6 +369,9 @@ def signal_share_mem(signal_path):
     digest = base64.urlsafe_b64encode(digest)[:8]
 
     with np.load(signal_path, allow_pickle=False) as signal:
+        assert (
+            signal["timestamps"].shape[0] >= conf["num_signals"]
+        ), f"Not enough signals are stored in file {signal_path}"
         for key, value in signal.items():
             path = f"/dev/shm/signal_{key}_{digest.decode('ascii')}.npy"
             with open(path, "xb") as file:
