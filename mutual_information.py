@@ -157,8 +157,8 @@ def calculate(i, averaging_signals, signal_stationary_distr):
     sig = generate_signals_sim(1, length=response_len, initial_values=sig0)
 
     response_distribution = generate_response_distribution_from_past_signals(
-        num_responses * 5,
-        5000,
+        max(1000, num_responses * 2),
+        1000,
         sig["components"][0, 0, 0],
         conf["kde_estimate"]["response"]["initial"],
     )
