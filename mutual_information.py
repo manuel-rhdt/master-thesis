@@ -188,6 +188,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
         )
         + log_p_x_zero_this[:, np.newaxis]
     )
+    conditional_entropy = np.mean(conditional_entropy, axis=0, keepdims=True)
 
     num_signals = conf["num_signals"]
     if num_signals > 0:
@@ -201,7 +202,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
                 points, conditional_distribution[s, :, 0]
             )
 
-        response_entropy = -likelihood.log_averaged_likelihood(
+        marginal_entropy = -likelihood.log_averaged_likelihood(
             traj_lengths,
             averaging_signals["components"],
             averaging_signals["timestamps"],
@@ -212,14 +213,15 @@ def calculate(i, averaging_signals, signal_stationary_distr):
             p_zero=log_p_x_zero,
             dtype=np.double,
         )
+        marginal_entropy = np.mean(marginal_entropy, axis=0, keepdims=True)
 
     if num_signals > 0:
-        mutual_information = response_entropy - conditional_entropy
+        mutual_information = marginal_entropy - conditional_entropy
         return {
             "trajectory_length": np.expand_dims(traj_lengths, axis=0),
             "mutual_information": mutual_information,
             "conditional_entropy": conditional_entropy,
-            "response_entropy": response_entropy,
+            "response_entropy": marginal_entropy,
         }
     else:
         return {
