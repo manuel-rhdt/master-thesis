@@ -1,10 +1,10 @@
 import numpy
 import numpy.random
-from numba import float32, int32, jitclass, njit
+from numba import float64, int32, jitclass, njit
 
 from .likelihood import expand_3d
 
-spec = [("k", float32[:]), ("reactants", int32[:, :]), ("products", int32[:, :])]
+spec = [("k", float64[:]), ("reactants", int32[:, :]), ("products", int32[:, :])]
 
 
 @jitclass(spec)
