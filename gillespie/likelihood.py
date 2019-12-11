@@ -28,7 +28,7 @@ def logsumexp(x):
 
 @jit(nopython=True)
 def calculate_sum_of_reaction_propensities(components, reactions):
-    result = np.empty_like(components[0], dtype=np.single)
+    result = np.empty_like(components[0], dtype=np.double)
 
     for n_reaction in range(reactions.size):
         tmp = np.full_like(result, reactions.k[n_reaction])
@@ -61,7 +61,7 @@ def calculate_selected_reaction_propensities(components, reaction_events, reacti
     (length,) = components[0].shape
     assert length == reaction_events.shape[-1]
 
-    propensities = np.empty(reactions.k.shape + components[0].shape, dtype=np.single)
+    propensities = np.empty(reactions.k.shape + components[0].shape, dtype=np.double)
     for n_reaction in range(reactions.size):
         propensities[n_reaction] = reactions.k[n_reaction]
 

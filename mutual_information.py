@@ -28,7 +28,7 @@ SIGNAL_NETWORK, RESPONSE_NETWORK = configuration.read_reactions()
 
 
 def generate_signals_sim(count, length=100000, initial_values=None, threads=True):
-    timestamps = np.zeros((count, length), dtype=np.single)
+    timestamps = np.zeros((count, length), dtype=np.double)
     trajectory = np.zeros((count, 1, length), dtype=np.int16)
     reaction_events = np.zeros((count, length - 1), dtype=np.uint8)
 
@@ -147,7 +147,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
 
     # TODO: make this configurable
     result_size = 5000
-    traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.single)
+    traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.double)
 
     num_responses = conf["response"].get("batch_size", 1)
     response_len = configuration.get()["response"]["length"]
@@ -184,7 +184,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
             responses["timestamps"],
             responses["reaction_events"],
             reactions=RESPONSE_NETWORK,
-            dtype=np.single,
+            dtype=np.double,
         )
         + log_p_x_zero_this[:, np.newaxis]
     )
@@ -210,7 +210,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
             responses["reaction_events"],
             reactions=RESPONSE_NETWORK,
             p_zero=log_p_x_zero,
-            dtype=np.single,
+            dtype=np.double,
         )
 
     if num_signals > 0:

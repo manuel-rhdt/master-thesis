@@ -33,7 +33,7 @@ class TestSim(unittest.TestCase):
         ext_timestamps = np.array([0.0, 0.5, 1.0, 1.5, 2.0])
 
         reactions = stochastic_sim.ReactionNetwork(2)
-        reactions.k = np.array([0.5, 0.8], dtype=np.single)
+        reactions.k = np.array([0.5, 0.8], dtype=np.double)
         reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
         reactions.products = np.array([[2, -1], [0, 2]], dtype=np.int32)
 

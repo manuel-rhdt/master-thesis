@@ -9,7 +9,7 @@ class TestAnalyzer(unittest.TestCase):
     def test_reaction_propensities1(self):
         components = np.array([[1, 2]])
         reactions = stochastic_sim.ReactionNetwork(1)
-        reactions.k = np.array([1.0], dtype=np.single)
+        reactions.k = np.array([1.0], dtype=np.double)
         reactions.reactants = np.array([[0]], dtype=np.int32)
         reaction_events = np.array([0, 0])
         result = likelihood.calculate_selected_reaction_propensities(
@@ -20,7 +20,7 @@ class TestAnalyzer(unittest.TestCase):
     def test_reaction_propensities2(self):
         components = np.array([[1, 2]])
         reactions = stochastic_sim.ReactionNetwork(2)
-        reactions.k = np.array([2.0, 5.0], dtype=np.single)
+        reactions.k = np.array([2.0, 5.0], dtype=np.double)
         reactions.reactants = np.array([[0], [-1]], dtype=np.int32)
 
         result = likelihood.calculate_sum_of_reaction_propensities(

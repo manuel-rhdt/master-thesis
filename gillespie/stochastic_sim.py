@@ -10,7 +10,7 @@ spec = [("k", float32[:]), ("reactants", int32[:, :]), ("products", int32[:, :])
 @jitclass(spec)
 class ReactionNetwork(object):
     def __init__(self, num_reactions):
-        self.k = numpy.zeros(num_reactions, dtype=numpy.single)
+        self.k = numpy.zeros(num_reactions, dtype=numpy.double)
         self.reactants = numpy.zeros((num_reactions, 1), dtype=numpy.int32)
         self.products = numpy.zeros((num_reactions, 1), dtype=numpy.int32)
 
@@ -21,7 +21,7 @@ class ReactionNetwork(object):
 
 def create_reaction_network(k, reactants, products):
     network = ReactionNetwork(len(k))
-    network.k = numpy.asarray(k, dtype=numpy.single)
+    network.k = numpy.asarray(k, dtype=numpy.double)
     max_num_reactants = max(len(react) for react in reactants)
     network.reactants = numpy.full((len(k), max_num_reactants), -1, dtype=numpy.int32)
     for i, react in enumerate(reactants):
