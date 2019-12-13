@@ -343,7 +343,7 @@ def get_or_generate_signals(distribution):
             i, s0 = args
             result = generate_response_distribution_from_past_signals(
                 num_past_trajectories,
-                5000,
+                1000,
                 s0,
                 conf["kde_estimate"]["response"]["initial"],
             )
