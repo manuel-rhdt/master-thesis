@@ -149,7 +149,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
     result_size = 5000
     traj_lengths = np.geomspace(0.01, 1000, num=result_size, dtype=np.double)
 
-    num_responses = conf["response"].get("batch_size", 1)
+    batch_size = conf["response"].get("batch_size", 1)
     response_len = configuration.get()["response"]["length"]
 
     # first we sample the initial points from the joined distribution
@@ -157,25 +157,25 @@ def calculate(i, averaging_signals, signal_stationary_distr):
     sig = generate_signals_sim(1, length=response_len, initial_values=sig0)
 
     response_distribution = generate_response_distribution_from_past_signals(
-        max(1000, num_responses * 2),
+        max(1000, batch_size * 2),
         1000,
         sig["components"][0, 0, 0],
         conf["kde_estimate"]["response"]["initial"],
     )
 
     responses = generate_responses(
-        num_responses,
+        batch_size,
         sig["timestamps"],
         sig["components"],
         length=response_len,
-        initial_values=response_distribution[:num_responses, 0],
+        initial_values=response_distribution[:batch_size, 0],
     )
 
     log_p_x_zero_this = estimate_log_density(
-        response_distribution[:num_responses, 0], response_distribution[:, 0]
+        response_distribution[:batch_size, 0], response_distribution[:, 0]
     )
 
-    conditional_entropy = -(
+    conditional_entropies = -(
         likelihood.log_likelihood(
             traj_lengths,
             sig["components"],
@@ -188,12 +188,13 @@ def calculate(i, averaging_signals, signal_stationary_distr):
         )
         + log_p_x_zero_this[:, np.newaxis]
     )
-    conditional_entropy = np.mean(conditional_entropy, axis=0, keepdims=True)
+    conditional_entropy = np.mean(conditional_entropies, axis=0, keepdims=True)
+    del conditional_entropies  # free memory asap
 
     num_signals = conf["num_signals"]
     if num_signals > 0:
         points = responses["components"][:, 0, 0]
-        log_p_x_zero = np.zeros((num_responses, num_signals))
+        log_p_x_zero = np.zeros((batch_size, num_signals))
         conditional_distribution = averaging_signals["conditional_distribution"]
 
         for s in range(num_signals):
@@ -202,7 +203,7 @@ def calculate(i, averaging_signals, signal_stationary_distr):
                 points, conditional_distribution[s, :, 0]
             )
 
-        marginal_entropy = -likelihood.log_averaged_likelihood(
+        marginal_entropies = -likelihood.log_averaged_likelihood(
             traj_lengths,
             averaging_signals["components"],
             averaging_signals["timestamps"],
@@ -213,13 +214,12 @@ def calculate(i, averaging_signals, signal_stationary_distr):
             p_zero=log_p_x_zero,
             dtype=np.double,
         )
-        marginal_entropy = np.mean(marginal_entropy, axis=0, keepdims=True)
+        marginal_entropy = np.mean(marginal_entropies, axis=0, keepdims=True)
+        del marginal_entropies
 
     if num_signals > 0:
-        mutual_information = marginal_entropy - conditional_entropy
         return {
             "trajectory_length": np.expand_dims(traj_lengths, axis=0),
-            "mutual_information": mutual_information,
             "conditional_entropy": conditional_entropy,
             "response_entropy": marginal_entropy,
         }
