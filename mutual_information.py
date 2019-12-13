@@ -439,8 +439,12 @@ def main():
             initargs=(signals_shared, distribution),
         ) as executor:
             last_time = datetime.now()
-            for res in executor.map(worker_work, range(num_responses)):
-                results.append(res)
+            futures = []
+            for r in range(num_responses):
+                futures.append(executor.submit(worker_work, r))
+
+            for fut in futures:
+                results.append(fut.result())
                 if len(results) % NUM_PROCESSES == 0:
                     i = len(results)
 
