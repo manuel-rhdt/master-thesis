@@ -99,7 +99,7 @@ def read_reactions(conf=None):
         for product in reaction["products"]:
             products[-1].append(name_index_table[product])
 
-    signal_network = stochastic_sim.create_reaction_network(k, reactants, products)
+    signal_network = {'k': k, 'reactants': reactants, 'products': products}
 
     for comp in conf["response"]["components"]:
         name_index_table[comp] = len(name_index_table)
@@ -116,6 +116,6 @@ def read_reactions(conf=None):
         for product in reaction["products"]:
             products[-1].append(name_index_table[product])
 
-    response_network = stochastic_sim.create_reaction_network(k, reactants, products)
+    response_network = {'k': k, 'reactants': reactants, 'products': products}
 
     return signal_network, response_network
