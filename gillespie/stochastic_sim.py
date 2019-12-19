@@ -225,8 +225,10 @@ def simulate(timestamps, trajectory, reaction_events, reactions):
     trajectory = expand_3d(trajectory)
 
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
+    
+    num_r, _ = timestamps.shape
 
-    for r in range(timestamps.shape[0]):
+    for r in range(num_r):
         t = timestamps[r]
         c = trajectory[r]
         events = reaction_events[r]
@@ -245,15 +247,17 @@ def simulate_ext(
     ext_components = expand_3d(ext_components)
 
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
+    
+    num_r, _ = timestamps.shape
+    num_s, _ = ext_timestamps.shape
+    
+    # numpy broadcasting rules
+    assert num_s == num_r or num_s == 1
 
     for r in range(timestamps.shape[0]):
         t = timestamps[r]
         c = trajectory[r]
         events = reaction_events[r]
-        if ext_timestamps.shape[0] == 1:
-            ext_t = ext_timestamps[0]
-            ext_c = ext_components[0]
-        else:
-            ext_t = ext_timestamps[r]
-            ext_c = ext_components[r]
+        ext_t = ext_timestamps[r % num_s]
+        ext_c = ext_components[r % num_s]
         simulate_one(t, c, events, reactions, ext_t, ext_c)

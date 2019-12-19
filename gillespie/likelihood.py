@@ -1,6 +1,7 @@
 import numpy as np
 from numba import generated_jit, jit, types
 from numba.typed import List as TypedList
+from . import stochastic_sim
 
 
 # inspired by scipy.special.logsumexp but only supports two-dimensional arrays and
@@ -150,7 +151,7 @@ def time_average(
     return out
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=True, nogil=True)
 def log_likelihood_inner(
     signal_components,
     signal_timestamps,
@@ -228,7 +229,7 @@ def expand_3d(array):
             return lambda array: array
 
 
-@jit(nopython=True, cache=True)
+@jit(nopython=True, cache=True, nogil=True)
 def log_likelihood(
     traj_lengths,
     signal_components,
@@ -250,31 +251,29 @@ def log_likelihood(
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
 
-    assert num_r == num_s or num_s == 1
+    assert num_r == num_s or num_s == 1 or num_r == 1
 
-    result = out if out is not None else np.zeros((num_r, length), dtype=dtype)
+    result = out if out is not None else np.zeros((max(num_r, num_s), length), dtype=dtype)
 
-    for r in range(num_r):
-        rc = response_components[r]
-        rt = response_timestamps[r]
-        if num_s == 1:
-            sc = signal_components[0]
-            st = signal_timestamps[0]
-        else:
-            sc = signal_components[r]
-            st = signal_timestamps[r]
+    for i in range(result.shape[0]):
+        r_index = i % num_r
+        s_index = i % num_s
+        rc = response_components[r_index]
+        rt = response_timestamps[r_index]
+        sc = signal_components[s_index]
+        st = signal_timestamps[s_index]
 
         log_p = log_likelihood_inner(
-            sc, st, rc, rt, reaction_events[r], reactions, dtype=dtype
+            sc, st, rc, rt, reaction_events[r_index], reactions, dtype=dtype
         )
 
         indices = np.digitize(traj_lengths, rt)
-        for i, index in enumerate(indices):
+        for j, index in enumerate(indices):
             if index >= len(log_p):
                 # the index is out of bounds... just extrapolate for now
-                result[r, i] = result[r, i - 1] + np.mean(log_p)
+                result[i, j] = result[i, j - 1] + np.mean(log_p)
             else:
-                result[r, i] = log_p[index]
+                result[i, j] = log_p[index]
 
     return result
 
@@ -340,3 +339,17 @@ def log_averaged_likelihood(
         result[r] = logsumexp(tmp) - np.log(num_s)
 
     return result
+
+
+def log_p(traj_lengths, signal, response, reactions):
+    network = stochastic_sim.create_reaction_network(**reactions)
+    
+    sc = signal['components']
+    st = signal['timestamps']
+    rc = response['components']
+    rt = response['timestamps']
+    events = response['reaction_events']
+    
+    return log_likelihood(traj_lengths, sc, st, rc, rt, events, network, dtype=np.double)
+    
+    
