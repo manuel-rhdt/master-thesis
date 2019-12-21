@@ -10,6 +10,7 @@ import os
 import pathlib
 import platform
 import sys
+from contextlib import contextmanager
 from datetime import datetime, timezone
 
 import numpy as np
@@ -361,6 +362,7 @@ def get_or_generate_signals(distribution):
     return signal_path
 
 
+@contextmanager
 def signal_share_mem(signal_path):
     shared_mem_sig = {}
     conf = configuration.get()
@@ -379,7 +381,17 @@ def signal_share_mem(signal_path):
                 np.save(file, value)
                 logging.info(f"Created file in shared memory: {path}")
             shared_mem_sig[key] = path
-    return shared_mem_sig
+
+    try:
+        yield shared_mem_sig
+    finally:
+        # clean up the created files after they're no longer needed
+        for path in shared_mem_sig.values():
+            try:
+                os.remove(path)
+                logging.info(f"Removed {path}")
+            except OSError as e:
+                logging.error(f"Could not remove {path}: {e}")
 
 
 def endrun(runinfo):
@@ -392,6 +404,41 @@ def endrun(runinfo):
         f.write(conf["original"])
         f.write("\n\n")
         toml.dump(runinfo, f)
+
+
+def perform_simulation(sim, conf):
+    with concurrent.futures.ProcessPoolExecutor(
+        max_workers=NUM_PROCESSES,
+        mp_context=multiprocessing.get_context("spawn"),
+        initializer=worker_init,
+        initargs=(signals_shared, distribution),
+    ) as executor:
+        last_time = datetime.now()
+        futures = []
+        for r in range(num_responses):
+            futures.append(executor.submit(worker_work, r))
+
+        for fut in futures:
+            results.append(fut.result())
+            if len(results) % NUM_PROCESSES == 0:
+                i = len(results)
+
+                time_per_iteration = (datetime.now() - last_time) / NUM_PROCESSES
+                last_time = datetime.now()
+
+                logging.info(
+                    "response "
+                    f"{i}/{num_responses} = {i/num_responses*100:.1f} % done. "
+                    f"{time_per_iteration.total_seconds():.2f} s/it"
+                )
+                timediff = datetime.now(timezone.utc) - runinfo["run"]["started"]
+                with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
+                    print(
+                        f"{i} / {num_responses} responses done\n"
+                        f"{i/num_responses * 100} % "
+                        f"in {str(timediff)}",
+                        file=progress_file,
+                    )
 
 
 def main():
@@ -428,63 +475,65 @@ def main():
         endrun(runinfo)
         return
 
-    signals_shared = signal_share_mem(signal_path)
-    num_responses = conf["num_responses"]
-    results = []
-    try:
-        with concurrent.futures.ProcessPoolExecutor(
-            max_workers=NUM_PROCESSES,
-            mp_context=multiprocessing.get_context("spawn"),
-            initializer=worker_init,
-            initargs=(signals_shared, distribution),
-        ) as executor:
-            last_time = datetime.now()
-            futures = []
-            for r in range(num_responses):
-                futures.append(executor.submit(worker_work, r))
+    for sim in conf.get("simulation", []):
+        perform_simulation(sim)
 
-            for fut in futures:
-                results.append(fut.result())
-                if len(results) % NUM_PROCESSES == 0:
-                    i = len(results)
+    with signal_share_mem(signal_path) as signals_shared:
+        num_responses = conf["num_responses"]
+        results = []
+        try:
+            with concurrent.futures.ProcessPoolExecutor(
+                max_workers=NUM_PROCESSES,
+                mp_context=multiprocessing.get_context("spawn"),
+                initializer=worker_init,
+                initargs=(signals_shared, distribution),
+            ) as executor:
+                last_time = datetime.now()
+                futures = []
+                for r in range(num_responses):
+                    futures.append(executor.submit(worker_work, r))
 
-                    time_per_iteration = (datetime.now() - last_time) / NUM_PROCESSES
-                    last_time = datetime.now()
+                for fut in futures:
+                    results.append(fut.result())
+                    if len(results) % NUM_PROCESSES == 0:
+                        i = len(results)
 
-                    logging.info(
-                        "response "
-                        f"{i}/{num_responses} = {i/num_responses*100:.1f} % done. "
-                        f"{time_per_iteration.total_seconds():.2f} s/it"
-                    )
-                    timediff = datetime.now(timezone.utc) - runinfo["run"]["started"]
-                    with (OUT_PATH / "progress.txt").open(mode="w") as progress_file:
-                        print(
-                            f"{i} / {num_responses} responses done\n"
-                            f"{i/num_responses * 100} % "
-                            f"in {str(timediff)}",
-                            file=progress_file,
+                        time_per_iteration = (
+                            datetime.now() - last_time
+                        ) / NUM_PROCESSES
+                        last_time = datetime.now()
+
+                        logging.info(
+                            "response "
+                            f"{i}/{num_responses} = {i/num_responses*100:.1f} % done. "
+                            f"{time_per_iteration.total_seconds():.2f} s/it"
                         )
-    except BaseException as error:
-        logging.error("Aborting calculation due to exception.")
-        runinfo["run"]["error"] = repr(error)
-        raise
-    finally:
-        for path in signals_shared.values():
-            try:
-                os.remove(path)
-                logging.info(f"Removed {path}")
-            except Exception as e:
-                logging.error(f"Could not remove {path}: {e}")
+                        timediff = (
+                            datetime.now(timezone.utc) - runinfo["run"]["started"]
+                        )
+                        with (OUT_PATH / "progress.txt").open(
+                            mode="w"
+                        ) as progress_file:
+                            print(
+                                f"{i} / {num_responses} responses done\n"
+                                f"{i/num_responses * 100} % "
+                                f"in {str(timediff)}",
+                                file=progress_file,
+                            )
+        except BaseException as error:
+            logging.error("Aborting calculation due to exception.")
+            runinfo["run"]["error"] = repr(error)
+            raise
+        finally:
+            runinfo["run"]["completed_responses"] = len(results)
+            if results:
+                output = {}
+                for key in results[0].keys():
+                    output[key] = np.concatenate([res[key] for res in results])
 
-        runinfo["run"]["completed_responses"] = len(results)
-        if results:
-            output = {}
-            for key in results[0].keys():
-                output[key] = np.concatenate([res[key] for res in results])
-
-            np.savez_compressed(OUT_PATH / "mutual_information", **output)
-            logging.info(f"Saved results to {OUT_PATH / 'mutual_information'}")
-        endrun(runinfo)
+                np.savez_compressed(OUT_PATH / "mutual_information", **output)
+                logging.info(f"Saved results to {OUT_PATH / 'mutual_information'}")
+            endrun(runinfo)
 
 
 if __name__ == "__main__":
