@@ -1,6 +1,6 @@
 import numpy
 import numpy.random
-from numba import float64, generated_jit, int32, jitclass, njit
+from numba import float64, generated_jit, int32, jitclass, njit, types
 
 spec = [("k", float64[:]), ("reactants", int32[:, :]), ("products", int32[:, :])]
 
@@ -11,7 +11,7 @@ def expand_3d(array):
         if array.ndim == 1:
             return lambda array: array.reshape((1, 1, -1))
         elif array.ndim == 2:
-            return lambda array: np.expand_dims(array, 0)
+            return lambda array: numpy.expand_dims(array, 0)
         else:
             return lambda array: array
 

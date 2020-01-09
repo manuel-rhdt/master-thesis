@@ -1,12 +1,10 @@
 import dask
-import dask.threaded
 import dask.array
+import dask.threaded
 import numpy
-from dask.base import DaskMethodsMixin
-from dask.highlevelgraph import HighLevelGraph
-from dask.base import tokenize
-from dask.utils import funcname
+from dask.base import DaskMethodsMixin, tokenize
 from dask.delayed import Delayed
+from dask.highlevelgraph import HighLevelGraph
 
 
 def _expand_dims(array, dims=2):
@@ -55,6 +53,7 @@ def from_delayed(value, num_traj, length, num_components=1, meta=None, name=None
     graph = HighLevelGraph.from_collections(name, dsk, dependencies=[value])
     chunks = ((num_traj,), (length,))
     return DistributedTrajectoryArray(graph, name, chunks, meta=None)
+
 
 class TrajectoryArray:
     def __init__(self, timestamps, components, reaction_events=None):
