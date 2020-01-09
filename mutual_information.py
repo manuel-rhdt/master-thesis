@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 
 import dask
+import numpy as np
+from dask import array as da
 from dask import delayed
 from dask.distributed import Client
-
-import numpy as np
+from scipy.special import logsumexp
 
 import gillespie.configuration
 from gillespie import trajectory_array as ta
+from gillespie.likelihood import log_p, log_p_multi
 from gillespie.simulate import simulate
-from gillespie.likelihood import log_p
-from dask import array as da
-
-from scipy.special import logsumexp
 
 
 def conditional_likelihood(traj_lengths, signal, response, network):
@@ -28,11 +26,12 @@ def conditional_likelihood(traj_lengths, signal, response, network):
     return da.concatenate(result)
 
 
-def log_p_multi(traj_lengths, signal, response, network):
-    result = np.empty((len(response), len(signal), len(traj_lengths)))
-    for i, r in enumerate(response):
-        result[i] = log_p(traj_lengths, signal, r, network)
-    return result
+# def log_p_multi(traj_lengths, signal, response, network):
+# return gillespie.likelihood.log_p_multi(traj_lengths, signal, response, network)
+# result = np.empty((len(response), len(signal), len(traj_lengths)))
+# for i, r in enumerate(response):
+#     result[i] = log_p(traj_lengths, signal, r, network)
+# return result
 
 
 def marginal_likelihood(traj_lengths, signal, response, network):
@@ -76,7 +75,7 @@ def signals_and_responses(count, batch, length, sig_network, res_network):
 
 def main():
     # dask.config.set(scheduler='synchronous')
-    _ = Client()
+    _ = Client("127.0.0.1:8786")
     conf = gillespie.configuration.get("configuration.toml")
     sig_network, res_network = gillespie.configuration.read_reactions(conf)
 
