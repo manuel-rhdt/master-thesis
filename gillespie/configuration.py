@@ -7,8 +7,6 @@ import string
 import toml
 from jinja2 import Environment, FileSystemLoader
 
-from . import stochastic_sim
-
 CONF = None
 
 
@@ -99,7 +97,7 @@ def read_reactions(conf=None):
         for product in reaction["products"]:
             products[-1].append(name_index_table[product])
 
-    signal_network = {'k': k, 'reactants': reactants, 'products': products}
+    signal_network = {"k": k, "reactants": reactants, "products": products}
 
     for comp in conf["response"]["components"]:
         name_index_table[comp] = len(name_index_table)
@@ -116,6 +114,6 @@ def read_reactions(conf=None):
         for product in reaction["products"]:
             products[-1].append(name_index_table[product])
 
-    response_network = {'k': k, 'reactants': reactants, 'products': products}
+    response_network = {"k": k, "reactants": reactants, "products": products}
 
     return signal_network, response_network

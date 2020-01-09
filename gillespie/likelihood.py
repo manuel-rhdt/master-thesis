@@ -253,7 +253,9 @@ def log_likelihood(
 
     assert num_r == num_s or num_s == 1 or num_r == 1
 
-    result = out if out is not None else np.zeros((max(num_r, num_s), length), dtype=dtype)
+    result = (
+        out if out is not None else np.zeros((max(num_r, num_s), length), dtype=dtype)
+    )
 
     for i in range(result.shape[0]):
         r_index = i % num_r
@@ -270,8 +272,8 @@ def log_likelihood(
         indices = np.digitize(traj_lengths, rt)
         for j, index in enumerate(indices):
             if index >= len(log_p):
-                # the index is out of bounds... just extrapolate for now
-                result[i, j] = result[i, j - 1] + np.mean(log_p)
+                # give it a nan value for now
+                result[i, j] = np.nan
             else:
                 result[i, j] = log_p[index]
 
@@ -343,13 +345,19 @@ def log_averaged_likelihood(
 
 def log_p(traj_lengths, signal, response, reactions):
     network = stochastic_sim.create_reaction_network(**reactions)
-    
-    sc = signal['components']
-    st = signal['timestamps']
-    rc = response['components']
-    rt = response['timestamps']
-    events = response['reaction_events']
-    
-    return log_likelihood(traj_lengths, sc, st, rc, rt, events, network, dtype=np.double)
-    
-    
+
+    sc = signal.components
+    st = signal.timestamps
+    rc = response.components
+    rt = response.timestamps
+    events = response.reaction_events
+
+    # just to make sure the numba compilation doesn't fail
+    assert st.ndim == rt.ndim == 2
+    assert rc.ndim == sc.ndim == 3
+    assert events.ndim == 2
+
+    return log_likelihood(
+        traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
+    )
+
