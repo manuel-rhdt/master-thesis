@@ -1,10 +1,19 @@
 import numpy
 import numpy.random
-from numba import float64, int32, jitclass, njit
-
-from .likelihood import expand_3d
+from numba import float64, generated_jit, int32, jitclass, njit
 
 spec = [("k", float64[:]), ("reactants", int32[:, :]), ("products", int32[:, :])]
+
+
+@generated_jit(nopython=True)
+def expand_3d(array):
+    if isinstance(array, types.Array):
+        if array.ndim == 1:
+            return lambda array: array.reshape((1, 1, -1))
+        elif array.ndim == 2:
+            return lambda array: np.expand_dims(array, 0)
+        else:
+            return lambda array: array
 
 
 @jitclass(spec)
@@ -225,7 +234,7 @@ def simulate(timestamps, trajectory, reaction_events, reactions):
     trajectory = expand_3d(trajectory)
 
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
-    
+
     num_r, _ = timestamps.shape
 
     for r in range(num_r):
@@ -247,10 +256,10 @@ def simulate_ext(
     ext_components = expand_3d(ext_components)
 
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
-    
+
     num_r, _ = timestamps.shape
     num_s, _ = ext_timestamps.shape
-    
+
     # numpy broadcasting rules
     assert num_s == num_r or num_s == 1
 

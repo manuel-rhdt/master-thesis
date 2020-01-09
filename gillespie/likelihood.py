@@ -1,7 +1,9 @@
 import numpy as np
 from numba import generated_jit, jit, types
 from numba.typed import List as TypedList
+
 from . import stochastic_sim
+from .stochastic_sim import expand_3d
 
 
 # inspired by scipy.special.logsumexp but only supports two-dimensional arrays and
@@ -218,17 +220,6 @@ def log_likelihood_inner(
     return result
 
 
-@generated_jit(nopython=True)
-def expand_3d(array):
-    if isinstance(array, types.Array):
-        if array.ndim == 1:
-            return lambda array: array.reshape((1, 1, -1))
-        elif array.ndim == 2:
-            return lambda array: np.expand_dims(array, 0)
-        else:
-            return lambda array: array
-
-
 @jit(nopython=True, cache=True, nogil=True)
 def log_likelihood(
     traj_lengths,
@@ -360,4 +351,3 @@ def log_p(traj_lengths, signal, response, reactions):
     return log_likelihood(
         traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
     )
-
