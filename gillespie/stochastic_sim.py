@@ -104,7 +104,7 @@ spec_ss = [
     ("current_time", types.float64),
     ("ext_progress", types.int32),
     ("propensities", types.float64[:]),
-    ("components", types.float64[:]),
+    ("components", types.uint32[:]),
     ("ext_timestamps", types.Optional(float64[:])),
     ("ext_components", types.Optional(types.uint16[:, :])),
     ("reactions", numba.typeof(dummy)),
@@ -204,7 +204,7 @@ def simulate_one(
 
     # define values used during iteration
     progress = 0
-    components = numpy.zeros(num_comps + num_ext_comps, dtype=numpy.double)
+    components = numpy.zeros(num_comps + num_ext_comps, dtype=numpy.uint32)
     for i in range(num_ext_comps):
         if ext_components is not None:
             components[i] = ext_components[i][0]

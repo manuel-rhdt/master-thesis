@@ -15,7 +15,7 @@ class TestSim(unittest.TestCase):
         reactions.reactants = np.array([[-1], [0]], dtype=np.int32)
         reactions.products = np.array([[0], [-1]], dtype=np.int32)
 
-        components = np.array([10.0])
+        components = np.array([10], dtype=np.uint32)
 
         sim = stochastic_sim.StochasticSim(components, None, None, reactions)
 
