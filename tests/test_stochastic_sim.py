@@ -16,8 +16,11 @@ class TestSim(unittest.TestCase):
         reactions.products = np.array([[0], [-1]], dtype=np.int32)
 
         components = np.array([10], dtype=np.uint32)
+        propensities = np.zeros(reactions.size)
 
-        sim = stochastic_sim.StochasticSim(components, None, None, reactions)
+        sim = stochastic_sim.StochasticSim(
+            components, propensities, None, None, reactions
+        )
 
         sim.update_components(0)
         self.assertAlmostEqual(components[0], 11.0)

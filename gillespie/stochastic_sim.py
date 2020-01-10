@@ -113,10 +113,12 @@ spec_ss = [
 
 @jitclass(spec_ss)
 class StochasticSim(object):
-    def __init__(self, components, ext_timestamps, ext_components, reactions):
+    def __init__(
+        self, components, propensities, ext_timestamps, ext_components, reactions
+    ):
         self.current_time = 0.0
         self.ext_progress = 0
-        self.propensities = numpy.zeros(reactions.size)
+        self.propensities = propensities
         self.components = components
         self.ext_timestamps = ext_timestamps
         self.ext_components = ext_components
@@ -189,6 +191,8 @@ def simulate_one(
     reactions,
     ext_timestamps=None,
     ext_components=None,
+    components=None,
+    propensities=None,
 ):
     """Simulate one trajectory
     """
@@ -204,14 +208,21 @@ def simulate_one(
 
     # define values used during iteration
     progress = 0
-    components = numpy.zeros(num_comps + num_ext_comps, dtype=numpy.uint32)
+    propensities = numpy.zeros(reactions.size) if propensities is None else propensities
+    components = (
+        numpy.zeros(num_comps + num_ext_comps, dtype=numpy.uint32)
+        if components is None
+        else components
+    )
     for i in range(num_ext_comps):
         if ext_components is not None:
             components[i] = ext_components[i][0]
     for comp in range(num_comps):
         components[comp + num_ext_comps] = trajectory[comp][0]
 
-    sim = StochasticSim(components, ext_timestamps, ext_components, reactions)
+    sim = StochasticSim(
+        components, propensities, ext_timestamps, ext_components, reactions
+    )
     while (progress + 1) < length:
         progress += 1
         time, selected_reaction = sim.propagate_time()
@@ -286,9 +297,13 @@ def simulate_ext(
     ext_components = expand_3d(ext_components)
 
     assert timestamps.shape[0] == trajectory.shape[0] == reaction_events.shape[0]
+    assert ext_timestamps.shape[0] == ext_components.shape[0]
 
-    num_r, _ = timestamps.shape
-    num_s, _ = ext_timestamps.shape
+    num_r, num_comps, _ = trajectory.shape
+    num_s, num_ext_comps, _ = ext_components.shape
+
+    components = numpy.zeros(num_comps + num_ext_comps, dtype=numpy.uint32)
+    propensities = numpy.zeros(reactions.size)
 
     # numpy broadcasting rules
     assert num_s == num_r or num_s == 1
@@ -299,4 +314,4 @@ def simulate_ext(
         events = reaction_events[r]
         ext_t = ext_timestamps[r % num_s]
         ext_c = ext_components[r % num_s]
-        simulate_one(t, c, events, reactions, ext_t, ext_c)
+        simulate_one(t, c, events, reactions, ext_t, ext_c, components, propensities)
