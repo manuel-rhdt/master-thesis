@@ -7,7 +7,7 @@ from gillespie import stochastic_sim
 
 class TestSim(unittest.TestCase):
     def test_select_reaction(self):
-        i = stochastic_sim.select_reaction([0.1, 0.2, 0.3])
+        i = stochastic_sim.select_reaction(np.array([0.1, 0.2, 0.3]))
         self.assertIn(i, [0, 1, 2])
 
     def test_update_concentration(self):
@@ -17,9 +17,11 @@ class TestSim(unittest.TestCase):
 
         components = np.array([10.0])
 
-        stochastic_sim.update_components(0, components, reactions)
+        sim = stochastic_sim.StochasticSim(components, None, None, reactions)
+
+        sim.update_components(0)
         self.assertAlmostEqual(components[0], 11.0)
-        stochastic_sim.update_components(1, components, reactions)
+        sim.update_components(1)
         self.assertAlmostEqual(components[0], 10.0)
 
     def test_simulate(self):
@@ -27,7 +29,7 @@ class TestSim(unittest.TestCase):
 
         timestamps = np.zeros(length)
         trajectory = np.zeros((1, length), dtype=np.uint16)
-        reaction_events = np.zeros(length - 1, dtype="i4")
+        reaction_events = np.zeros(length - 1, dtype=np.uint8)
         trajectory[:, 0] = np.array([5])
         ext_components = np.full((2, 5), 10, dtype=np.uint16)
         ext_timestamps = np.array([0.0, 0.5, 1.0, 1.5, 2.0])

@@ -1,3 +1,4 @@
+import numba
 import numpy
 import numpy.random
 from numba import float64, generated_jit, int32, jitclass, njit, types
@@ -98,54 +99,86 @@ def select_reaction(propensities):
     return selected_reaction
 
 
-@njit
-def update_components(selected_reaction, components, reactions):
-    for reactant in reactions.reactants[selected_reaction]:
-        if reactant >= 0:
-            components[reactant] -= 1
-    for product in reactions.products[selected_reaction]:
-        if product >= 0:
-            components[product] += 1
+dummy = ReactionNetwork(0)
+spec_ss = [
+    ("current_time", types.float64),
+    ("ext_progress", types.int32),
+    ("propensities", types.float64[:]),
+    ("components", types.float64[:]),
+    ("ext_timestamps", types.Optional(float64[:])),
+    ("ext_components", types.Optional(types.uint16[:, :])),
+    ("reactions", numba.typeof(dummy)),
+]
 
 
-@njit
-def timestep_generate(components, ext_timestamps, ext_components, reactions):
-    num_ext_comps = len(ext_components) if ext_components is not None else 0
-    ext_length = len(ext_timestamps) if ext_timestamps is not None else 0
-    current_time = 0.0
-    ext_progress = 0
-    propensities = numpy.zeros(reactions.size)
-    random_variate = -numpy.log(numpy.random.random_sample())
-    while True:
-        if ext_progress >= ext_length:
-            next_ext_timestamp = numpy.Inf
-        elif ext_timestamps is not None:
-            next_ext_timestamp = ext_timestamps[ext_progress]
+@jitclass(spec_ss)
+class StochasticSim(object):
+    def __init__(self, components, ext_timestamps, ext_components, reactions):
+        self.current_time = 0.0
+        self.ext_progress = 0
+        self.propensities = numpy.zeros(reactions.size)
+        self.components = components
+        self.ext_timestamps = ext_timestamps
+        self.ext_components = ext_components
+        self.reactions = reactions
 
-        calc_propensities(components, propensities, reactions)
-        total_propensity = numpy.sum(propensities)
+    @property
+    def ext_len(self):
+        return len(self.ext_timestamps) if self.ext_timestamps is not None else 0
 
-        perform_reaction, timestep = try_propagate_time(
-            random_variate, current_time, next_ext_timestamp, total_propensity
-        )
-        current_time += timestep
+    @property
+    def num_ext_comps(self):
+        return len(self.ext_components) if self.ext_components is not None else 0
 
-        if perform_reaction:
-            # Update components
-            selected_reaction = select_reaction(propensities)
-            update_components(selected_reaction, components, reactions)
-
-            yield current_time, selected_reaction
-            random_variate = -numpy.log(numpy.random.random_sample())
+    def next_ext_timestamp(self):
+        if self.ext_progress >= self.ext_len:
+            return numpy.Inf
+        elif self.ext_timestamps is not None:
+            return self.ext_timestamps[self.ext_progress]
         else:
-            random_variate -= timestep * total_propensity
-            # update the external trajectory
-            ext_progress += 1
-            for i in range(num_ext_comps):
-                if ext_components is not None:
-                    components[i] = ext_components[i][
-                        min(ext_progress, len(ext_components[i]) - 1)
-                    ]
+            raise RuntimeError("no external trajectory")
+
+    def next_ext_comp(self, i):
+        if self.ext_components is not None:
+            index = min(self.ext_progress, len(self.ext_components[i]) - 1)
+            return self.ext_components[i][index]
+        else:
+            raise RuntimeError("no external trajectory")
+
+    def update_components(self, selected_reaction):
+        for reactant in self.reactions.reactants[selected_reaction]:
+            if reactant >= 0:
+                self.components[reactant] -= 1
+        for product in self.reactions.products[selected_reaction]:
+            if product >= 0:
+                self.components[product] += 1
+
+    def propagate_time(self):
+        random_variate = -numpy.log(numpy.random.random_sample())
+
+        while True:
+            calc_propensities(self.components, self.propensities, self.reactions)
+            total_propensity = numpy.sum(self.propensities)
+
+            perform_reaction, timestep = try_propagate_time(
+                random_variate,
+                self.current_time,
+                self.next_ext_timestamp(),
+                total_propensity,
+            )
+            self.current_time += timestep
+
+            if perform_reaction:
+                selected_reaction = select_reaction(self.propensities)
+                self.update_components(selected_reaction)
+                return self.current_time, selected_reaction
+            else:
+                random_variate -= timestep * total_propensity
+                # update the external trajectory
+                self.ext_progress += 1
+                for i in range(self.num_ext_comps):
+                    if self.ext_components is not None:
+                        self.components[i] = self.next_ext_comp(i)
 
 
 @njit(cache=True, nogil=True)
@@ -171,24 +204,20 @@ def simulate_one(
 
     # define values used during iteration
     progress = 0
-    components = numpy.zeros(num_comps + num_ext_comps, dtype=trajectory.dtype)
+    components = numpy.zeros(num_comps + num_ext_comps, dtype=numpy.double)
     for i in range(num_ext_comps):
         if ext_components is not None:
             components[i] = ext_components[i][0]
     for comp in range(num_comps):
         components[comp + num_ext_comps] = trajectory[comp][0]
 
-    for time, selected_reaction in timestep_generate(
-        components, ext_timestamps, ext_components, reactions
-    ):
-        # update trajectory
+    sim = StochasticSim(components, ext_timestamps, ext_components, reactions)
+    while (progress + 1) < length:
         progress += 1
+        time, selected_reaction = sim.propagate_time()
         timestamps[progress] = time
         reaction_events[progress - 1] = selected_reaction
-        trajectory[:, progress] = components[num_ext_comps:]
-
-        if progress >= length - 1:
-            break
+        trajectory[:, progress] = sim.components[num_ext_comps:]
 
 
 @njit(cache=True, nogil=True)
@@ -198,14 +227,15 @@ def simulate_until_one(
     prev_time = 0.0
     components = initial_values
     prev_components = components
-    for time, _ in timestep_generate(
-        components, ext_timestamps, ext_components, reactions
-    ):
+
+    sim = StochasticSim(components, ext_timestamps, ext_components, reactions)
+    while True:
+        time, _ = sim.propagate_time()
         if time >= until:
             return prev_time, prev_components
 
         prev_time = time
-        prev_components = components
+        prev_components = sim.components
 
 
 @njit(cache=True, nogil=True)

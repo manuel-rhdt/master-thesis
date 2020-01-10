@@ -1,5 +1,5 @@
 import numpy as np
-from numba import generated_jit, jit, types
+from numba import jit
 from numba.typed import List as TypedList
 
 from . import stochastic_sim
