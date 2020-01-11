@@ -166,3 +166,7 @@ ipython_config.py
 configuration.toml
 data
 .vscode
+testrun*
+dask-worker-space
+data*
+result*

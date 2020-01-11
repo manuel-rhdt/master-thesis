@@ -1,30 +1,32 @@
 import numpy
 
+import accelerate
 from . import stochastic_sim
 from .trajectory_array import TrajectoryArray
 
 
 def simulate(count, length, reactions, ext_trajectory=None, initial_value=0):
     timestamps = numpy.zeros((count, length), dtype=numpy.double)
-    trajectory = numpy.zeros((count, 1, length), dtype=numpy.uint16)
-    reaction_events = numpy.zeros((count, length - 1), dtype=numpy.uint8)
+    trajectory = numpy.zeros((count, 1, length), dtype=numpy.uint32)
+    reaction_events = numpy.zeros((count, length - 1), dtype=numpy.uint32)
 
     trajectory[..., 0] = initial_value
-    network = stochastic_sim.create_reaction_network(**reactions)
 
     if ext_trajectory is not None:
         ext_timestamps = ext_trajectory.timestamps
         ext_components = ext_trajectory.components
-        stochastic_sim.simulate_ext(
-            timestamps,
-            trajectory,
-            reaction_events,
-            network,
-            ext_timestamps,
-            ext_components,
-        )
     else:
-        stochastic_sim.simulate(timestamps, trajectory, reaction_events, network)
+        ext_timestamps = None
+        ext_components = None
+    
+    accelerate.simulate_trajectories(
+        timestamps,
+        trajectory,
+        reaction_events,
+        reactions,
+        ext_timestamps,
+        ext_components,
+    )
 
     return TrajectoryArray(timestamps, trajectory, reaction_events)
 
