@@ -55,10 +55,7 @@ class TestAnalyzer(unittest.TestCase):
         signals = simulate.simulate(10, 100, reactions1, None, initial_value=1000)
         responses = simulate.simulate(10, 100, reactions2, signals, initial_value=1000)
 
-        signals.components = signals.components.astype(np.double)
-        responses.components = responses.components.astype(np.double)
-
-        result = np.zeros((10, 100))
+        result = np.zeros((10, 99))
         accelerate.log_likelihood(responses, signals, reactions2, result)
 
     def test_accelerated_log_likelihood2(self):

@@ -361,6 +361,5 @@ def log_p_multi(traj_lengths, signal, response, reactions):
     num_responses, length = response.timestamps.shape
     num_signals, _ = signal.timestamps.shape
     result = np.zeros((num_responses, num_signals, length - 1))
-    for i, r in enumerate(response):
-        accelerate.log_likelihood(response, signal, reactions, result[i])
+    accelerate.log_likelihood(response, signal, reactions, result[i], outer=True)
     return result
