@@ -127,14 +127,14 @@ def signals_and_responses(count, batch, length, sig_network, res_network):
 
 
 def computation_start(conf, path):
-    # cluster = conf.get("scheduler_address", None)
-    # if cluster is None:
-    #     cluster = LocalCluster(processes=False)
-    #     print("Connecting to", cluster.dashboard_link)
-    # client = Client(cluster)
-    # print(client)
-    import dask
-    dask.config.set(scheduler='threads')
+    cluster = conf.get("scheduler_address", None)
+    if cluster is None:
+        cluster = LocalCluster(processes=False)
+        print("Connecting to", cluster.dashboard_link)
+    client = Client(cluster)
+    print(client)
+    # import dask
+    # dask.config.set(scheduler='threads')
     sig_network, res_network = gillespie.configuration.read_reactions(conf)
 
     length = conf["length"]
@@ -148,7 +148,7 @@ def computation_start(conf, path):
     ce_responses = simulate_outer(ce_res_per_signal, length, res_network, ce_signals)
 
     me_responses = signals_and_responses(
-        me_num_responses, batch // 2, length, sig_network, res_network
+        me_num_responses, batch, length, sig_network, res_network
     )
     me_signals = simulate_batched(me_num_signals, batch, length, sig_network)
 
