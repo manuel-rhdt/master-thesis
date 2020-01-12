@@ -61,9 +61,8 @@ def conditional_likelihood(traj_lengths, signal, response, network):
     #     )
 
     # return da.concatenate(result, axis=0)
-
-    ll = delayed(log_p)(traj_lengths, sig[0], response, network)
-    return da.from_delayed(ll, shape=(50_000,) + traj_lengths.shape, dtype=np.double)
+    ll = delayed(log_p)(traj_lengths, sig[0], response.to_delayed()[0], network)
+    return da.from_delayed(ll, shape=(response.chunks[0][0], response.chunks[1][0]), dtype=np.double)
 
 
 def marginal_likelihood(traj_lengths, signal, response, network):
@@ -76,7 +75,7 @@ def marginal_likelihood(traj_lengths, signal, response, network):
             level2.append(
                 da.from_delayed(
                     ll,
-                    shape=(res_chunk, sig_chunk) + traj_lengths.shape,
+                    shape=(res_chunk, sig_chunk, response.chunks[1][0]),
                     dtype=np.double,
                 )
             )
@@ -104,9 +103,10 @@ def simulate_batched(count, batch, length, network, ext_trajectory=None):
 def simulate_outer(count, length, network, ext_trajectory):
     r = np.empty(len(ext_trajectory), dtype=object)
     for i, s in enumerate(ext_trajectory):
-        r[i] = delayed(simulate)(
+        response = delayed(simulate)(
             count, length, network, ext_trajectory=s, initial_value=50
         )
+        r[i] = ta.from_delayed(response, count, length)
     return r
 
 
@@ -127,12 +127,14 @@ def signals_and_responses(count, batch, length, sig_network, res_network):
 
 
 def computation_start(conf, path):
-    cluster = conf.get("scheduler_address", None)
-    if cluster is None:
-        cluster = LocalCluster()
-        print("Connecting to", cluster.dashboard_link)
-    client = Client(cluster)
-    print(client)
+    # cluster = conf.get("scheduler_address", None)
+    # if cluster is None:
+    #     cluster = LocalCluster(processes=False)
+    #     print("Connecting to", cluster.dashboard_link)
+    # client = Client(cluster)
+    # print(client)
+    import dask
+    dask.config.set(scheduler='threads')
     sig_network, res_network = gillespie.configuration.read_reactions(conf)
 
     length = conf["length"]
@@ -151,6 +153,7 @@ def computation_start(conf, path):
     me_signals = simulate_batched(me_num_signals, batch, length, sig_network)
 
     min_length = da.min(me_responses.timestamps[:, -1]).compute()
+    print(min_length)
     traj_lengths = np.linspace(0, min_length, conf["num_points"])
     ce = []
     for s, r in zip(ce_signals, ce_responses):

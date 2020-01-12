@@ -5,7 +5,6 @@ import numpy as np
 from gillespie import simulate
 
 reactions1 = {"k": [0.5, 500.0], "reactants": [[0], []], "products": [[], [0]]}
-
 reactions2 = {"k": [1.0, 4.0], "reactants": [[0], [1]], "products": [[0, 1], []]}
 
 

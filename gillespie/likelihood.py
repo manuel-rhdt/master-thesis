@@ -2,8 +2,8 @@ import numpy as np
 from numba import jit
 from numba.typed import List as TypedList
 
-from . import stochastic_sim
-from .stochastic_sim import expand_3d
+# from . import stochastic_sim
+# from .stochastic_sim import expand_3d
 
 
 # inspired by scipy.special.logsumexp but only supports two-dimensional arrays and
@@ -232,12 +232,6 @@ def log_likelihood(
     dtype=None,
     out=None,
 ):
-    response_components = expand_3d(response_components)
-    signal_components = expand_3d(signal_components)
-    response_timestamps = np.atleast_2d(response_timestamps)
-    signal_timestamps = np.atleast_2d(signal_timestamps)
-    reaction_events = np.atleast_2d(reaction_events)
-
     num_r, _, _ = response_components.shape
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
@@ -287,12 +281,6 @@ def log_likelihood_outer(
     Calculates the log likelihoods of the responses for various signals and averages
     over the signals.
     """
-    response_components = expand_3d(response_components)
-    signal_components = expand_3d(signal_components)
-    response_timestamps = np.atleast_2d(response_timestamps)
-    signal_timestamps = np.atleast_2d(signal_timestamps)
-    reaction_events = np.atleast_2d(reaction_events)
-
     num_r, _, _ = response_components.shape
     num_s, _, _ = signal_components.shape
     (length,) = traj_lengths.shape
@@ -327,40 +315,52 @@ def log_likelihood_outer(
 
     return result
 
+import accelerate
 
 def log_p(traj_lengths, signal, response, reactions):
-    network = stochastic_sim.create_reaction_network(**reactions)
+    # network = stochastic_sim.create_reaction_network(**reactions)
 
-    sc = signal.components
-    st = signal.timestamps
-    rc = response.components
-    rt = response.timestamps
-    events = response.reaction_events
+    # sc = signal.components
+    # st = signal.timestamps
+    # rc = response.components
+    # rt = response.timestamps
+    # events = response.reaction_events
 
-    # just to make sure the numba compilation doesn't fail
-    assert st.ndim == rt.ndim == 2
-    assert rc.ndim == sc.ndim == 3
-    assert events.ndim == 2
+    # # just to make sure the numba compilation doesn't fail
+    # assert st.ndim == rt.ndim == 2
+    # assert rc.ndim == sc.ndim == 3
+    # assert events.ndim == 2
 
-    return log_likelihood(
-        traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
-    )
+    # return log_likelihood(
+    #     traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
+    # )
+    num_responses, length = response.timestamps.shape
+    num_signals, _ = signal.timestamps.shape
+    result = np.zeros((max(num_responses, num_signals), length - 1))
+    accelerate.log_likelihood(response, signal, reactions, result)
+    return result
 
 
 def log_p_multi(traj_lengths, signal, response, reactions):
-    network = stochastic_sim.create_reaction_network(**reactions)
+    # network = stochastic_sim.create_reaction_network(**reactions)
 
-    sc = signal.components
-    st = signal.timestamps
-    rc = response.components
-    rt = response.timestamps
-    events = response.reaction_events
+    # sc = signal.components
+    # st = signal.timestamps
+    # rc = response.components
+    # rt = response.timestamps
+    # events = response.reaction_events
 
-    # just to make sure the numba compilation doesn't fail
-    assert st.ndim == rt.ndim == 2
-    assert rc.ndim == sc.ndim == 3
-    assert events.ndim == 2
+    # # just to make sure the numba compilation doesn't fail
+    # assert st.ndim == rt.ndim == 2
+    # assert rc.ndim == sc.ndim == 3
+    # assert events.ndim == 2
 
-    return log_likelihood_outer(
-        traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
-    )
+    # return log_likelihood_outer(
+    #     traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
+    # )
+    num_responses, length = response.timestamps.shape
+    num_signals, _ = signal.timestamps.shape
+    result = np.zeros((num_responses, num_signals, length - 1))
+    for i, r in enumerate(response):
+        accelerate.log_likelihood(response, signal, reactions, result[i])
+    return result
