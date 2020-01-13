@@ -320,22 +320,6 @@ import accelerate
 
 
 def log_p(traj_lengths, signal, response, reactions):
-    # network = stochastic_sim.create_reaction_network(**reactions)
-
-    # sc = signal.components
-    # st = signal.timestamps
-    # rc = response.components
-    # rt = response.timestamps
-    # events = response.reaction_events
-
-    # # just to make sure the numba compilation doesn't fail
-    # assert st.ndim == rt.ndim == 2
-    # assert rc.ndim == sc.ndim == 3
-    # assert events.ndim == 2
-
-    # return log_likelihood(
-    #     traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
-    # )
     num_responses, _ = response.timestamps.shape
     num_signals, _ = signal.timestamps.shape
     result = np.zeros((max(num_responses, num_signals), traj_lengths.shape[0]))
@@ -343,26 +327,9 @@ def log_p(traj_lengths, signal, response, reactions):
     return result
 
 
-def log_p_multi(traj_lengths, signal, response, reactions):
-    # network = stochastic_sim.create_reaction_network(**reactions)
-
-    # sc = signal.components
-    # st = signal.timestamps
-    # rc = response.components
-    # rt = response.timestamps
-    # events = response.reaction_events
-
-    # # just to make sure the numba compilation doesn't fail
-    # assert st.ndim == rt.ndim == 2
-    # assert rc.ndim == sc.ndim == 3
-    # assert events.ndim == 2
-
-    # return log_likelihood_outer(
-    #     traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
-    # )
+def log_p_average(traj_lengths, signal, response, reactions):
     num_responses, _ = response.timestamps.shape
-    num_signals, _ = signal.timestamps.shape
-    result = np.zeros((num_responses, num_signals, traj_lengths.shape[0]))
+    result = np.zeros((num_responses, traj_lengths.shape[0]))
     accelerate.log_likelihood(
         traj_lengths, response, signal, reactions, result, outer=True
     )
