@@ -315,7 +315,9 @@ def log_likelihood_outer(
 
     return result
 
+
 import accelerate
+
 
 def log_p(traj_lengths, signal, response, reactions):
     # network = stochastic_sim.create_reaction_network(**reactions)
@@ -334,10 +336,10 @@ def log_p(traj_lengths, signal, response, reactions):
     # return log_likelihood(
     #     traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
     # )
-    num_responses, length = response.timestamps.shape
+    num_responses, _ = response.timestamps.shape
     num_signals, _ = signal.timestamps.shape
-    result = np.zeros((max(num_responses, num_signals), length - 1))
-    accelerate.log_likelihood(response, signal, reactions, result)
+    result = np.zeros((max(num_responses, num_signals), traj_lengths.shape[0]))
+    accelerate.log_likelihood(traj_lengths, response, signal, reactions, result)
     return result
 
 
@@ -358,8 +360,11 @@ def log_p_multi(traj_lengths, signal, response, reactions):
     # return log_likelihood_outer(
     #     traj_lengths, sc, st, rc, rt, events, network, dtype=np.double
     # )
-    num_responses, length = response.timestamps.shape
+    num_responses, _ = response.timestamps.shape
     num_signals, _ = signal.timestamps.shape
-    result = np.zeros((num_responses, num_signals, length - 1))
-    accelerate.log_likelihood(response, signal, reactions, result, outer=True)
+    result = np.zeros((num_responses, num_signals, traj_lengths.shape[0]))
+    accelerate.log_likelihood(
+        traj_lengths, response, signal, reactions, result, outer=True
+    )
     return result
+
