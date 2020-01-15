@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Manuel Reinhardt <M.Reinhardt@amolf.nl>"]
 edition = "2018"
 
+[lib]
+name = "accelerate"
+
 [dependencies]
 rand = "0.7.3"
 toml = "0.5"
@@ -18,3 +21,6 @@ opt-level = 0
 
 [profile.release]
 opt-level = 3
+
+[dev-dependencies]
+criterion = "0.3"
