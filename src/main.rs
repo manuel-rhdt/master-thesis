@@ -252,6 +252,7 @@ fn main() -> std::io::Result<()> {
     match fs::OpenOptions::new()
         .create_new(true)
         .write(true)
+        .mode(0o444)
         .open(info_toml_path)
     {
         Ok(mut config_file_copy) => write!(config_file_copy, "{}", contents)?,
