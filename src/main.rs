@@ -9,12 +9,10 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use gillespie::{
-    ReactionNetwork, SimulationCoordinator, TrajectoryArray, MAX_NUM_PRODUCTS,
-    MAX_NUM_REACTANTS,
+    ReactionNetwork, SimulationCoordinator, TrajectoryArray, MAX_NUM_PRODUCTS, MAX_NUM_REACTANTS,
 };
 use likelihood::log_likelihood;
 
-use base64;
 use ndarray::{Array, Array1, Array2, Array3, ArrayView1, Axis};
 use ndarray_npy::WriteNpyExt;
 use rand::{self, SeedableRng};
@@ -28,12 +26,6 @@ fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
-}
-
-fn stringhash<T: Hash + ?Sized>(t: &T) -> String {
-    let val = calculate_hash(t);
-    let array: [u8; 8] = unsafe { std::mem::transmute(val) };
-    base64::encode_config(&array, base64::URL_SAFE_NO_PAD)
 }
 
 fn conditional_likelihood(
@@ -74,10 +66,10 @@ fn marginal_likelihood(
         result.as_slice_mut().unwrap(),
     );
 
-    result.map_axis(Axis(0), logmeanexp)
+    result.map_axis(Axis(0), log_mean_exp)
 }
 
-pub fn logmeanexp(values: ArrayView1<f64>) -> f64 {
+pub fn log_mean_exp(values: ArrayView1<f64>) -> f64 {
     use std::ops::Div;
 
     let max = values.fold(std::f64::NEG_INFINITY, |a, &b| a.max(b));
@@ -252,7 +244,6 @@ fn main() -> std::io::Result<()> {
     let info_toml_path = &conf.output.join("info.toml");
 
     let worker_name = std::env::var("GILLESPIE_WORKER_ID").ok();
-    let worker_id = worker_name.as_deref().map(|val| stringhash(val));
 
     match fs::OpenOptions::new()
         .create_new(true)
@@ -262,6 +253,15 @@ fn main() -> std::io::Result<()> {
     {
         Ok(mut config_file_copy) => write!(config_file_copy, "{}", contents)?,
         Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+            if worker_name.is_none() {
+                panic!(
+                    "{:?} already exists!\n\
+                     to run multiple jobs in parallel set the environment \
+                     variable GILLESPIE_WORKER_ID.",
+                    info_toml_path
+                );
+            }
+
             // sleep a little so the other workers have time to write the info.toml
             std::thread::sleep(std::time::Duration::from_secs(1));
 
@@ -274,10 +274,6 @@ fn main() -> std::io::Result<()> {
                 println!("configuration.toml matches existing info.toml");
             } else {
                 panic!("{:?} does not match configuration.toml", info_toml_path);
-            }
-
-            if worker_id.is_none() {
-                panic!("Please set GILLESPIE_WORKER_ID to run multiple jobs in parallel");
             }
         }
         Err(other) => return Err(other),

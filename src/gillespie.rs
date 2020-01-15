@@ -16,6 +16,7 @@ pub struct ReactionNetwork {
 }
 
 impl ReactionNetwork {
+    #[allow(unused)]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -123,10 +124,11 @@ pub struct TrajectoryArray<T, C, R> {
 }
 
 impl<T, C, R> TrajectoryArray<T, C, R> {
-    pub fn from_trajectory(traj: Trajectory<T, C, R>) -> Self {
+    #[allow(unused)]
+    pub fn from_trajectory(trajectory: Trajectory<T, C, R>) -> Self {
         TrajectoryArray {
             count: 1,
-            inner: traj,
+            inner: trajectory,
         }
     }
 
@@ -287,20 +289,20 @@ impl<'ext, 'other, Rng: rand::Rng> Simulation<'ext, 'other, Rng> {
     pub fn next_ext_timestamp(&self) -> f64 {
         if self.ext_progress >= self.ext_len() {
             std::f64::INFINITY
-        } else if let Some(traj) = &self.ext_trajectory {
-            traj.timestamps[self.ext_progress]
+        } else if let Some(trajectory) = &self.ext_trajectory {
+            trajectory.timestamps[self.ext_progress]
         } else {
             panic!("no external trajectory")
         }
     }
 
     pub fn next_ext_component(&self, comp_num: usize) -> Count {
-        let traj = self
+        let trajectory = self
             .ext_trajectory
             .as_ref()
             .expect("no external trajectory");
-        let index = std::cmp::min(self.ext_progress, traj.len() - 1);
-        traj.get_component(comp_num)[index]
+        let index = std::cmp::min(self.ext_progress, trajectory.len() - 1);
+        trajectory.get_component(comp_num)[index]
     }
 
     pub fn select_reaction(&mut self) -> usize {
@@ -338,20 +340,20 @@ impl<'ext, 'other, Rng: rand::Rng> Simulation<'ext, 'other, Rng> {
             calc_propensities(&mut self.propensities, &self.components, &self.reactions);
             let total_propensity: f64 = self.propensities.iter().sum();
 
-            let (perform_reaction, timestep) = try_propagate_time(
+            let (perform_reaction, time_step) = try_propagate_time(
                 random_variate,
                 self.current_time,
                 self.next_ext_timestamp(),
                 total_propensity,
             );
-            self.current_time += timestep;
+            self.current_time += time_step;
 
             if perform_reaction {
                 let selected_reaction = self.select_reaction();
                 self.update_components(selected_reaction);
                 return (self.current_time, selected_reaction);
             } else {
-                random_variate -= timestep * total_propensity;
+                random_variate -= time_step * total_propensity;
                 // update the external trajectory
                 self.ext_progress += 1;
                 for i in 0..self.num_ext_components() {
@@ -413,21 +415,22 @@ pub fn simulate(
             rng,
         );
 
-        let mut sim_traj = ta.get_mut(i);
+        let mut sim_trajectory = ta.get_mut(i);
 
         for comp in 0..num_components {
-            sim_traj.get_component_mut(comp)[0] = sim.components[comp + num_ext_components];
+            sim_trajectory.get_component_mut(comp)[0] = sim.components[comp + num_ext_components];
         }
         for j in 1..length {
             let (t, selected_reaction) = sim.propagate_time();
-            sim_traj.timestamps[j] = t;
-            sim_traj
+            sim_trajectory.timestamps[j] = t;
+            sim_trajectory
                 .reaction_events
                 .as_mut()
                 .map(|re| re[j - 1] = selected_reaction as u32);
 
             for comp in 0..num_components {
-                sim_traj.get_component_mut(comp)[j] = sim.components[comp + num_ext_components];
+                sim_trajectory.get_component_mut(comp)[j] =
+                    sim.components[comp + num_ext_components];
             }
         }
     }
@@ -443,7 +446,7 @@ pub fn stationary_distribution(
     ext_trajectory: Option<TrajectoryArray<&[f64], &[f64], &[u32]>>,
     rng: &mut impl rand::Rng,
 ) -> Vec<f64> {
-    let traj = simulate(
+    let trajectory = simulate(
         count,
         length,
         initial_values,
@@ -451,9 +454,9 @@ pub fn stationary_distribution(
         ext_trajectory,
         rng,
     );
-    let mut result = Vec::with_capacity(traj.len());
-    for i in 0..traj.len() {
-        result.push(traj.get(i).get_component(0)[traj.num_steps() - 1]);
+    let mut result = Vec::with_capacity(trajectory.len());
+    for i in 0..trajectory.len() {
+        result.push(trajectory.get(i).get_component(0)[trajectory.num_steps() - 1]);
     }
     result
 }
