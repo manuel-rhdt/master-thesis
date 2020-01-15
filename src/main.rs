@@ -349,8 +349,8 @@ fn main() -> std::io::Result<()> {
             }
 
             let filename = match entropy_type {
-                EntropyType::Conditional => format!("ce-{:?}.npy", chunk_num),
-                EntropyType::Marginal => format!("me-{:?}.npy", chunk_num),
+                EntropyType::Conditional => format!("ce-{:03}.npy", chunk_num),
+                EntropyType::Marginal => format!("me-{:03}.npy", chunk_num),
             };
 
             if let Ok(out_file) = fs::OpenOptions::new()
