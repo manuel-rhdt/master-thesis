@@ -1,5 +1,6 @@
 mod gillespie;
 mod likelihood;
+
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
@@ -7,7 +8,10 @@ use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use gillespie::{simulate, ReactionNetwork, TrajectoryArray, MAX_NUM_PRODUCTS, MAX_NUM_REACTANTS};
+use gillespie::{
+    ReactionNetwork, SimulationCoordinator, TrajectoryArray, MAX_NUM_PRODUCTS,
+    MAX_NUM_REACTANTS,
+};
 use likelihood::log_likelihood;
 
 use base64;
@@ -36,27 +40,17 @@ fn conditional_likelihood(
     traj_lengths: &[f64],
     num_res: usize,
     batch: usize,
-    length: usize,
-    sig_network: &ReactionNetwork,
-    res_network: &ReactionNetwork,
-    rng: &mut impl rand::Rng,
+    coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> Array1<f64> {
-    let sig = simulate(1, length, &vec![50.0; 1], sig_network, None, rng);
+    let sig = coordinator.generate_signals(1);
     let mut result = Array3::zeros((num_res / batch, batch, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
-        let res = simulate(
-            batch,
-            length,
-            &vec![50.0; 2],
-            res_network,
-            Some(sig.as_ref()),
-            rng,
-        );
+        let res = coordinator.generate_responses(batch, sig.as_ref());
         log_likelihood(
             traj_lengths,
             sig.as_ref(),
             res.as_ref(),
-            res_network,
+            &coordinator.res_network,
             out.as_slice_mut().unwrap(),
         );
     }
@@ -66,21 +60,17 @@ fn conditional_likelihood(
 
 fn marginal_likelihood(
     traj_lengths: &[f64],
-    length: usize,
     signals_pre: TrajectoryArray<&[f64], &[f64], &[u32]>,
-    sig_network: &ReactionNetwork,
-    res_network: &ReactionNetwork,
-    rng: &mut impl rand::Rng,
+    coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> Array1<f64> {
-    let sig = simulate(1, length, &[50.0; 1], sig_network, None, rng);
-    let res = simulate(1, length, &[50.0; 2], res_network, Some(sig.as_ref()), rng);
+    let (_, res) = coordinator.generate_signal_response_pairs(1);
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
     log_likelihood(
         traj_lengths,
         signals_pre,
         res.as_ref(),
-        res_network,
+        &coordinator.res_network,
         result.as_slice_mut().unwrap(),
     );
 
@@ -106,7 +96,6 @@ pub fn logmeanexp(values: ArrayView1<f64>) -> f64 {
 struct Config {
     output: PathBuf,
     batch_size: usize,
-    length: usize,
     conditional_entropy: ConfigConditionalEntropy,
     marginal_entropy: ConfigMarginalEntropy,
     signal: ConfigReactionNetwork,
@@ -115,7 +104,6 @@ struct Config {
 
 impl Config {
     pub fn hash_relevant<H: Hasher>(&self, hasher: &mut H) {
-        self.length.hash(hasher);
         self.conditional_entropy.hash(hasher);
         self.marginal_entropy.hash(hasher);
         self.signal.hash(hasher);
@@ -126,6 +114,19 @@ impl Config {
         let mut s = DefaultHasher::new();
         self.hash_relevant(&mut s);
         s.finish()
+    }
+
+    pub fn create_coordinator(&self, seed: u64) -> SimulationCoordinator<ChaChaRng> {
+        let rng = ChaChaRng::seed_from_u64(seed);
+        SimulationCoordinator {
+            response_len: self.response.length,
+            signal_len: self.signal.length,
+
+            sig_network: self.signal.to_reaction_network(),
+            res_network: self.response.to_reaction_network(),
+
+            rng,
+        }
     }
 }
 
@@ -144,6 +145,7 @@ struct ConfigMarginalEntropy {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 struct ConfigReactionNetwork {
     initial: f64,
+    length: usize,
     components: Vec<String>,
     reactions: Vec<Reaction>,
 }
@@ -151,6 +153,7 @@ struct ConfigReactionNetwork {
 impl Hash for ConfigReactionNetwork {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.initial.to_bits().hash(state);
+        self.length.hash(state);
         self.components.hash(state);
         self.reactions.hash(state);
     }
@@ -287,53 +290,35 @@ fn main() -> std::io::Result<()> {
 
     let seed_base = conf.get_relevant_hash() ^ calculate_hash(&worker_name);
 
-    let sig_network = conf.signal.to_reaction_network();
-    let res_network = conf.response.to_reaction_network();
-
-    let length = conf.length;
-
-    let traj_lengths = Array::linspace(0.0, 600.0, length);
+    let traj_lengths = Array::linspace(0.0, 600.0, conf.response.length);
 
     let ce_chunks = (0..conf.conditional_entropy.num_signals)
         .into_par_iter()
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0xabcdabcd;
-            let mut rng = ChaChaRng::seed_from_u64(seed);
+            let mut coordinator = conf.create_coordinator(seed);
             -conditional_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 conf.conditional_entropy.responses_per_signal,
                 conf.batch_size,
-                length,
-                &sig_network,
-                &res_network,
-                &mut rng,
+                &mut coordinator,
             )
         })
         .chunks(conf.batch_size)
         .enumerate();
 
-    let mut rng = ChaChaRng::seed_from_u64(seed_base);
-    let signals_pre = simulate(
-        conf.marginal_entropy.num_signals,
-        length,
-        &[50.0],
-        &sig_network,
-        None,
-        &mut rng,
-    );
+    let mut coordinator = conf.create_coordinator(seed_base);
+    let signals_pre = coordinator.generate_signals(conf.marginal_entropy.num_signals);
 
     let me_chunks = (0..conf.marginal_entropy.num_responses)
         .into_par_iter()
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0x12341234;
-            let mut rng = ChaChaRng::seed_from_u64(seed);
+            let mut coordinator = conf.create_coordinator(seed);
             -marginal_likelihood(
                 traj_lengths.as_slice().unwrap(),
-                length,
                 signals_pre.as_ref(),
-                &sig_network,
-                &res_network,
-                &mut rng,
+                &mut coordinator,
             )
         })
         .chunks(conf.batch_size)

@@ -373,12 +373,11 @@ pub fn simulate(
     rng: &mut impl rand::Rng,
 ) -> SimulatedTrajectoryArray {
     let mut propensities = vec![0.0; reactions.len()];
-    let mut components = initial_values.to_owned();
+    let num_ext_components = ext_trajectory.map(|x| x.num_components()).unwrap_or(0);
+    let num_components = initial_values.len() / count;
+    let mut components = vec![0.0; num_ext_components + num_components];
 
     let num_ext_trajectories = ext_trajectory.as_ref().map(|x| x.len()).unwrap_or(0);
-
-    let num_ext_components = ext_trajectory.map(|x| x.num_components()).unwrap_or(0);
-    let num_components = initial_values.len() - num_ext_components;
     assert!(num_components > 0);
 
     let mut ta = TrajectoryArray {
@@ -393,6 +392,17 @@ pub fn simulate(
     };
 
     for i in 0..count {
+        for comp in 0..num_ext_components {
+            components[comp] = ext_trajectory
+                .as_ref()
+                .unwrap()
+                .get(i % num_ext_trajectories)
+                .get_component(comp)[0];
+        }
+        for comp in 0..num_components {
+            components[comp + num_ext_components] = initial_values[i * num_components + comp];
+        }
+
         let mut sim = Simulation::new(
             &mut components,
             &mut propensities,
@@ -406,7 +416,7 @@ pub fn simulate(
         let mut sim_traj = ta.get_mut(i);
 
         for comp in 0..num_components {
-            sim_traj.get_component_mut(comp)[0] = initial_values[comp + num_ext_components];
+            sim_traj.get_component_mut(comp)[0] = sim.components[comp + num_ext_components];
         }
         for j in 1..length {
             let (t, selected_reaction) = sim.propagate_time();
@@ -423,4 +433,97 @@ pub fn simulate(
     }
 
     ta
+}
+
+pub fn stationary_distribution(
+    count: usize,
+    length: usize,
+    initial_values: &[f64],
+    reactions: &ReactionNetwork,
+    ext_trajectory: Option<TrajectoryArray<&[f64], &[f64], &[u32]>>,
+    rng: &mut impl rand::Rng,
+) -> Vec<f64> {
+    let traj = simulate(
+        count,
+        length,
+        initial_values,
+        reactions,
+        ext_trajectory,
+        rng,
+    );
+    let mut result = Vec::with_capacity(traj.len());
+    for i in 0..traj.len() {
+        result.push(traj.get(i).get_component(0)[traj.num_steps() - 1]);
+    }
+    result
+}
+
+pub struct SimulationCoordinator<Rng: rand::Rng> {
+    pub response_len: usize,
+    pub signal_len: usize,
+
+    pub sig_network: ReactionNetwork,
+    pub res_network: ReactionNetwork,
+
+    pub rng: Rng,
+}
+
+impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
+    pub fn get_signal_distribution(&mut self, count: usize) -> Vec<f64> {
+        stationary_distribution(
+            count,
+            self.signal_len,
+            &vec![100.0; count],
+            &self.sig_network,
+            None,
+            &mut self.rng,
+        )
+    }
+
+    pub fn get_response_distribution(&mut self, count: usize) -> Vec<f64> {
+        let sig = self.generate_signals(count);
+        stationary_distribution(
+            count,
+            self.response_len,
+            &vec![100.0; count],
+            &self.res_network,
+            Some(sig.as_ref()),
+            &mut self.rng,
+        )
+    }
+
+    pub fn generate_signals(&mut self, count: usize) -> SimulatedTrajectoryArray {
+        simulate(
+            count,
+            self.signal_len,
+            &self.get_signal_distribution(count),
+            &self.sig_network,
+            None,
+            &mut self.rng,
+        )
+    }
+
+    pub fn generate_responses(
+        &mut self,
+        count: usize,
+        signals: TrajectoryArray<&[f64], &[f64], &[u32]>,
+    ) -> SimulatedTrajectoryArray {
+        simulate(
+            count,
+            self.response_len,
+            &self.get_response_distribution(count),
+            &self.res_network,
+            Some(signals),
+            &mut self.rng,
+        )
+    }
+
+    pub fn generate_signal_response_pairs(
+        &mut self,
+        count: usize,
+    ) -> (SimulatedTrajectoryArray, SimulatedTrajectoryArray) {
+        let sig = self.generate_signals(count);
+        let res = self.generate_responses(count, sig.as_ref());
+        (sig, res)
+    }
 }
