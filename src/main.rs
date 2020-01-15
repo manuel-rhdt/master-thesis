@@ -238,6 +238,8 @@ fn create_dir_if_not_exists<P: AsRef<std::path::Path>>(path: P) -> std::io::Resu
 }
 
 fn main() -> std::io::Result<()> {
+    use std::os::unix::fs::OpenOptionsExt;
+
     let mut config_file = File::open("configuration.toml")?;
     let mut contents = String::new();
     config_file.read_to_string(&mut contents)?;
@@ -351,7 +353,12 @@ fn main() -> std::io::Result<()> {
                 EntropyType::Marginal => format!("me-{:?}.npy", chunk_num),
             };
 
-            if let Ok(out_file) = File::create(worker_dir.join(&filename)) {
+            if let Ok(out_file) = fs::OpenOptions::new()
+                .create_new(true)
+                .write(true)
+                .mode(0o444)
+                .open(worker_dir.join(&filename))
+            {
                 array.write_npy(out_file).expect("could not write npy");
             } else {
                 panic!("could not write chunk {:?}", &filename);
