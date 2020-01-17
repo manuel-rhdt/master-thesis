@@ -76,12 +76,14 @@ where
             .advance()
             .map(|event| event.time)
             .unwrap_or(std::f64::INFINITY);
+        let num_sig_comp = signal.components().len();
+        let num_res_comp = response.components().len();
         ComponentIter {
             signal,
             response,
             reactions,
             remaining_constant_time,
-            components: vec![0.0; 2],
+            components: vec![0.0; num_sig_comp + num_res_comp],
         }
     }
 }
@@ -128,12 +130,13 @@ where
     /// ```
     ///
     fn next(&mut self) -> Option<(f64, f64, f64)> {
+        let num_ext_comp = self.signal.components().len();
         if let Some(Event { time: delta_t }) = self.response.advance() {
             let mut rem_time = delta_t;
             let mut integrated_propensity = 0.0;
             loop {
-                self.components[..1].copy_from_slice(self.signal.components());
-                self.components[1..].copy_from_slice(self.response.components());
+                self.components[..num_ext_comp].copy_from_slice(self.signal.components());
+                self.components[num_ext_comp..].copy_from_slice(self.response.components());
                 if rem_time < self.remaining_constant_time {
                     let reaction_event = self.response.update();
                     let event_prop =

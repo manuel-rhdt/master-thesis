@@ -61,6 +61,16 @@ impl<T: AsRef<[f64]>, C: AsRef<[Count]>, R> Trajectory<T, C, R> {
             progress: 0,
         }
     }
+
+    pub fn rev_iter(&self) -> RevTrajectoryIter<'_, T, C, R> {
+        let len = self.components[0].as_ref().len();
+        let components = vec![self.components[0].as_ref()[len - 1]; self.num_components()];
+        RevTrajectoryIter {
+            trajectory: self,
+            components,
+            progress: len - 1,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
@@ -162,6 +172,51 @@ impl<'traj, T: AsRef<[f64]>, C: AsRef<[Count]>, R: AsRef<[u32]>> TrajectoryItera
             .reaction_events
             .as_ref()
             .map(|r| r.as_ref()[self.progress - 1])
+            .unwrap()
+    }
+
+    fn components(&self) -> &[Count] {
+        &self.components
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RevTrajectoryIter<'traj, T, C, R> {
+    trajectory: &'traj Trajectory<T, C, R>,
+    components: Vec<f64>,
+    progress: usize,
+}
+
+impl<'traj, T: AsRef<[f64]>, C: AsRef<[Count]>, R: AsRef<[u32]>> TrajectoryIterator
+    for RevTrajectoryIter<'traj, T, C, R>
+{
+    type Ex = u32;
+
+    fn advance(&mut self) -> Option<Event> {
+        let timestamps = self.trajectory.timestamps.as_ref();
+        let current_time = timestamps[self.progress];
+        if self.progress == 0 {
+            return None;
+        }
+        timestamps.get(self.progress - 1).map(|&time| Event {
+            time: current_time - time,
+        })
+    }
+
+    fn update(&mut self) -> u32 {
+        self.progress -= 1;
+        for (comp_array, comp) in self
+            .trajectory
+            .components
+            .iter()
+            .zip(self.components.iter_mut())
+        {
+            *comp = comp_array.as_ref()[self.progress];
+        }
+        self.trajectory
+            .reaction_events
+            .as_ref()
+            .map(|r| r.as_ref()[self.progress])
             .unwrap()
     }
 
@@ -320,7 +375,8 @@ impl<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> TrajectoryIterator
     }
 
     fn components(&self) -> &[Count] {
-        &self.sim.components[1..]
+        let num_ext_components = self.external_trajectory.components().len();
+        &self.sim.components[num_ext_components..]
     }
 }
 
@@ -393,35 +449,26 @@ pub struct SimulationCoordinator<Rng: rand::Rng> {
 }
 
 impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
-    pub fn get_signal_distribution(&mut self, count: usize) -> Vec<f64> {
-        let initial = &[100.0; 1];
-        let mut result = Vec::with_capacity(count);
-        for _ in 0..count {
-            let mut traj =
-                simulate(initial, &self.sig_network, &mut self.rng).cap(self.trajectory_len);
-            while traj.next().is_some() {}
-            result.push(traj.components()[0])
-        }
-        result
+    pub fn get_signal_distribution(&mut self) -> f64 {
+        let mut traj =
+            simulate(&[100.0], &self.sig_network, &mut self.rng).cap(self.trajectory_len);
+        while traj.next().is_some() {}
+        traj.components()[0]
     }
 
-    pub fn get_response_distribution(&mut self, count: usize) -> Vec<f64> {
-        let mut result = Vec::with_capacity(count);
-        for _ in 0..count {
-            let sig = simulate(&[100.0; 1], &self.sig_network, &mut self.rng)
-                .cap(self.trajectory_len)
-                .collect();
-            let mut res = simulate_ext(&[100.0; 1], &self.res_network, sig.iter(), &mut self.rng)
-                .cap(self.trajectory_len);
-            while res.next().is_some() {}
-            result.push(res.components()[0])
-        }
-        result
+    pub fn get_response_distribution(&mut self, sig_initial: &[Count]) -> f64 {
+        let sig = simulate(sig_initial, &self.sig_network, &mut self.rng)
+            .cap(self.trajectory_len)
+            .collect();
+        let mut res = simulate_ext(&[100.0], &self.res_network, sig.rev_iter(), &mut self.rng)
+            .cap(self.trajectory_len);
+        while res.next().is_some() {}
+        res.components()[0]
     }
 
     pub fn generate_signal(&mut self) -> impl '_ + TrajectoryIterator<Ex = u32> {
         simulate(
-            &self.get_signal_distribution(1),
+            &[self.get_signal_distribution()],
             &self.sig_network,
             &mut self.rng,
         )
@@ -433,7 +480,7 @@ impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
         sig: impl 'a + TrajectoryIterator,
     ) -> impl 'a + TrajectoryIterator<Ex = u32> {
         simulate_ext(
-            &self.get_response_distribution(1),
+            &[self.get_response_distribution(sig.components())],
             &self.sig_network,
             sig,
             &mut self.rng,
