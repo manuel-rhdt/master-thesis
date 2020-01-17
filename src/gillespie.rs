@@ -31,6 +31,7 @@ pub fn calc_propensities(
     components: &[Count],
     reactions: &ReactionNetwork,
 ) {
+    #[allow(clippy::needless_range_loop)]
     for i in 0..reactions.len() {
         propensities[i] = reactions.k[i];
         for &reactant in reactions.reactants[i].iter() {
@@ -267,6 +268,7 @@ impl<'a, Rng: rand::Rng> SimulatedTrajectory<'a, Rng> {
         selected_reaction
     }
 
+    #[allow(clippy::unnecessary_cast)]
     fn update_components_with_reaction(&mut self, selected_reaction: usize) {
         for &reactant in &self.reactions.reactants[selected_reaction] {
             self.components[reactant as usize] -= 1 as Count

@@ -8,9 +8,7 @@ use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
 use std::path::PathBuf;
 
-use gillespie::{
-    ReactionNetwork, SimulationCoordinator, Trajectory, TrajectoryIterator
-};
+use gillespie::{ReactionNetwork, SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
 use ndarray::{Array, Array1, Array2, ArrayView1, Axis};
@@ -137,11 +135,19 @@ struct ConfigMarginalEntropy {
     num_responses: usize,
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone)]
 struct ConfigReactionNetwork {
     initial: f64,
     components: Vec<String>,
     reactions: Vec<Reaction>,
+}
+
+impl PartialEq for ConfigReactionNetwork {
+    fn eq(&self, right: &ConfigReactionNetwork) -> bool {
+        self.initial.to_bits() == right.initial.to_bits()
+            && self.components == right.components
+            && self.reactions == right.reactions
+    }
 }
 
 impl Hash for ConfigReactionNetwork {
@@ -207,11 +213,19 @@ impl ConfigReactionNetwork {
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Deserialize, Debug, Clone)]
 struct Reaction {
     k: f64,
     reactants: Vec<String>,
     products: Vec<String>,
+}
+
+impl PartialEq for Reaction {
+    fn eq(&self, right: &Reaction) -> bool {
+        self.k.to_bits() == right.k.to_bits()
+            && self.reactants == right.reactants
+            && self.products == right.products
+    }
 }
 
 impl Hash for Reaction {
@@ -284,7 +298,7 @@ fn main() -> std::io::Result<()> {
 
     let worker_dir = &conf
         .output
-        .join(&format!("{}", worker_name.as_deref().unwrap_or("default")));
+        .join(&worker_name.as_deref().unwrap_or("default"));
     fs::create_dir(worker_dir)?;
 
     let seed_base = conf.get_relevant_hash() ^ calculate_hash(&worker_name);
@@ -294,7 +308,7 @@ fn main() -> std::io::Result<()> {
     let ce_chunks = (0..conf.conditional_entropy.num_signals)
         .into_par_iter()
         .map(|num| {
-            let seed = num as u64 ^ seed_base ^ 0xabcdabcd;
+            let seed = num as u64 ^ seed_base ^ 0xabcd_abcd;
             let mut coordinator = conf.create_coordinator(seed);
             -conditional_likelihood(
                 traj_lengths.as_slice().unwrap(),
@@ -314,7 +328,7 @@ fn main() -> std::io::Result<()> {
     let me_chunks = (0..conf.marginal_entropy.num_responses)
         .into_par_iter()
         .map(|num| {
-            let seed = num as u64 ^ seed_base ^ 0x12341234;
+            let seed = num as u64 ^ seed_base ^ 0x1234_1234;
             let mut coordinator = conf.create_coordinator(seed);
             -marginal_likelihood(
                 traj_lengths.as_slice().unwrap(),
