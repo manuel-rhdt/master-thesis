@@ -481,7 +481,7 @@ impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
     ) -> impl 'a + TrajectoryIterator<Ex = u32> {
         simulate_ext(
             &[self.get_response_distribution(sig.components())],
-            &self.sig_network,
+            &self.res_network,
             sig,
             &mut self.rng,
         )
