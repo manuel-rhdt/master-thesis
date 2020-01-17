@@ -54,7 +54,7 @@ impl<T, C, R> Trajectory<T, C, R> {
 
 impl<T: AsRef<[f64]>, C: AsRef<[Count]>, R> Trajectory<T, C, R> {
     pub fn iter(&self) -> TrajectoryIter<'_, T, C, R> {
-        let components = vec![0.0; self.num_components()];
+        let components = vec![self.components[0].as_ref()[0]; self.num_components()];
         TrajectoryIter {
             trajectory: self,
             components,
