@@ -143,7 +143,7 @@ where
                         propensity_of_event(&self.components, reaction_event, self.reactions);
                     integrated_propensity +=
                         rem_time * sum_of_reaction_propensities(&self.components, self.reactions);
-                    break Some((delta_t, event_prop, integrated_propensity / delta_t));
+                    break Some((delta_t, event_prop, integrated_propensity));
                 } else {
                     rem_time -= self.remaining_constant_time;
                     integrated_propensity += self.remaining_constant_time
@@ -172,9 +172,9 @@ fn log_likelihood_inner<'a>(
     let component_iter = ComponentIter::new(signal, response, reactions);
     component_iter.scan(
         (0.0, 0.0),
-        |(current_time, ll), (dt, inst_rate, avrg_rate)| {
+        |(current_time, ll), (dt, inst_rate, integrated_rate)| {
             *current_time += dt;
-            *ll += inst_rate.ln() - avrg_rate * dt;
+            *ll += inst_rate.ln() - integrated_rate;
             Some((*current_time, *ll))
         },
     )
