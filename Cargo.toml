@@ -4,9 +4,6 @@ version = "0.1.0"
 authors = ["Manuel Reinhardt <M.Reinhardt@amolf.nl>"]
 edition = "2018"
 
-[lib]
-name = "accelerate"
-
 [dependencies]
 rand = "0.7.3"
 toml = "0.5"
@@ -15,6 +12,7 @@ ndarray = "0.13"
 ndarray-npy = "0.5.0"
 rayon = "1.3"
 rand_chacha = "0.2.1"
+arrayvec = "0.5"
 
 [profile.dev]
 opt-level = 0

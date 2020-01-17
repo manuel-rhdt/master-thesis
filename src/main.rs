@@ -9,11 +9,11 @@ use std::io::prelude::*;
 use std::path::PathBuf;
 
 use gillespie::{
-    ReactionNetwork, SimulationCoordinator, TrajectoryArray, MAX_NUM_PRODUCTS, MAX_NUM_REACTANTS,
+    ReactionNetwork, SimulationCoordinator, Trajectory, TrajectoryIterator
 };
 use likelihood::log_likelihood;
 
-use ndarray::{Array, Array1, Array2, Array3, ArrayView1, Axis};
+use ndarray::{Array, Array1, Array2, ArrayView1, Axis};
 use ndarray_npy::WriteNpyExt;
 use rand::{self, SeedableRng};
 use rand_chacha::ChaChaRng;
@@ -31,40 +31,39 @@ fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
 fn conditional_likelihood(
     traj_lengths: &[f64],
     num_res: usize,
-    batch: usize,
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> Array1<f64> {
-    let sig = coordinator.generate_signals(1);
-    let mut result = Array3::zeros((num_res / batch, batch, traj_lengths.len()));
+    let res_network = coordinator.res_network.clone();
+    let sig = coordinator.generate_signal().collect();
+    let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
-        let res = coordinator.generate_responses(batch, sig.as_ref());
-        log_likelihood(
-            traj_lengths,
-            sig.as_ref(),
-            res.as_ref(),
-            &coordinator.res_network,
-            out.as_slice_mut().unwrap(),
-        );
+        let res = coordinator.generate_response(sig.iter());
+        for (ll, out) in
+            log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(out.iter_mut())
+        {
+            *out = ll;
+        }
     }
-    let result = result.into_shape((num_res, traj_lengths.len())).unwrap();
     result.mean_axis(Axis(0)).unwrap()
 }
 
 fn marginal_likelihood(
     traj_lengths: &[f64],
-    signals_pre: TrajectoryArray<&[f64], &[f64], &[u32]>,
+    signals_pre: &[Trajectory<Vec<f64>, Vec<f64>, Vec<u32>>],
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> Array1<f64> {
-    let (_, res) = coordinator.generate_signal_response_pairs(1);
+    let res_network = coordinator.res_network.clone();
+    let sig = coordinator.generate_signal().collect();
+    let res = coordinator.generate_response(sig.iter()).collect();
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
-    log_likelihood(
-        traj_lengths,
-        signals_pre,
-        res.as_ref(),
-        &coordinator.res_network,
-        result.as_slice_mut().unwrap(),
-    );
+    for (sig, mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
+        for (ll, out) in
+            log_likelihood(traj_lengths, sig.iter(), res.iter(), &res_network).zip(out.iter_mut())
+        {
+            *out = ll;
+        }
+    }
 
     result.map_axis(Axis(0), log_mean_exp)
 }
@@ -88,6 +87,7 @@ pub fn log_mean_exp(values: ArrayView1<f64>) -> f64 {
 struct Config {
     output: PathBuf,
     batch_size: usize,
+    length: f64,
     conditional_entropy: ConfigConditionalEntropy,
     marginal_entropy: ConfigMarginalEntropy,
     signal: ConfigReactionNetwork,
@@ -98,6 +98,7 @@ impl Config {
     pub fn hash_relevant<H: Hasher>(&self, hasher: &mut H) {
         self.conditional_entropy.hash(hasher);
         self.marginal_entropy.hash(hasher);
+        self.length.to_bits().hash(hasher);
         self.signal.hash(hasher);
         self.response.hash(hasher);
     }
@@ -111,8 +112,7 @@ impl Config {
     pub fn create_coordinator(&self, seed: u64) -> SimulationCoordinator<ChaChaRng> {
         let rng = ChaChaRng::seed_from_u64(seed);
         SimulationCoordinator {
-            response_len: self.response.length,
-            signal_len: self.signal.length,
+            trajectory_len: self.length,
 
             sig_network: self.signal.to_reaction_network(),
             res_network: self.response.to_reaction_network(),
@@ -137,7 +137,6 @@ struct ConfigMarginalEntropy {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 struct ConfigReactionNetwork {
     initial: f64,
-    length: usize,
     components: Vec<String>,
     reactions: Vec<Reaction>,
 }
@@ -145,7 +144,6 @@ struct ConfigReactionNetwork {
 impl Hash for ConfigReactionNetwork {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.initial.to_bits().hash(state);
-        self.length.hash(state);
         self.components.hash(state);
         self.reactions.hash(state);
     }
@@ -184,15 +182,17 @@ impl ConfigReactionNetwork {
 
         for reaction in &self.reactions {
             k.push(reaction.k);
-            let mut r = [None; MAX_NUM_REACTANTS];
-            for (i, reactant) in reaction.reactants.iter().enumerate() {
-                r[i] = Some(name_table[reactant] as u32);
-            }
+            let r = reaction
+                .reactants
+                .iter()
+                .map(|reactant| name_table[reactant] as u32)
+                .collect();
             reactants.push(r);
-            let mut p = [None; MAX_NUM_PRODUCTS];
-            for (i, product) in reaction.products.iter().enumerate() {
-                p[i] = Some(name_table[product] as u32);
-            }
+            let p = reaction
+                .products
+                .iter()
+                .map(|product| name_table[product] as u32)
+                .collect();
             products.push(p);
         }
 
@@ -286,7 +286,7 @@ fn main() -> std::io::Result<()> {
 
     let seed_base = conf.get_relevant_hash() ^ calculate_hash(&worker_name);
 
-    let traj_lengths = Array::linspace(0.0, 600.0, conf.response.length);
+    let traj_lengths = Array::linspace(0.0, conf.length, 2000);
 
     let ce_chunks = (0..conf.conditional_entropy.num_signals)
         .into_par_iter()
@@ -296,7 +296,6 @@ fn main() -> std::io::Result<()> {
             -conditional_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 conf.conditional_entropy.responses_per_signal,
-                conf.batch_size,
                 &mut coordinator,
             )
         })
@@ -304,7 +303,10 @@ fn main() -> std::io::Result<()> {
         .enumerate();
 
     let mut coordinator = conf.create_coordinator(seed_base);
-    let signals_pre = coordinator.generate_signals(conf.marginal_entropy.num_signals);
+    let mut signals_pre = Vec::with_capacity(conf.marginal_entropy.num_signals);
+    for _ in 0..conf.marginal_entropy.num_signals {
+        signals_pre.push(coordinator.generate_signal().collect())
+    }
 
     let me_chunks = (0..conf.marginal_entropy.num_responses)
         .into_par_iter()
@@ -313,7 +315,7 @@ fn main() -> std::io::Result<()> {
             let mut coordinator = conf.create_coordinator(seed);
             -marginal_likelihood(
                 traj_lengths.as_slice().unwrap(),
-                signals_pre.as_ref(),
+                &signals_pre,
                 &mut coordinator,
             )
         })

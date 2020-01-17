@@ -1,6 +1,6 @@
 use std;
-use std::borrow::{Borrow, BorrowMut};
 
+use arrayvec::ArrayVec;
 use rand;
 
 type Count = f64;
@@ -11,8 +11,8 @@ pub const MAX_NUM_PRODUCTS: usize = 2;
 #[derive(Clone, Debug)]
 pub struct ReactionNetwork {
     pub k: Vec<f64>,
-    pub reactants: Vec<[Option<u32>; MAX_NUM_REACTANTS]>,
-    pub products: Vec<[Option<u32>; MAX_NUM_PRODUCTS]>,
+    pub reactants: Vec<ArrayVec<[u32; MAX_NUM_REACTANTS]>>,
+    pub products: Vec<ArrayVec<[u32; MAX_NUM_PRODUCTS]>>,
 }
 
 impl ReactionNetwork {
@@ -33,279 +33,171 @@ pub fn calc_propensities(
 ) {
     for i in 0..reactions.len() {
         propensities[i] = reactions.k[i];
-        for reactant in reactions.reactants[i].iter().filter_map(|&x| x) {
+        for &reactant in reactions.reactants[i].iter() {
             propensities[i] *= components[reactant as usize] as f64
         }
     }
 }
 
-pub fn try_propagate_time(
-    random_variate: f64,
-    timestamp: f64,
-    next_ext_timestamp: f64,
-    total_propensity: f64,
-) -> (bool, f64) {
-    let max_time_step = next_ext_timestamp - timestamp;
-
-    if max_time_step <= 0.0 {
-        return (false, 0.0);
-    }
-
-    assert!(total_propensity >= 0.0);
-
-    if max_time_step * total_propensity < random_variate {
-        (false, max_time_step)
-    } else {
-        let time_step = random_variate / total_propensity;
-        (true, time_step)
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Trajectory<T, C, R> {
-    pub length: usize,
-    pub num_components: usize,
     pub timestamps: T,
-    pub components: C,
+    pub components: Vec<C>,
     pub reaction_events: Option<R>,
 }
 
 impl<T, C, R> Trajectory<T, C, R> {
-    pub fn len(&self) -> usize {
-        self.length
-    }
-
     pub fn num_components(&self) -> usize {
-        self.num_components
+        self.components.len()
     }
+}
 
-    pub fn get_component<U>(&self, comp: usize) -> &[U]
-    where
-        C: Borrow<[U]>,
-    {
-        self.components
-            .borrow()
-            .chunks(self.length)
-            .nth(comp)
-            .expect("Access out of bounds.")
-    }
-
-    pub fn get_component_mut<U>(&mut self, comp: usize) -> &mut [U]
-    where
-        C: BorrowMut<[U]>,
-    {
-        self.components
-            .borrow_mut()
-            .chunks_mut(self.length)
-            .nth(comp)
-            .expect("Access out of bounds.")
-    }
-
-    pub fn as_ref<X: ?Sized, Y: ?Sized, Z: ?Sized>(&self) -> Trajectory<&X, &Y, &Z>
-    where
-        T: AsRef<X>,
-        C: AsRef<Y>,
-        R: AsRef<Z>,
-    {
-        Trajectory {
-            length: self.length,
-            num_components: self.num_components,
-            timestamps: self.timestamps.as_ref(),
-            components: self.components.as_ref(),
-            reaction_events: self.reaction_events.as_ref().map(AsRef::as_ref),
+impl<T: AsRef<[f64]>, C: AsRef<[Count]>, R> Trajectory<T, C, R> {
+    pub fn iter(&self) -> TrajectoryIter<'_, T, C, R> {
+        let components = vec![0.0; self.num_components()];
+        TrajectoryIter {
+            trajectory: self,
+            components,
+            progress: 0,
         }
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct TrajectoryArray<T, C, R> {
-    count: usize,
-    inner: Trajectory<T, C, R>,
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+pub struct Event {
+    pub time: f64,
 }
 
-impl<T, C, R> TrajectoryArray<T, C, R> {
-    #[allow(unused)]
-    pub fn from_trajectory(trajectory: Trajectory<T, C, R>) -> Self {
-        TrajectoryArray {
-            count: 1,
-            inner: trajectory,
-        }
-    }
+/// An iterator yielding a trajectory.
+///
+/// `advance` and `update` have to be called in lock-step, else the behavior is not defined.
+pub trait TrajectoryIterator {
+    type Ex;
 
-    pub fn num_steps(&self) -> usize {
-        self.inner.len()
-    }
+    fn advance(&mut self) -> Option<Event>;
+    fn update(&mut self) -> Self::Ex;
 
-    pub fn num_components(&self) -> usize {
-        self.inner.num_components()
-    }
+    fn components(&self) -> &[Count];
 
-    pub fn len(&self) -> usize {
-        self.count
-    }
-
-    pub fn as_ref<X: ?Sized, Y: ?Sized, Z: ?Sized>(&self) -> TrajectoryArray<&X, &Y, &Z>
-    where
-        T: AsRef<X>,
-        C: AsRef<Y>,
-        R: AsRef<Z>,
-    {
-        TrajectoryArray {
-            count: self.count,
-            inner: self.inner.as_ref(),
-        }
-    }
-
-    pub fn get<'a, X, Y, Z>(&'a self, index: usize) -> Trajectory<&'a [X], &'a [Y], &'a [Z]>
-    where
-        T: Borrow<[X]>,
-        C: Borrow<[Y]>,
-        R: Borrow<[Z]>,
-    {
-        if index >= self.len() {
-            panic!("Index out of bounds")
-        }
-        let num_steps = self.num_steps();
-        let num_components = self.num_components();
-        let timestamps = self
-            .inner
-            .timestamps
-            .borrow()
-            .chunks(num_steps)
-            .nth(index)
-            .unwrap();
-        let components = self
-            .inner
-            .components
-            .borrow()
-            .chunks(num_steps * num_components)
-            .nth(index)
-            .unwrap();
-        let reaction_events = if let Some(re) = &self.inner.reaction_events {
-            Some(re.borrow().chunks(num_steps - 1).nth(index).unwrap())
+    fn next(&mut self) -> Option<(Event, Self::Ex)> {
+        if let Some(event) = self.advance() {
+            let ex = self.update();
+            Some((event, ex))
         } else {
             None
-        };
-
-        Trajectory {
-            length: num_steps,
-            num_components,
-            timestamps,
-            components,
-            reaction_events,
         }
     }
 
-    pub fn get_mut<'a, X, Y, Z>(
-        &'a mut self,
-        index: usize,
-    ) -> Trajectory<&'a mut [X], &'a mut [Y], &'a mut [Z]>
+    fn cap(self, cap: f64) -> CappedTrajectory<Self>
     where
-        T: BorrowMut<[X]>,
-        C: BorrowMut<[Y]>,
-        R: BorrowMut<[Z]>,
+        Self: Sized,
     {
-        if index >= self.len() {
-            panic!("Index out of bounds")
+        CappedTrajectory {
+            inner: self,
+            cap,
+            accumulated_time: 0.0,
         }
-        let num_steps = self.num_steps();
-        let num_components = self.num_components();
-        let timestamps = self
-            .inner
-            .timestamps
-            .borrow_mut()
-            .chunks_mut(num_steps)
-            .nth(index)
-            .unwrap();
-        let components = self
-            .inner
-            .components
-            .borrow_mut()
-            .chunks_mut(num_steps * num_components)
-            .nth(index)
-            .unwrap();
-        let reaction_events = if let Some(re) = &mut self.inner.reaction_events {
-            Some(
-                re.borrow_mut()
-                    .chunks_mut(num_steps - 1)
-                    .nth(index)
-                    .unwrap(),
-            )
-        } else {
-            None
-        };
+    }
+
+    fn collect(mut self) -> Trajectory<Vec<f64>, Vec<Count>, Vec<Self::Ex>>
+    where
+        Self: Sized,
+    {
+        let mut timestamps = vec![0.0];
+        let mut component_traj = vec![];
+        for &comp in self.components() {
+            component_traj.push(vec![comp]);
+        }
+        let mut reaction_events = vec![];
+
+        let mut current_time = 0.0;
+        while let Some((Event { time }, reaction_event)) = self.next() {
+            current_time += time;
+            timestamps.push(current_time);
+            for (comp_array, &comp) in component_traj.iter_mut().zip(self.components()) {
+                comp_array.push(comp);
+            }
+            reaction_events.push(reaction_event)
+        }
 
         Trajectory {
-            length: num_steps,
-            num_components,
             timestamps,
-            components,
-            reaction_events,
+            components: component_traj,
+            reaction_events: Some(reaction_events),
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TrajectoryIter<'traj, T, C, R> {
+    trajectory: &'traj Trajectory<T, C, R>,
+    components: Vec<f64>,
+    progress: usize,
+}
+
+impl<'traj, T: AsRef<[f64]>, C: AsRef<[Count]>, R: AsRef<[u32]>> TrajectoryIterator
+    for TrajectoryIter<'traj, T, C, R>
+{
+    type Ex = u32;
+
+    fn advance(&mut self) -> Option<Event> {
+        let timestamps = self.trajectory.timestamps.as_ref();
+        let current_time = timestamps[self.progress];
+        timestamps.get(self.progress + 1).map(|&time| Event {
+            time: time - current_time,
+        })
+    }
+
+    fn update(&mut self) -> u32 {
+        self.progress += 1;
+        for (comp_array, comp) in self
+            .trajectory
+            .components
+            .iter()
+            .zip(self.components.iter_mut())
+        {
+            *comp = comp_array.as_ref()[self.progress];
+        }
+        self.trajectory
+            .reaction_events
+            .as_ref()
+            .map(|r| r.as_ref()[self.progress - 1])
+            .unwrap()
+    }
+
+    fn components(&self) -> &[Count] {
+        &self.components
     }
 }
 
 #[derive(Debug)]
-struct Simulation<'ext, 'other, Rng: rand::Rng> {
-    rng: &'other mut Rng,
-    current_time: f64,
-    ext_progress: usize,
-    propensities: &'other mut [f64],
-    components: &'other mut [Count],
-    ext_trajectory: Option<Trajectory<&'ext [f64], &'ext [Count], &'ext [u32]>>,
-    reactions: &'other ReactionNetwork,
+struct SimulatedTrajectory<'a, Rng: rand::Rng> {
+    rng: &'a mut Rng,
+    propensities: Vec<f64>,
+    components: Vec<f64>,
+    reactions: &'a ReactionNetwork,
+    log_rand_var: f64,
 }
 
-impl<'ext, 'other, Rng: rand::Rng> Simulation<'ext, 'other, Rng> {
+impl<'a, Rng: rand::Rng> SimulatedTrajectory<'a, Rng> {
     pub fn new(
-        components: &'other mut [Count],
-        propensities: &'other mut [f64],
-        ext_trajectory: Option<Trajectory<&'ext [f64], &'ext [Count], &'ext [u32]>>,
-        reactions: &'other ReactionNetwork,
-        rng: &'other mut Rng,
+        mut propensities: Vec<f64>,
+        reactions: &'a ReactionNetwork,
+        components: Vec<Count>,
+        rng: &'a mut Rng,
     ) -> Self {
-        Self {
-            current_time: 0.0,
-            ext_progress: 0,
+        assert_eq!(propensities.len(), reactions.len());
+        calc_propensities(&mut propensities, &components, reactions);
+        SimulatedTrajectory {
+            log_rand_var: -rng.gen::<f64>().ln(),
             propensities,
             components,
-            ext_trajectory,
             reactions,
             rng,
         }
     }
 
-    pub fn ext_len(&self) -> usize {
-        self.ext_trajectory.as_ref().map(|t| t.len()).unwrap_or(0)
-    }
-
-    pub fn num_ext_components(&self) -> usize {
-        self.ext_trajectory
-            .as_ref()
-            .map(|t| t.num_components())
-            .unwrap_or(0)
-    }
-
-    pub fn next_ext_timestamp(&self) -> f64 {
-        if self.ext_progress >= self.ext_len() {
-            std::f64::INFINITY
-        } else if let Some(trajectory) = &self.ext_trajectory {
-            trajectory.timestamps[self.ext_progress]
-        } else {
-            panic!("no external trajectory")
-        }
-    }
-
-    pub fn next_ext_component(&self, comp_num: usize) -> Count {
-        let trajectory = self
-            .ext_trajectory
-            .as_ref()
-            .expect("no external trajectory");
-        let index = std::cmp::min(self.ext_progress, trajectory.len() - 1);
-        trajectory.get_component(comp_num)[index]
-    }
-
-    pub fn select_reaction(&mut self) -> usize {
+    fn select_reaction(&mut self) -> usize {
         let r: f64 = self.rng.gen();
         let total_propensity: f64 = self.propensities.iter().sum();
 
@@ -320,150 +212,179 @@ impl<'ext, 'other, Rng: rand::Rng> Simulation<'ext, 'other, Rng> {
         selected_reaction
     }
 
-    pub fn update_components(&mut self, selected_reaction: usize) {
+    fn update_components_with_reaction(&mut self, selected_reaction: usize) {
         for &reactant in &self.reactions.reactants[selected_reaction] {
-            if let Some(reactant) = reactant {
-                self.components[reactant as usize] -= 1 as Count
-            }
+            self.components[reactant as usize] -= 1 as Count
         }
         for &product in &self.reactions.products[selected_reaction] {
-            if let Some(product) = product {
-                self.components[product as usize] += 1 as Count
-            }
+            self.components[product as usize] += 1 as Count
         }
     }
 
-    pub fn propagate_time(&mut self) -> (f64, usize) {
-        let mut random_variate = -self.rng.gen::<f64>().ln();
+    fn total_propensity(&mut self) -> f64 {
+        calc_propensities(&mut self.propensities, &self.components, self.reactions);
+        self.propensities.iter().sum()
+    }
 
+    fn time_step(&mut self) -> f64 {
+        self.log_rand_var / self.total_propensity()
+    }
+
+    fn update_components(&mut self) -> u32 {
+        let selected_reaction = self.select_reaction();
+        self.update_components_with_reaction(selected_reaction);
+        selected_reaction as u32
+    }
+}
+
+impl<'a, Rng: rand::Rng> TrajectoryIterator for SimulatedTrajectory<'a, Rng> {
+    type Ex = u32;
+
+    fn advance(&mut self) -> Option<Event> {
+        Some(Event {
+            time: self.time_step(),
+        })
+    }
+
+    fn update(&mut self) -> u32 {
+        self.log_rand_var = -self.rng.gen::<f64>().ln();
+        self.update_components()
+    }
+
+    fn components(&self) -> &[Count] {
+        &self.components
+    }
+}
+
+pub struct DrivenTrajectory<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> {
+    external_trajectory: ExtTraj,
+    sim: SimulatedTrajectory<'a, Rng>,
+    remaining_constant_time: f64,
+}
+
+impl<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> DrivenTrajectory<'a, Rng, ExtTraj> {
+    fn new(sim: SimulatedTrajectory<'a, Rng>, mut external_trajectory: ExtTraj) -> Self {
+        let remaining_constant_time = external_trajectory
+            .advance()
+            .map(|event| event.time)
+            .unwrap_or(std::f64::INFINITY);
+        DrivenTrajectory {
+            sim,
+            external_trajectory,
+            remaining_constant_time,
+        }
+    }
+
+    fn step(&mut self) -> (f64, bool) {
+        let sim_step = self.sim.time_step();
+        if self.remaining_constant_time < sim_step {
+            let step = self.remaining_constant_time;
+
+            self.sim.log_rand_var -= step * self.sim.total_propensity();
+
+            self.external_trajectory.update();
+            let components = self.external_trajectory.components();
+            self.sim.components[..components.len()].copy_from_slice(components);
+
+            self.remaining_constant_time = self
+                .external_trajectory
+                .advance()
+                .map(|event| event.time)
+                .unwrap_or(std::f64::INFINITY);
+            (step, false)
+        } else {
+            self.remaining_constant_time -= sim_step;
+            (sim_step, true)
+        }
+    }
+}
+
+impl<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> TrajectoryIterator
+    for DrivenTrajectory<'a, Rng, ExtTraj>
+{
+    type Ex = u32;
+
+    fn advance(&mut self) -> Option<Event> {
+        let mut current_time = 0.0;
         loop {
-            calc_propensities(&mut self.propensities, &self.components, &self.reactions);
-            let total_propensity: f64 = self.propensities.iter().sum();
-
-            let (perform_reaction, time_step) = try_propagate_time(
-                random_variate,
-                self.current_time,
-                self.next_ext_timestamp(),
-                total_propensity,
-            );
-            self.current_time += time_step;
-
-            if perform_reaction {
-                let selected_reaction = self.select_reaction();
-                self.update_components(selected_reaction);
-                return (self.current_time, selected_reaction);
-            } else {
-                random_variate -= time_step * total_propensity;
-                // update the external trajectory
-                self.ext_progress += 1;
-                for i in 0..self.num_ext_components() {
-                    self.components[i] = self.next_ext_component(i);
-                }
+            let (step, ready) = self.step();
+            current_time += step;
+            if ready {
+                break Some(Event { time: current_time });
             }
         }
     }
+
+    fn update(&mut self) -> u32 {
+        self.sim.update()
+    }
+
+    fn components(&self) -> &[Count] {
+        &self.sim.components[1..]
+    }
 }
 
-type SimulatedTrajectoryArray = TrajectoryArray<Vec<f64>, Vec<f64>, Vec<u32>>;
+pub struct CappedTrajectory<Inner: TrajectoryIterator> {
+    inner: Inner,
+    cap: f64,
+    accumulated_time: f64,
+}
 
-pub fn simulate(
-    count: usize,
-    length: usize,
+impl<Inner: TrajectoryIterator> TrajectoryIterator for CappedTrajectory<Inner> {
+    type Ex = Inner::Ex;
+
+    fn advance(&mut self) -> Option<Event> {
+        if self.accumulated_time >= self.cap {
+            return None;
+        }
+        if let Some(Event { time }) = self.inner.advance() {
+            self.accumulated_time += time;
+            Some(Event { time })
+        } else {
+            None
+        }
+    }
+
+    fn update(&mut self) -> Self::Ex {
+        self.inner.update()
+    }
+
+    fn components(&self) -> &[Count] {
+        self.inner.components()
+    }
+}
+
+pub fn simulate<'a>(
     initial_values: &[f64],
-    reactions: &ReactionNetwork,
-    ext_trajectory: Option<TrajectoryArray<&[f64], &[f64], &[u32]>>,
-    rng: &mut impl rand::Rng,
-) -> SimulatedTrajectoryArray {
-    let mut propensities = vec![0.0; reactions.len()];
-    let num_ext_components = ext_trajectory.map(|x| x.num_components()).unwrap_or(0);
-    let num_components = initial_values.len() / count;
-    let mut components = vec![0.0; num_ext_components + num_components];
-
-    let num_ext_trajectories = ext_trajectory.as_ref().map(|x| x.len()).unwrap_or(0);
+    reactions: &'a ReactionNetwork,
+    rng: &'a mut impl rand::Rng,
+) -> impl 'a + TrajectoryIterator<Ex = u32> {
+    let propensities = vec![0.0; reactions.len()];
+    let num_components = initial_values.len();
     assert!(num_components > 0);
+    let components = initial_values.to_owned();
 
-    let mut ta = TrajectoryArray {
-        count,
-        inner: Trajectory {
-            length,
-            num_components,
-            timestamps: vec![0.0; length * count],
-            components: vec![0.0; length * count * num_components],
-            reaction_events: Some(vec![0_u32; (length - 1) * count]),
-        },
-    };
-
-    for i in 0..count {
-        for comp in 0..num_ext_components {
-            components[comp] = ext_trajectory
-                .as_ref()
-                .unwrap()
-                .get(i % num_ext_trajectories)
-                .get_component(comp)[0];
-        }
-        for comp in 0..num_components {
-            components[comp + num_ext_components] = initial_values[i * num_components + comp];
-        }
-
-        let mut sim = Simulation::new(
-            &mut components,
-            &mut propensities,
-            ext_trajectory
-                .as_ref()
-                .map(|x| x.get(i % num_ext_trajectories)),
-            reactions,
-            rng,
-        );
-
-        let mut sim_trajectory = ta.get_mut(i);
-
-        for comp in 0..num_components {
-            sim_trajectory.get_component_mut(comp)[0] = sim.components[comp + num_ext_components];
-        }
-        for j in 1..length {
-            let (t, selected_reaction) = sim.propagate_time();
-            sim_trajectory.timestamps[j] = t;
-            sim_trajectory
-                .reaction_events
-                .as_mut()
-                .map(|re| re[j - 1] = selected_reaction as u32);
-
-            for comp in 0..num_components {
-                sim_trajectory.get_component_mut(comp)[j] =
-                    sim.components[comp + num_ext_components];
-            }
-        }
-    }
-
-    ta
+    SimulatedTrajectory::new(propensities, reactions, components, rng)
 }
 
-pub fn stationary_distribution(
-    count: usize,
-    length: usize,
+pub fn simulate_ext<'a>(
     initial_values: &[f64],
-    reactions: &ReactionNetwork,
-    ext_trajectory: Option<TrajectoryArray<&[f64], &[f64], &[u32]>>,
-    rng: &mut impl rand::Rng,
-) -> Vec<f64> {
-    let trajectory = simulate(
-        count,
-        length,
-        initial_values,
-        reactions,
-        ext_trajectory,
-        rng,
-    );
-    let mut result = Vec::with_capacity(trajectory.len());
-    for i in 0..trajectory.len() {
-        result.push(trajectory.get(i).get_component(0)[trajectory.num_steps() - 1]);
-    }
-    result
+    reactions: &'a ReactionNetwork,
+    external_trajectory: impl 'a + TrajectoryIterator,
+    rng: &'a mut impl rand::Rng,
+) -> impl 'a + TrajectoryIterator<Ex = u32> {
+    let propensities = vec![0.0; reactions.len()];
+    let num_components = initial_values.len();
+    assert!(num_components > 0);
+    let mut components = external_trajectory.components().to_owned();
+    components.extend_from_slice(initial_values);
+
+    let sim = SimulatedTrajectory::new(propensities, reactions, components, rng);
+    DrivenTrajectory::new(sim, external_trajectory)
 }
 
 pub struct SimulationCoordinator<Rng: rand::Rng> {
-    pub response_len: usize,
-    pub signal_len: usize,
+    pub trajectory_len: f64,
 
     pub sig_network: ReactionNetwork,
     pub res_network: ReactionNetwork,
@@ -473,60 +394,50 @@ pub struct SimulationCoordinator<Rng: rand::Rng> {
 
 impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
     pub fn get_signal_distribution(&mut self, count: usize) -> Vec<f64> {
-        stationary_distribution(
-            count,
-            self.signal_len,
-            &vec![100.0; count],
-            &self.sig_network,
-            None,
-            &mut self.rng,
-        )
+        let initial = &[100.0; 1];
+        let mut result = Vec::with_capacity(count);
+        for _ in 0..count {
+            let mut traj =
+                simulate(initial, &self.sig_network, &mut self.rng).cap(self.trajectory_len);
+            while traj.next().is_some() {}
+            result.push(traj.components()[0])
+        }
+        result
     }
 
     pub fn get_response_distribution(&mut self, count: usize) -> Vec<f64> {
-        let sig = self.generate_signals(count);
-        stationary_distribution(
-            count,
-            self.response_len,
-            &vec![100.0; count],
-            &self.res_network,
-            Some(sig.as_ref()),
-            &mut self.rng,
-        )
+        let mut result = Vec::with_capacity(count);
+        for _ in 0..count {
+            let sig = simulate(&[100.0; 1], &self.sig_network, &mut self.rng)
+                .cap(self.trajectory_len)
+                .collect();
+            let mut res = simulate_ext(&[100.0; 1], &self.res_network, sig.iter(), &mut self.rng)
+                .cap(self.trajectory_len);
+            while res.next().is_some() {}
+            result.push(res.components()[0])
+        }
+        result
     }
 
-    pub fn generate_signals(&mut self, count: usize) -> SimulatedTrajectoryArray {
+    pub fn generate_signal(&mut self) -> impl '_ + TrajectoryIterator<Ex = u32> {
         simulate(
-            count,
-            self.signal_len,
-            &self.get_signal_distribution(count),
+            &self.get_signal_distribution(1),
             &self.sig_network,
-            None,
             &mut self.rng,
         )
+        .cap(self.trajectory_len)
     }
 
-    pub fn generate_responses(
-        &mut self,
-        count: usize,
-        signals: TrajectoryArray<&[f64], &[f64], &[u32]>,
-    ) -> SimulatedTrajectoryArray {
-        simulate(
-            count,
-            self.response_len,
-            &self.get_response_distribution(count),
-            &self.res_network,
-            Some(signals),
+    pub fn generate_response<'a>(
+        &'a mut self,
+        sig: impl 'a + TrajectoryIterator,
+    ) -> impl 'a + TrajectoryIterator<Ex = u32> {
+        simulate_ext(
+            &self.get_response_distribution(1),
+            &self.sig_network,
+            sig,
             &mut self.rng,
         )
-    }
-
-    pub fn generate_signal_response_pairs(
-        &mut self,
-        count: usize,
-    ) -> (SimulatedTrajectoryArray, SimulatedTrajectoryArray) {
-        let sig = self.generate_signals(count);
-        let res = self.generate_responses(count, sig.as_ref());
-        (sig, res)
+        .cap(self.trajectory_len)
     }
 }
