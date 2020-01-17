@@ -22,6 +22,9 @@ use rayon::prelude::*;
 use serde::Deserialize;
 use toml;
 
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
