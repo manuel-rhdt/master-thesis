@@ -39,9 +39,7 @@ fn conditional_likelihood(
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
         let res = coordinator.generate_response(sig.iter());
-        for (ll, out) in
-            log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(out.iter_mut())
-        {
+        for (ll, out) in log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(&mut out) {
             *out = ll;
         }
     }
@@ -53,14 +51,18 @@ fn marginal_likelihood(
     signals_pre: &[Trajectory<Vec<f64>, Vec<f64>, Vec<u32>>],
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> Array1<f64> {
-    let res_network = coordinator.res_network.clone();
     let sig = coordinator.generate_signal().collect();
     let res = coordinator.generate_response(sig.iter()).collect();
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
     for (sig, mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
-        for (ll, out) in
-            log_likelihood(traj_lengths, sig.iter(), res.iter(), &res_network).zip(out.iter_mut())
+        for (ll, out) in log_likelihood(
+            traj_lengths,
+            sig.iter(),
+            res.iter(),
+            &coordinator.res_network,
+        )
+        .zip(&mut out)
         {
             *out = ll;
         }
@@ -73,13 +75,11 @@ pub fn log_mean_exp(values: ArrayView1<f64>) -> f64 {
     use std::ops::Div;
 
     let max = values.fold(std::f64::NEG_INFINITY, |a, &b| a.max(b));
-    let count_non_nan = values.iter().filter(|x| !x.is_nan()).count() as f64;
     values
         .iter()
-        .filter(|x| !x.is_nan())
         .map(|&x| (x - max).exp())
         .sum::<f64>()
-        .div(count_non_nan)
+        .div(values.len() as f64)
         .ln()
         + max
 }
