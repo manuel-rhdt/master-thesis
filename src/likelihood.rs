@@ -22,7 +22,7 @@ struct ComponentIter<'r, Signal, Response> {
     signal: Signal,
     response: Response,
     reactions: &'r ReactionNetwork,
-    remaining_constant_time: f64,
+    remaining_constant_signal_time: f64,
     components: Vec<f64>,
 }
 
@@ -32,7 +32,7 @@ where
     Response: TrajectoryIterator<Ex = u32>,
 {
     fn new(mut signal: Signal, response: Response, reactions: &'r ReactionNetwork) -> Self {
-        let remaining_constant_time = signal
+        let remaining_constant_signal_time = signal
             .advance()
             .map(|event| event.time)
             .unwrap_or(std::f64::INFINITY);
@@ -42,7 +42,7 @@ where
             signal,
             response,
             reactions,
-            remaining_constant_time,
+            remaining_constant_signal_time,
             components: vec![0.0; num_sig_comp + num_res_comp],
         }
     }
@@ -92,27 +92,41 @@ where
     fn next(&mut self) -> Option<(f64, f64, f64)> {
         let num_ext_comp = self.signal.components().len();
         if let Some(Event { time: delta_t }) = self.response.advance() {
-            let mut rem_time = delta_t;
+            let mut remaining_constant_response_time = delta_t;
             let mut integrated_propensity = 0.0;
             loop {
                 self.components[..num_ext_comp].copy_from_slice(self.signal.components());
                 self.components[num_ext_comp..].copy_from_slice(self.response.components());
-                if rem_time < self.remaining_constant_time {
+                if remaining_constant_response_time < self.remaining_constant_signal_time {
+                    // the response will change before the signal, therefore we have to
+                    // - keep track of time
+                    // - perform the response update
+                    // - calculate the propensity of the event that happened
+                    // - calculate the integrated propensity of the remaining time
+                    // - yield the result
+                    self.remaining_constant_signal_time -= remaining_constant_response_time;
                     let reaction_event = self.response.update();
                     let event_prop =
                         propensity_of_event(&self.components, reaction_event, self.reactions);
-                    integrated_propensity +=
-                        rem_time * sum_of_reaction_propensities(&self.components, self.reactions);
+                    integrated_propensity += remaining_constant_response_time
+                        * sum_of_reaction_propensities(&self.components, self.reactions);
                     break Some((delta_t, event_prop, integrated_propensity));
                 } else {
-                    rem_time -= self.remaining_constant_time;
-                    integrated_propensity += self.remaining_constant_time
+                    // the signal will change before the response, therefore we havet to
+                    // - keep track of time
+                    // - integrate the propensity for the amount of time that the signal is const
+                    // - update the signal
+                    // - get the time when the next signal change will occur
+                    remaining_constant_response_time -= self.remaining_constant_signal_time;
+                    integrated_propensity += self.remaining_constant_signal_time
                         * sum_of_reaction_propensities(&self.components, self.reactions);
                     self.signal.update();
                     if let Some(Event { time }) = self.signal.advance() {
-                        self.remaining_constant_time = time;
+                        self.remaining_constant_signal_time = time;
                     } else {
-                        self.remaining_constant_time = std::f64::INFINITY;
+                        // When no more events happen to the signal we just say that the signal will
+                        // remain constant forever.
+                        self.remaining_constant_signal_time = std::f64::INFINITY;
                     }
                 }
             }
