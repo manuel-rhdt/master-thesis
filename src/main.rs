@@ -14,6 +14,7 @@ use ndarray::{Array, Array1, Array2, ArrayView1, Axis};
 use ndarray_npy::WriteNpyExt;
 use rayon;
 use rayon::prelude::*;
+use serde::Serialize;
 use toml;
 
 #[global_allocator]
@@ -80,18 +81,20 @@ enum EntropyType {
 }
 
 fn print_help() -> ! {
-    println!("\
+    println!(
+        "\
 Usage:
     gillespie [conf]
 
 Arguments:
     conf - The path to the configuration file. The default is 
            'configuration.toml'.
-");
+"
+    );
     std::process::exit(0)
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     use std::os::unix::fs::OpenOptionsExt;
 
     let args: Vec<String> = env::args().collect();
@@ -100,9 +103,7 @@ fn main() -> std::io::Result<()> {
         1 => "configuration.toml",
         // one argument passed
         2 => &args[1],
-        _ => {
-            print_help()
-        }
+        _ => print_help(),
     };
 
     let mut config_file = File::open(configuration_filename)?;
@@ -146,13 +147,22 @@ fn main() -> std::io::Result<()> {
                 panic!("{:?} does not match configuration.toml", info_toml_path);
             }
         }
-        Err(other) => return Err(other),
+        Err(other) => return Err(other.into()),
     }
 
     let worker_dir = &conf
         .output
         .join(&worker_name.as_deref().unwrap_or("default"));
     fs::create_dir(worker_dir)?;
+    let mut worker_toml = fs::File::create(worker_dir.join("worker.toml"))?;
+    let worker_info = WorkerInfo {
+        build_time: env!("VERGEN_BUILD_TIMESTAMP").parse().ok(),
+        commit_sha: env!("VERGEN_SHA"),
+        commit_date: env!("VERGEN_COMMIT_DATE").parse().ok(),
+        version: env!("VERGEN_SEMVER"),
+        hostname: env::var("HOSTNAME").ok(),
+    };
+    write!(worker_toml, "{}", toml::to_string_pretty(&worker_info)?)?;
 
     let seed_base = conf.get_relevant_hash() ^ calculate_hash(&worker_name);
 
@@ -219,4 +229,13 @@ fn main() -> std::io::Result<()> {
         });
 
     Ok(())
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct WorkerInfo {
+    hostname: Option<String>,
+    commit_sha: &'static str,
+    commit_date: Option<toml::value::Datetime>,
+    version: &'static str,
+    build_time: Option<toml::value::Datetime>,
 }
