@@ -1,61 +1,21 @@
 use super::gillespie::{Event, ReactionNetwork, TrajectoryIterator};
 
-fn sum_of_reaction_propensities(components: &[f64], reactions: &ReactionNetwork) -> f64 {
-    let mut acc = 0.0;
-    for j_reaction in 0..reactions.len() {
-        let k = reactions.k[j_reaction];
-        let reactants = &reactions.reactants[j_reaction];
-
-        let mut tmp = k;
-        for &reactant in reactants.iter() {
-            tmp *= components[reactant as usize];
-        }
-
-        acc += tmp
-    }
-    acc
-}
-
 fn propensity_of_event(
     components: &[f64],
     reaction_event: u32,
     reactions: &ReactionNetwork,
 ) -> f64 {
-    let k = reactions.k[reaction_event as usize];
-    let reactants = &reactions.reactants[reaction_event as usize];
-
-    let mut result = k;
-    for &reactant in reactants.iter() {
-        result *= components[reactant as usize];
-    }
-    result
+    reactions.k[reaction_event as usize]
+        * reactions.reactants[reaction_event as usize]
+            .iter()
+            .map(|&reactant| components[reactant as usize])
+            .product::<f64>()
 }
 
-struct TrajectoryIter<'a> {
-    index: usize,
-    timestamps: &'a [f64],
-    values: &'a [f64],
-}
-
-impl<'a> Iterator for TrajectoryIter<'a> {
-    type Item = (f64, (f64, f64));
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.timestamps.len() || self.index >= self.values.len() {
-            let last_val = self.values[self.values.len() - 1];
-            return Some((std::f64::INFINITY, (last_val, last_val)));
-        }
-        if self.index == 0 {
-            self.index = 1;
-        }
-
-        let result = (
-            self.timestamps[self.index],
-            (self.values[self.index - 1], self.values[self.index]),
-        );
-        self.index += 1;
-        Some(result)
-    }
+fn sum_of_reaction_propensities(components: &[f64], reactions: &ReactionNetwork) -> f64 {
+    (0..reactions.len() as u32)
+        .map(|i| propensity_of_event(components, i, reactions))
+        .sum()
 }
 
 struct ComponentIter<'r, Signal, Response> {
