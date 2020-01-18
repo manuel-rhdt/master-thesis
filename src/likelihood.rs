@@ -55,38 +55,17 @@ where
 {
     type Item = (f64, f64, f64);
 
-    /// Average of `trajectory` with `old_timestamp` in the time-intervals specified by
-    /// `new_timestamps`.
-    ///
-    /// Note: This function assumes that both `old_timestamps` and `new_timestamps` are
-    /// ordered.
-    ///
-    /// # Discussion
-    ///
-    /// This function is used for the calculation of the mean propensity over a timestep in
-    /// the response trajectory. Since the propensity for a reaction is variable, the
-    /// survival probability depends on the time-integrated value of the total propensity.
-    /// Since the signal trajectory is assumed to be piecewise constant we can calculate the
-    /// average signal between every pair of response timestamps. If we use this average
-    /// signal to compute the total propensity, we don't require the calculation of the time
-    /// integral anymore.
-    ///
-    /// This function computes the average of a trajectory given by the values `trajectory`
-    /// at the timestamps `old_timestamps` where the averaging happens for the intervals
-    /// between pairs of timestamps in `new_timestamps`.
-    ///
-    /// Returns a list of averages of size `len(new_timestamps) - 1`.
     ///
     /// ```
     ///             |                                    |
-    ///             |        +---------------------------| <-- trajectory[k + 1]
+    ///             |        +---------------------------| <-- signal[k + 1]
     ///             |========|===========================| <== average[i]
     ///             |        |                           |
-    ///          ---|--------+                           | <-- trajectory[k]
-    ///             | old_timestamps[k + 1]              |
+    ///          ---|--------+                           | <-- signal[k]
+    ///             | signal.timestamp[k + 1]            |
     ///             |                                    |
     ///             +------------------------------------+---> time
-    ///     new_timestamps[i]                  new_timestamps[i+1]
+    ///     response.timestamp[i]                  response.timestamp[i+1]
     /// ```
     ///
     fn next(&mut self) -> Option<(f64, f64, f64)> {
