@@ -113,7 +113,7 @@ fn main() -> std::io::Result<()> {
     create_dir_if_not_exists(&conf.output)?;
     let info_toml_path = &conf.output.join("info.toml");
 
-    let worker_name = std::env::var("GILLESPIE_WORKER_ID").ok();
+    let worker_name = env::var("GILLESPIE_WORKER_ID").ok();
 
     match fs::OpenOptions::new()
         .create_new(true)

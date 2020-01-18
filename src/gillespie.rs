@@ -40,22 +40,16 @@ pub fn calc_propensities(
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Trajectory<T, C, R> {
     pub timestamps: T,
     pub components: Vec<C>,
     pub reaction_events: Option<R>,
 }
 
-impl<T, C, R> Trajectory<T, C, R> {
-    pub fn num_components(&self) -> usize {
-        self.components.len()
-    }
-}
-
 impl<T: AsRef<[f64]>, C: AsRef<[Count]>, R> Trajectory<T, C, R> {
     pub fn iter(&self) -> TrajectoryIter<'_, T, C, R> {
-        let components = vec![self.components[0].as_ref()[0]; self.num_components()];
+        let components = self.components.iter().map(|c| c.as_ref()[0]).collect();
         TrajectoryIter {
             trajectory: self,
             components,
@@ -65,7 +59,11 @@ impl<T: AsRef<[f64]>, C: AsRef<[Count]>, R> Trajectory<T, C, R> {
 
     pub fn rev_iter(&self) -> RevTrajectoryIter<'_, T, C, R> {
         let len = self.components[0].as_ref().len();
-        let components = vec![self.components[0].as_ref()[len - 1]; self.num_components()];
+        let components = self
+            .components
+            .iter()
+            .map(|c| c.as_ref()[len - 1])
+            .collect();
         RevTrajectoryIter {
             trajectory: self,
             components,
@@ -488,5 +486,47 @@ impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
             &mut self.rng,
         )
         .cap(self.trajectory_len)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn trajectory_iter_works1() {
+        let trajectory = Trajectory {
+            timestamps: vec![0.0, 1.0, 2.0, 3.0, 4.0],
+            components: vec![
+                vec![11.0, 10.0, 9.0, 8.0, 7.0],
+                vec![110.0, 100.0, 90.0, 80.0, 70.0],
+            ],
+            reaction_events: Some(vec![1, 0, 1, 2]),
+        };
+
+        assert_eq!(trajectory, trajectory.iter().collect());
+    }
+
+    #[test]
+    fn trajectory_rev_iter_works1() {
+        let trajectory = Trajectory {
+            timestamps: vec![0.0, 2.0, 3.0, 7.0, 19.0],
+            components: vec![
+                vec![11.0, 10.0, 9.0, 8.0, 7.0],
+                vec![110.0, 100.0, 90.0, 80.0, 70.0],
+            ],
+            reaction_events: Some(vec![1, 0, 1, 2]),
+        };
+
+        let rev_trajectory = Trajectory {
+            timestamps: vec![0.0, 12.0, 16.0, 17.0, 19.0],
+            components: vec![
+                vec![7.0, 8.0, 9.0, 10.0, 11.0],
+                vec![70.0, 80.0, 90.0, 100.0, 110.0],
+            ],
+            reaction_events: Some(vec![2, 1, 0, 1]),
+        };
+
+        assert_eq!(rev_trajectory, trajectory.rev_iter().collect());
     }
 }
