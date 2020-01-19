@@ -445,6 +445,7 @@ pub fn simulate_ext<'a>(
     DrivenTrajectory::new(sim, external_trajectory)
 }
 
+#[derive(Debug, Clone)]
 pub struct SimulationCoordinator<Rng: rand::Rng> {
     pub trajectory_len: f64,
     pub equilibration_time: f64,

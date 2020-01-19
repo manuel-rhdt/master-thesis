@@ -17,6 +17,8 @@ use gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
 use ndarray::{array, Array, Array1, Array2, ArrayView1, Axis};
+use rand::SeedableRng;
+use rand_pcg::Pcg64Mcg;
 use rayon;
 use rayon::prelude::*;
 use serde::Serialize;
@@ -65,15 +67,17 @@ fn conditional_likelihood(
 
 fn marginal_likelihood(
     traj_lengths: &[f64],
-    signals_pre: &[Trajectory<Vec<f64>, Vec<f64>, Vec<u32>>],
-    kdes: &[kde::NormalKernelDensityEstimate],
+    signals_pre: &[(
+        Trajectory<Vec<f64>, Vec<f64>, Vec<u32>>,
+        kde::NormalKernelDensityEstimate,
+    )],
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> Array1<f64> {
     let sig = coordinator.generate_signal().collect();
     let res = coordinator.generate_response(sig.iter()).collect();
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
-    for ((sig, kde), mut out) in signals_pre.iter().zip(kdes).zip(result.outer_iter_mut()) {
+    for ((sig, kde), ref mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
         check_abort_signal!(array![]);
         let logp = kde.pdf(res.iter().components()[0]).ln();
         for (ll, out) in log_likelihood(
@@ -82,7 +86,7 @@ fn marginal_likelihood(
             res.iter(),
             &coordinator.res_network,
         )
-        .zip(&mut out)
+        .zip(out)
         {
             *out = logp + ll;
         }
@@ -208,15 +212,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         })
         .map(|log_lh| (EntropyType::Conditional, log_lh));
 
-    let mut coordinator = conf.create_coordinator(seed_base);
-    let mut signals_pre = Vec::with_capacity(conf.marginal_entropy.num_signals);
-    let mut kdes = Vec::with_capacity(conf.marginal_entropy.num_signals);
-    for _ in 0..conf.marginal_entropy.num_signals {
-        check_abort_signal!();
-        let sig = coordinator.generate_signal().collect();
-        kdes.push(coordinator.equilibrate_respones_dist(sig.iter().components(), 1_000));
-        signals_pre.push(sig);
-    }
+    let coordinator = conf.create_coordinator(seed_base);
+    let before = std::time::Instant::now();
+    let signals_pre = (0..conf.marginal_entropy.num_signals)
+        .into_par_iter()
+        .map_with(coordinator, |coordinator, i| {
+            check_abort_signal!();
+            coordinator.rng = Pcg64Mcg::seed_from_u64(seed_base ^ i as u64);
+            let sig = coordinator.generate_signal().collect();
+            let kde = coordinator.equilibrate_respones_dist(sig.iter().components(), 1_000);
+            Ok((sig, kde))
+        })
+        .collect::<Result<Vec<_>, std::io::Error>>()?;
+    log::info!(
+        "timing: generate_signals: {:.2} s",
+        (std::time::Instant::now() - before).as_secs_f64()
+    );
 
     let me_chunks = (0..conf.marginal_entropy.num_responses)
         .into_par_iter()
@@ -227,7 +238,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let me = -marginal_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 &signals_pre,
-                &kdes,
                 &mut coordinator,
             );
             log::info!(
