@@ -23,7 +23,15 @@ use toml;
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-static RUNNING: AtomicBool = AtomicBool::new(true);
+static UNCAUGHT_SIGNAL: AtomicBool = AtomicBool::new(false);
+
+macro_rules! check_abort_signal {
+    () => {
+        if UNCAUGHT_SIGNAL.compare_and_swap(true, false, Ordering::SeqCst) {
+            panic!("Process received SIGINT or SIGTERM!");
+        }
+    };
+}
 
 fn conditional_likelihood(
     traj_lengths: &[f64],
@@ -34,9 +42,7 @@ fn conditional_likelihood(
     let sig = coordinator.generate_signal().collect();
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
-        if !RUNNING.load(Ordering::SeqCst) {
-            panic!("Process aborted");
-        }
+        check_abort_signal!();
         let res = coordinator.generate_response(sig.iter());
         for (ll, out) in log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(&mut out) {
             *out = ll;
@@ -55,9 +61,7 @@ fn marginal_likelihood(
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
     for (sig, mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
-        if !RUNNING.load(Ordering::SeqCst) {
-            panic!("Process aborted");
-        }
+        check_abort_signal!();
         for (ll, out) in log_likelihood(
             traj_lengths,
             sig.iter(),
@@ -107,7 +111,7 @@ Arguments:
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     ctrlc::set_handler(move || {
-        RUNNING.store(false, Ordering::SeqCst);
+        UNCAUGHT_SIGNAL.store(true, Ordering::SeqCst);
     })
     .expect("Error setting Ctrl-C handler");
 
@@ -180,11 +184,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
         });
 
+    check_abort_signal!();
     let mut coordinator = conf.create_coordinator(seed_base);
     let mut signals_pre = Vec::with_capacity(conf.marginal_entropy.num_signals);
     for _ in 0..conf.marginal_entropy.num_signals {
         signals_pre.push(coordinator.generate_signal().collect())
     }
+    check_abort_signal!();
 
     let me_chunks = (0..conf.marginal_entropy.num_responses)
         .into_par_iter()
@@ -204,11 +210,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ce_chunks
         .map(|(row, log_lh)| (EntropyType::Conditional, row, log_lh))
         .chain(me_chunks.map(|(row, log_lh)| (EntropyType::Marginal, row, log_lh)))
+        .panic_fuse()
         .try_for_each(|(entropy_type, _, log_lh)| -> std::io::Result<()> {
-            if !RUNNING.load(Ordering::SeqCst) {
-                return Err(std::io::Error::from(std::io::ErrorKind::Interrupted));
-            }
-
             let mut buffer = ryu::Buffer::new();
             let mut line = String::with_capacity(log_lh.dim() * 22);
             for &val in &log_lh {
