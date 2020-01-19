@@ -3,16 +3,18 @@ mod gillespie;
 mod likelihood;
 
 use std::env;
-use std::fs::{self, File};
+use std::fs::{File, OpenOptions};
 use std::io::prelude::*;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
 
 use configuration::{calculate_hash, create_dir_if_not_exists, Config};
 use gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
-use chrono::Local;
 use ndarray::{Array, Array1, Array2, ArrayView1, Axis};
-use ndarray_npy::WriteNpyExt;
 use rayon;
 use rayon::prelude::*;
 use serde::Serialize;
@@ -20,6 +22,8 @@ use toml;
 
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
+static RUNNING: AtomicBool = AtomicBool::new(true);
 
 fn conditional_likelihood(
     traj_lengths: &[f64],
@@ -30,6 +34,9 @@ fn conditional_likelihood(
     let sig = coordinator.generate_signal().collect();
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
+        if !RUNNING.load(Ordering::SeqCst) {
+            panic!("Process aborted");
+        }
         let res = coordinator.generate_response(sig.iter());
         for (ll, out) in log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(&mut out) {
             *out = ll;
@@ -48,6 +55,9 @@ fn marginal_likelihood(
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
     for (sig, mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
+        if !RUNNING.load(Ordering::SeqCst) {
+            panic!("Process aborted");
+        }
         for (ll, out) in log_likelihood(
             traj_lengths,
             sig.iter(),
@@ -96,7 +106,10 @@ Arguments:
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use std::os::unix::fs::OpenOptionsExt;
+    ctrlc::set_handler(move || {
+        RUNNING.store(false, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
 
     let args: Vec<String> = env::args().collect();
     let configuration_filename = match args.len() {
@@ -113,52 +126,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf: Config = toml::from_str(&contents)?;
 
     create_dir_if_not_exists(&conf.output)?;
-    let info_toml_path = &conf.output.join("info.toml");
+    let file_marginal = Mutex::new(
+        OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(conf.output.join("marginal_entropy.txt"))?,
+    );
+    let file_conditional = Mutex::new(
+        OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(conf.output.join("conditional_entropy.txt"))?,
+    );
+
+    let traj_lengths = Array::linspace(0.0, conf.length, conf.num_trajectory_lengths);
 
     let worker_name = env::var("GILLESPIE_WORKER_ID").ok();
 
-    match fs::OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .mode(0o444)
-        .open(info_toml_path)
-    {
-        Ok(mut config_file_copy) => write!(config_file_copy, "{}", contents)?,
-        Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-            if worker_name.is_none() {
-                panic!(
-                    "{:?} already exists!\n\
-                     to run multiple jobs in parallel set the environment \
-                     variable GILLESPIE_WORKER_ID.",
-                    info_toml_path
-                );
-            }
-
-            // sleep a little so the other workers have time to write the info.toml
-            std::thread::sleep(std::time::Duration::from_secs(1));
-
-            let mut info_toml = File::open(info_toml_path)?;
-            let mut contents = String::new();
-            info_toml.read_to_string(&mut contents)?;
-            let other_conf: Config = toml::from_str(&contents)?;
-
-            if other_conf == conf {
-                println!("configuration.toml matches existing info.toml");
-            } else {
-                panic!("{:?} does not match configuration.toml", info_toml_path);
-            }
-        }
-        Err(other) => return Err(other.into()),
-    }
-
-    let worker_dir = &conf
-        .output
-        .join(&worker_name.as_deref().unwrap_or("default"));
-    fs::create_dir(worker_dir)?;
-    let mut worker_toml = fs::File::create(worker_dir.join("worker.toml"))?;
     let worker_info = WorkerInfo {
         hostname: env::var("HOSTNAME").ok(),
-        start_time: Local::now()
+        worker_id: worker_name.clone(),
+        start_time: chrono::Local::now()
             .to_rfc3339()
             .parse()
             .expect("could not parse current time"),
@@ -169,25 +157,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             version: env!("VERGEN_SEMVER"),
         },
     };
-    write!(worker_toml, "{}", toml::to_string_pretty(&worker_info)?)?;
+    write!(
+        File::create(conf.output.join("worker.toml"))?,
+        "{}",
+        toml::to_string_pretty(&worker_info)?
+    )?;
 
     let seed_base = conf.get_relevant_hash() ^ calculate_hash(&worker_name);
-
-    let traj_lengths = Array::linspace(0.0, conf.length, 2000);
 
     let ce_chunks = (0..conf.conditional_entropy.num_signals)
         .into_par_iter()
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0xabcd_abcd;
             let mut coordinator = conf.create_coordinator(seed);
-            -conditional_likelihood(
-                traj_lengths.as_slice().unwrap(),
-                conf.conditional_entropy.responses_per_signal,
-                &mut coordinator,
+            (
+                num,
+                -conditional_likelihood(
+                    traj_lengths.as_slice().unwrap(),
+                    conf.conditional_entropy.responses_per_signal,
+                    &mut coordinator,
+                ),
             )
-        })
-        .chunks(conf.batch_size)
-        .enumerate();
+        });
 
     let mut coordinator = conf.create_coordinator(seed_base);
     let mut signals_pre = Vec::with_capacity(conf.marginal_entropy.num_signals);
@@ -200,40 +191,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0x1234_1234;
             let mut coordinator = conf.create_coordinator(seed);
-            -marginal_likelihood(
-                traj_lengths.as_slice().unwrap(),
-                &signals_pre,
-                &mut coordinator,
+            (
+                num,
+                -marginal_likelihood(
+                    traj_lengths.as_slice().unwrap(),
+                    &signals_pre,
+                    &mut coordinator,
+                ),
             )
-        })
-        .chunks(conf.batch_size)
-        .enumerate();
+        });
 
     ce_chunks
-        .map(|(chunk_num, log_lh)| (EntropyType::Conditional, chunk_num, log_lh))
-        .chain(me_chunks.map(|(chunk_num, log_lh)| (EntropyType::Marginal, chunk_num, log_lh)))
-        .for_each(|(entropy_type, chunk_num, log_lh)| {
-            let mut array = Array2::zeros((conf.batch_size, traj_lengths.len()));
-            for (mut row, ll) in array.outer_iter_mut().zip(log_lh.iter()) {
-                row.assign(ll);
+        .map(|(row, log_lh)| (EntropyType::Conditional, row, log_lh))
+        .chain(me_chunks.map(|(row, log_lh)| (EntropyType::Marginal, row, log_lh)))
+        .try_for_each(|(entropy_type, _, log_lh)| -> std::io::Result<()> {
+            if !RUNNING.load(Ordering::SeqCst) {
+                return Err(std::io::Error::from(std::io::ErrorKind::Interrupted));
             }
 
-            let filename = match entropy_type {
-                EntropyType::Conditional => format!("ce-{:03}.npy", chunk_num),
-                EntropyType::Marginal => format!("me-{:03}.npy", chunk_num),
+            let mut buffer = ryu::Buffer::new();
+            let mut line = String::with_capacity(log_lh.dim() * 22);
+            for &val in &log_lh {
+                line += buffer.format(val);
+                line += " ";
+            }
+            let mut file = match entropy_type {
+                EntropyType::Conditional => file_conditional.lock().unwrap(),
+                EntropyType::Marginal => file_marginal.lock().unwrap(),
             };
-
-            if let Ok(out_file) = fs::OpenOptions::new()
-                .create_new(true)
-                .write(true)
-                .mode(0o444)
-                .open(worker_dir.join(&filename))
-            {
-                array.write_npy(out_file).expect("could not write npy");
-            } else {
-                panic!("could not write chunk {:?}", &filename);
-            }
-        });
+            writeln!(file, "{}", line)?;
+            Ok(())
+        })?;
 
     Ok(())
 }
@@ -241,6 +229,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[derive(Debug, Clone, Serialize)]
 struct WorkerInfo {
     hostname: Option<String>,
+    worker_id: Option<String>,
     start_time: toml::value::Datetime,
     version: VersionInfo,
 }

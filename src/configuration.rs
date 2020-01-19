@@ -20,6 +20,7 @@ pub struct Config {
     pub output: PathBuf,
     pub batch_size: usize,
     pub length: f64,
+    pub num_trajectory_lengths: usize,
     pub conditional_entropy: ConfigConditionalEntropy,
     pub marginal_entropy: ConfigMarginalEntropy,
     pub signal: ConfigReactionNetwork,
@@ -31,6 +32,7 @@ impl Config {
         self.conditional_entropy.hash(hasher);
         self.marginal_entropy.hash(hasher);
         self.length.to_bits().hash(hasher);
+        self.num_trajectory_lengths.hash(hasher);
         self.signal.hash(hasher);
         self.response.hash(hasher);
     }
