@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
 use rand::{self, SeedableRng};
-use rand_chacha::ChaChaRng;
+use rand_pcg::Pcg64Mcg;
 use serde::Deserialize;
 
 pub fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
@@ -41,8 +41,8 @@ impl Config {
         s.finish()
     }
 
-    pub fn create_coordinator(&self, seed: u64) -> SimulationCoordinator<ChaChaRng> {
-        let rng = ChaChaRng::seed_from_u64(seed);
+    pub fn create_coordinator(&self, seed: u64) -> SimulationCoordinator<Pcg64Mcg> {
+        let rng = Pcg64Mcg::seed_from_u64(seed);
         SimulationCoordinator {
             trajectory_len: self.length,
 
