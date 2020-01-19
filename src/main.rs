@@ -174,13 +174,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0xabcd_abcd;
             let mut coordinator = conf.create_coordinator(seed);
-            (
-                num,
-                -conditional_likelihood(
-                    traj_lengths.as_slice().unwrap(),
-                    conf.conditional_entropy.responses_per_signal,
-                    &mut coordinator,
-                ),
+            -conditional_likelihood(
+                traj_lengths.as_slice().unwrap(),
+                conf.conditional_entropy.responses_per_signal,
+                &mut coordinator,
             )
         });
 
@@ -197,21 +194,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0x1234_1234;
             let mut coordinator = conf.create_coordinator(seed);
-            (
-                num,
-                -marginal_likelihood(
-                    traj_lengths.as_slice().unwrap(),
-                    &signals_pre,
-                    &mut coordinator,
-                ),
+            -marginal_likelihood(
+                traj_lengths.as_slice().unwrap(),
+                &signals_pre,
+                &mut coordinator,
             )
         });
 
     ce_chunks
-        .map(|(row, log_lh)| (EntropyType::Conditional, row, log_lh))
-        .chain(me_chunks.map(|(row, log_lh)| (EntropyType::Marginal, row, log_lh)))
+        .map(|log_lh| (EntropyType::Conditional, log_lh))
+        .chain(me_chunks.map(|log_lh| (EntropyType::Marginal, log_lh)))
         .panic_fuse()
-        .try_for_each(|(entropy_type, _, log_lh)| -> std::io::Result<()> {
+        .try_for_each(|(entropy_type, log_lh)| -> std::io::Result<()> {
             let mut buffer = ryu::Buffer::new();
             let mut line = String::with_capacity(log_lh.dim() * 22);
             for &val in &log_lh {
