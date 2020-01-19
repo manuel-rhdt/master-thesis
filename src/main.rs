@@ -10,6 +10,7 @@ use configuration::{calculate_hash, create_dir_if_not_exists, Config};
 use gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
+use chrono::Local;
 use ndarray::{Array, Array1, Array2, ArrayView1, Axis};
 use ndarray_npy::WriteNpyExt;
 use rayon;
@@ -156,11 +157,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::create_dir(worker_dir)?;
     let mut worker_toml = fs::File::create(worker_dir.join("worker.toml"))?;
     let worker_info = WorkerInfo {
-        build_time: env!("VERGEN_BUILD_TIMESTAMP").parse().ok(),
-        commit_sha: env!("VERGEN_SHA"),
-        commit_date: env!("VERGEN_COMMIT_DATE").parse().ok(),
-        version: env!("VERGEN_SEMVER"),
         hostname: env::var("HOSTNAME").ok(),
+        start_time: Local::now()
+            .to_rfc3339()
+            .parse()
+            .expect("could not parse current time"),
+        version: VersionInfo {
+            build_time: env!("VERGEN_BUILD_TIMESTAMP").parse().ok(),
+            commit_sha: env!("VERGEN_SHA"),
+            commit_date: env!("VERGEN_COMMIT_DATE").parse().ok(),
+            version: env!("VERGEN_SEMVER"),
+        },
     };
     write!(worker_toml, "{}", toml::to_string_pretty(&worker_info)?)?;
 
@@ -234,6 +241,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[derive(Debug, Clone, Serialize)]
 struct WorkerInfo {
     hostname: Option<String>,
+    start_time: toml::value::Datetime,
+    version: VersionInfo,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct VersionInfo {
     commit_sha: &'static str,
     commit_date: Option<toml::value::Datetime>,
     version: &'static str,
