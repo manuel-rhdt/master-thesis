@@ -7,7 +7,8 @@ use std::path::PathBuf;
 
 use rand::{self, SeedableRng};
 use rand_pcg::Pcg64Mcg;
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
+use tera::Tera;
 
 pub fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
@@ -15,7 +16,7 @@ pub fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
     s.finish()
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
     pub output: PathBuf,
     pub batch_size: usize,
@@ -56,19 +57,19 @@ impl Config {
     }
 }
 
-#[derive(Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ConfigConditionalEntropy {
     pub num_signals: usize,
     pub responses_per_signal: usize,
 }
 
-#[derive(Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ConfigMarginalEntropy {
     pub num_signals: usize,
     pub num_responses: usize,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigReactionNetwork {
     pub initial: f64,
     pub components: Vec<String>,
@@ -146,7 +147,7 @@ impl ConfigReactionNetwork {
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Reaction {
     pub k: f64,
     pub reactants: Vec<String>,
@@ -175,4 +176,22 @@ pub fn create_dir_if_not_exists<P: AsRef<std::path::Path>>(path: P) -> std::io::
         Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => Ok(()),
         other => other,
     }
+}
+
+pub fn parse_configuration(
+    path: impl AsRef<std::path::Path>,
+) -> Result<Config, Box<dyn std::error::Error>> {
+    use std::io::Read;
+
+    let mut config_file = std::fs::File::open(path)?;
+    let mut contents = String::new();
+    config_file.read_to_string(&mut contents)?;
+
+    let mut context = tera::Context::new();
+    for (key, value) in std::env::vars() {
+        context.insert(key, &value);
+    }
+    let contents = Tera::one_off(&contents, &context, false)?;
+
+    Ok(toml::from_str(&contents)?)
 }

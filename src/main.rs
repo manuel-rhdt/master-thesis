@@ -11,7 +11,7 @@ use std::sync::{
     Mutex,
 };
 
-use configuration::{calculate_hash, create_dir_if_not_exists, Config};
+use configuration::{calculate_hash, create_dir_if_not_exists, parse_configuration, Config};
 use gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
@@ -132,11 +132,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         2 => &args[1],
         _ => print_help(),
     };
-
-    let mut config_file = File::open(configuration_filename)?;
-    let mut contents = String::new();
-    config_file.read_to_string(&mut contents)?;
-    let conf: Config = toml::from_str(&contents)?;
+    let conf = parse_configuration(configuration_filename)?;
 
     create_dir_if_not_exists(&conf.output)?;
     let file_marginal = Mutex::new(
@@ -173,6 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             commit_date: env!("VERGEN_COMMIT_DATE").parse().ok(),
             version: env!("VERGEN_SEMVER"),
         },
+        configuration: conf.clone(),
     };
     write!(
         OpenOptions::new()
@@ -275,6 +272,7 @@ struct WorkerInfo {
     end_time: Option<toml::value::Datetime>,
     error: Option<String>,
     version: VersionInfo,
+    configuration: Config,
 }
 
 #[derive(Debug, Clone, Serialize)]
