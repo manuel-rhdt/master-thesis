@@ -1,5 +1,6 @@
 mod configuration;
 mod gillespie;
+mod kde;
 mod likelihood;
 
 use std::env;
@@ -47,12 +48,16 @@ fn conditional_likelihood(
 ) -> Array1<f64> {
     let res_network = coordinator.res_network.clone();
     let sig = coordinator.generate_signal().collect();
+
+    let kde = coordinator.equilibrate_respones_dist(sig.iter().components(), 1000);
+
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
         check_abort_signal!(array![]);
         let res = coordinator.generate_response(sig.iter());
+        let log_p0 = kde.pdf(res.components()[0]).ln();
         for (ll, out) in log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(&mut out) {
-            *out = ll;
+            *out = log_p0 + ll;
         }
     }
     result.mean_axis(Axis(0)).unwrap()
@@ -61,14 +66,16 @@ fn conditional_likelihood(
 fn marginal_likelihood(
     traj_lengths: &[f64],
     signals_pre: &[Trajectory<Vec<f64>, Vec<f64>, Vec<u32>>],
+    kdes: &[kde::NormalKernelDensityEstimate],
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> Array1<f64> {
     let sig = coordinator.generate_signal().collect();
     let res = coordinator.generate_response(sig.iter()).collect();
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
-    for (sig, mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
+    for ((sig, kde), mut out) in signals_pre.iter().zip(kdes).zip(result.outer_iter_mut()) {
         check_abort_signal!(array![]);
+        let logp = kde.pdf(res.iter().components()[0]).ln();
         for (ll, out) in log_likelihood(
             traj_lengths,
             sig.iter(),
@@ -77,7 +84,7 @@ fn marginal_likelihood(
         )
         .zip(&mut out)
         {
-            *out = ll;
+            *out = logp + ll;
         }
     }
 
@@ -203,9 +210,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut coordinator = conf.create_coordinator(seed_base);
     let mut signals_pre = Vec::with_capacity(conf.marginal_entropy.num_signals);
+    let mut kdes = Vec::with_capacity(conf.marginal_entropy.num_signals);
     for _ in 0..conf.marginal_entropy.num_signals {
         check_abort_signal!();
-        signals_pre.push(coordinator.generate_signal().collect())
+        let sig = coordinator.generate_signal().collect();
+        kdes.push(coordinator.equilibrate_respones_dist(sig.iter().components(), 1_000));
+        signals_pre.push(sig);
     }
 
     let me_chunks = (0..conf.marginal_entropy.num_responses)
@@ -217,6 +227,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let me = -marginal_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 &signals_pre,
+                &kdes,
                 &mut coordinator,
             );
             log::info!(

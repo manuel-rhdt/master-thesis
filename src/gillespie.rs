@@ -1,5 +1,7 @@
 use std;
 
+use crate::kde::NormalKernelDensityEstimate;
+
 use arrayvec::ArrayVec;
 use rand;
 
@@ -95,6 +97,10 @@ pub trait TrajectoryIterator {
         } else {
             None
         }
+    }
+
+    fn exhaust(&mut self) {
+        while self.next().is_some() {}
     }
 
     fn cap(self, cap: f64) -> CappedTrajectory<Self>
@@ -441,6 +447,7 @@ pub fn simulate_ext<'a>(
 
 pub struct SimulationCoordinator<Rng: rand::Rng> {
     pub trajectory_len: f64,
+    pub equilibration_time: f64,
 
     pub sig_network: ReactionNetwork,
     pub res_network: ReactionNetwork,
@@ -449,26 +456,37 @@ pub struct SimulationCoordinator<Rng: rand::Rng> {
 }
 
 impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
-    pub fn get_signal_distribution(&mut self) -> f64 {
+    pub fn equilibrate_signal(&mut self) -> f64 {
         let mut traj =
-            simulate(&[100.0], &self.sig_network, &mut self.rng).cap(self.trajectory_len);
-        while traj.next().is_some() {}
+            simulate(&[100.0], &self.sig_network, &mut self.rng).cap(self.equilibration_time);
+        traj.exhaust();
         traj.components()[0]
     }
 
-    pub fn get_response_distribution(&mut self, sig_initial: &[Count]) -> f64 {
+    pub fn equilibrate_response(&mut self, sig_initial: &[Count]) -> f64 {
         let sig = simulate(sig_initial, &self.sig_network, &mut self.rng)
-            .cap(self.trajectory_len)
+            .cap(self.equilibration_time)
             .collect();
         let mut res = simulate_ext(&[100.0], &self.res_network, sig.rev_iter(), &mut self.rng)
-            .cap(self.trajectory_len);
-        while res.next().is_some() {}
+            .cap(self.equilibration_time);
+        res.exhaust();
         res.components()[0]
+    }
+
+    pub fn equilibrate_respones_dist(
+        &mut self,
+        sig_initial: &[Count],
+        num_samples: usize,
+    ) -> NormalKernelDensityEstimate {
+        let data = (0..num_samples)
+            .map(|_| self.equilibrate_response(sig_initial))
+            .collect();
+        NormalKernelDensityEstimate::new(data)
     }
 
     pub fn generate_signal(&mut self) -> impl '_ + TrajectoryIterator<Ex = u32> {
         simulate(
-            &[self.get_signal_distribution()],
+            &[self.equilibrate_signal()],
             &self.sig_network,
             &mut self.rng,
         )
@@ -480,7 +498,7 @@ impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
         sig: impl 'a + TrajectoryIterator,
     ) -> impl 'a + TrajectoryIterator<Ex = u32> {
         simulate_ext(
-            &[self.get_response_distribution(sig.components())],
+            &[self.equilibrate_response(sig.components())],
             &self.res_network,
             sig,
             &mut self.rng,

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 use rand::{self, SeedableRng};
 use rand_pcg::Pcg64Mcg;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use tera::Tera;
 
 pub fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
@@ -45,14 +45,14 @@ impl Config {
     }
 
     pub fn create_coordinator(&self, seed: u64) -> SimulationCoordinator<Pcg64Mcg> {
-        let rng = Pcg64Mcg::seed_from_u64(seed);
         SimulationCoordinator {
             trajectory_len: self.length,
+            equilibration_time: self.length,
 
             sig_network: self.signal.to_reaction_network(),
             res_network: self.response.to_reaction_network(),
 
-            rng,
+            rng: Pcg64Mcg::seed_from_u64(seed),
         }
     }
 }
@@ -72,6 +72,7 @@ pub struct ConfigMarginalEntropy {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigReactionNetwork {
     pub initial: f64,
+    pub mean: f64,
     pub components: Vec<String>,
     pub reactions: Vec<Reaction>,
 }
@@ -79,6 +80,7 @@ pub struct ConfigReactionNetwork {
 impl PartialEq for ConfigReactionNetwork {
     fn eq(&self, right: &ConfigReactionNetwork) -> bool {
         self.initial.to_bits() == right.initial.to_bits()
+            && self.mean.to_bits() == right.mean.to_bits()
             && self.components == right.components
             && self.reactions == right.reactions
     }
@@ -87,6 +89,7 @@ impl PartialEq for ConfigReactionNetwork {
 impl Hash for ConfigReactionNetwork {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.initial.to_bits().hash(state);
+        self.mean.to_bits().hash(state);
         self.components.hash(state);
         self.reactions.hash(state);
     }

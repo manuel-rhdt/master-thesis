@@ -19,6 +19,8 @@ ctrlc = { version = "3.0", features = ["termination"] }
 log = "0.4.0"
 env_logger = "0.7.1"
 tera = { version = "1", default-features = false }
+ndarray-stats = "0.3.0"
+noisy_float = "0.1.11"
 
 [profile.dev]
 opt-level = 0
