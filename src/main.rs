@@ -14,7 +14,7 @@ use configuration::{calculate_hash, create_dir_if_not_exists, Config};
 use gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
-use ndarray::{Array, Array1, Array2, ArrayView1, Axis};
+use ndarray::{array, Array, Array1, Array2, ArrayView1, Axis};
 use rayon;
 use rayon::prelude::*;
 use serde::Serialize;
@@ -27,8 +27,14 @@ static UNCAUGHT_SIGNAL: AtomicBool = AtomicBool::new(false);
 
 macro_rules! check_abort_signal {
     () => {
-        if UNCAUGHT_SIGNAL.compare_and_swap(true, false, Ordering::SeqCst) {
-            panic!("Process received SIGINT or SIGTERM!");
+        check_abort_signal!(Err(
+            std::io::Error::from(std::io::ErrorKind::Interrupted).into()
+        ));
+    };
+
+    ($default:expr) => {
+        if UNCAUGHT_SIGNAL.load(Ordering::SeqCst) {
+            return $default;
         }
     };
 }
@@ -42,7 +48,7 @@ fn conditional_likelihood(
     let sig = coordinator.generate_signal().collect();
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
-        check_abort_signal!();
+        check_abort_signal!(array![]);
         let res = coordinator.generate_response(sig.iter());
         for (ll, out) in log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(&mut out) {
             *out = ll;
@@ -61,7 +67,7 @@ fn marginal_likelihood(
 
     let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
     for (sig, mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
-        check_abort_signal!();
+        check_abort_signal!(array![]);
         for (ll, out) in log_likelihood(
             traj_lengths,
             sig.iter(),
@@ -115,6 +121,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     })
     .expect("Error setting Ctrl-C handler");
 
+    env_logger::init();
+
     let args: Vec<String> = env::args().collect();
     let configuration_filename = match args.len() {
         // no arguments passed
@@ -147,13 +155,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let worker_name = env::var("GILLESPIE_WORKER_ID").ok();
 
-    let worker_info = WorkerInfo {
+    let mut worker_info = WorkerInfo {
         hostname: env::var("HOSTNAME").ok(),
         worker_id: worker_name.clone(),
         start_time: chrono::Local::now()
             .to_rfc3339()
             .parse()
             .expect("could not parse current time"),
+        end_time: None,
         version: VersionInfo {
             build_time: env!("VERGEN_BUILD_TIMESTAMP").parse().ok(),
             commit_sha: env!("VERGEN_SHA"),
@@ -174,38 +183,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0xabcd_abcd;
             let mut coordinator = conf.create_coordinator(seed);
-            -conditional_likelihood(
+            let before = std::time::Instant::now();
+            let ce = -conditional_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 conf.conditional_entropy.responses_per_signal,
                 &mut coordinator,
-            )
+            );
+            log::info!(
+                "timing: conditional_entropy: {:.2} s",
+                (std::time::Instant::now() - before).as_secs_f64()
+            );
+            ce
         });
 
-    check_abort_signal!();
     let mut coordinator = conf.create_coordinator(seed_base);
     let mut signals_pre = Vec::with_capacity(conf.marginal_entropy.num_signals);
     for _ in 0..conf.marginal_entropy.num_signals {
+        check_abort_signal!();
         signals_pre.push(coordinator.generate_signal().collect())
     }
-    check_abort_signal!();
 
     let me_chunks = (0..conf.marginal_entropy.num_responses)
         .into_par_iter()
         .map(|num| {
             let seed = num as u64 ^ seed_base ^ 0x1234_1234;
             let mut coordinator = conf.create_coordinator(seed);
-            -marginal_likelihood(
+            let before = std::time::Instant::now();
+            let me = -marginal_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 &signals_pre,
                 &mut coordinator,
-            )
+            );
+            log::info!(
+                "timing: marginal_entropy: {:.2} s",
+                (std::time::Instant::now() - before).as_secs_f64()
+            );
+            me
         });
 
     ce_chunks
         .map(|log_lh| (EntropyType::Conditional, log_lh))
         .chain(me_chunks.map(|log_lh| (EntropyType::Marginal, log_lh)))
-        .panic_fuse()
         .try_for_each(|(entropy_type, log_lh)| -> std::io::Result<()> {
+            check_abort_signal!();
             let mut buffer = ryu::Buffer::new();
             let mut line = String::with_capacity(log_lh.dim() * 22);
             for &val in &log_lh {
@@ -220,6 +240,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(())
         })?;
 
+    worker_info.end_time = Some(
+        chrono::Local::now()
+            .to_rfc3339()
+            .parse()
+            .expect("could not parse current time"),
+    );
+    write!(
+        File::create(conf.output.join("worker.toml"))?,
+        "{}",
+        toml::to_string_pretty(&worker_info)?
+    )?;
+
     Ok(())
 }
 
@@ -228,6 +260,7 @@ struct WorkerInfo {
     hostname: Option<String>,
     worker_id: Option<String>,
     start_time: toml::value::Datetime,
+    end_time: Option<toml::value::Datetime>,
     version: VersionInfo,
 }
 
