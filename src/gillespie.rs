@@ -450,6 +450,9 @@ pub struct SimulationCoordinator<Rng: rand::Rng> {
     pub trajectory_len: f64,
     pub equilibration_time: f64,
 
+    pub response_mean: f64,
+    pub signal_mean: f64,
+
     pub sig_network: ReactionNetwork,
     pub res_network: ReactionNetwork,
 
@@ -458,8 +461,8 @@ pub struct SimulationCoordinator<Rng: rand::Rng> {
 
 impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
     pub fn equilibrate_signal(&mut self) -> f64 {
-        let mut traj =
-            simulate(&[100.0], &self.sig_network, &mut self.rng).cap(self.equilibration_time);
+        let mut traj = simulate(&[self.signal_mean], &self.sig_network, &mut self.rng)
+            .cap(self.equilibration_time);
         traj.exhaust();
         traj.components()[0]
     }
@@ -468,8 +471,13 @@ impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
         let sig = simulate(sig_initial, &self.sig_network, &mut self.rng)
             .cap(self.equilibration_time)
             .collect();
-        let mut res = simulate_ext(&[100.0], &self.res_network, sig.rev_iter(), &mut self.rng)
-            .cap(self.equilibration_time);
+        let mut res = simulate_ext(
+            &[self.response_mean],
+            &self.res_network,
+            sig.rev_iter(),
+            &mut self.rng,
+        )
+        .cap(self.equilibration_time);
         res.exhaust();
         res.components()[0]
     }

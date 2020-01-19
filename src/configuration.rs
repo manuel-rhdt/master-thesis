@@ -49,6 +49,9 @@ impl Config {
             trajectory_len: self.length,
             equilibration_time: self.length,
 
+            signal_mean: self.signal.mean,
+            response_mean: self.response.mean,
+
             sig_network: self.signal.to_reaction_network(),
             res_network: self.response.to_reaction_network(),
 
