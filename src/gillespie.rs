@@ -314,26 +314,26 @@ impl<'a, Rng: rand::Rng> TrajectoryIterator for SimulatedTrajectory<'a, Rng> {
 pub struct DrivenTrajectory<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> {
     external_trajectory: ExtTraj,
     sim: SimulatedTrajectory<'a, Rng>,
-    remaining_constant_time: f64,
+    remaining_constant_signal_time: f64,
 }
 
 impl<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> DrivenTrajectory<'a, Rng, ExtTraj> {
     fn new(sim: SimulatedTrajectory<'a, Rng>, mut external_trajectory: ExtTraj) -> Self {
-        let remaining_constant_time = external_trajectory
+        let remaining_constant_signal_time = external_trajectory
             .advance()
             .map(|event| event.time)
             .unwrap_or(std::f64::INFINITY);
         DrivenTrajectory {
             sim,
             external_trajectory,
-            remaining_constant_time,
+            remaining_constant_signal_time,
         }
     }
 
     fn step(&mut self) -> (f64, bool) {
         let sim_step = self.sim.time_step();
-        if self.remaining_constant_time < sim_step {
-            let step = self.remaining_constant_time;
+        if self.remaining_constant_signal_time < sim_step {
+            let step = self.remaining_constant_signal_time;
 
             self.sim.log_rand_var -= step * self.sim.total_propensity();
 
@@ -341,14 +341,14 @@ impl<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> DrivenTrajectory<'a, Rng, 
             let components = self.external_trajectory.components();
             self.sim.components[..components.len()].copy_from_slice(components);
 
-            self.remaining_constant_time = self
+            self.remaining_constant_signal_time = self
                 .external_trajectory
                 .advance()
                 .map(|event| event.time)
                 .unwrap_or(std::f64::INFINITY);
             (step, false)
         } else {
-            self.remaining_constant_time -= sim_step;
+            self.remaining_constant_signal_time -= sim_step;
             (sim_step, true)
         }
     }
