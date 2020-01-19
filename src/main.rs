@@ -3,8 +3,9 @@ mod gillespie;
 mod likelihood;
 
 use std::env;
-use std::fs::{File, OpenOptions};
+use std::fs::{File, OpenOptions, Permissions};
 use std::io::prelude::*;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Mutex,
@@ -142,12 +143,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         OpenOptions::new()
             .create_new(true)
             .write(true)
+            .mode(0o444)
             .open(conf.output.join("marginal_entropy.txt"))?,
     );
     let file_conditional = Mutex::new(
         OpenOptions::new()
             .create_new(true)
             .write(true)
+            .mode(0o444)
             .open(conf.output.join("conditional_entropy.txt"))?,
     );
 
@@ -163,6 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .parse()
             .expect("could not parse current time"),
         end_time: None,
+        error: None,
         version: VersionInfo {
             build_time: env!("VERGEN_BUILD_TIMESTAMP").parse().ok(),
             commit_sha: env!("VERGEN_SHA"),
@@ -171,7 +175,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         },
     };
     write!(
-        File::create(conf.output.join("worker.toml"))?,
+        OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(conf.output.join("worker.toml"))?,
         "{}",
         toml::to_string_pretty(&worker_info)?
     )?;
@@ -194,7 +201,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 (std::time::Instant::now() - before).as_secs_f64()
             );
             ce
-        });
+        })
+        .map(|log_lh| (EntropyType::Conditional, log_lh));
 
     let mut coordinator = conf.create_coordinator(seed_base);
     let mut signals_pre = Vec::with_capacity(conf.marginal_entropy.num_signals);
@@ -219,11 +227,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 (std::time::Instant::now() - before).as_secs_f64()
             );
             me
-        });
+        })
+        .map(|log_lh| (EntropyType::Marginal, log_lh));
 
-    ce_chunks
-        .map(|log_lh| (EntropyType::Conditional, log_lh))
-        .chain(me_chunks.map(|log_lh| (EntropyType::Marginal, log_lh)))
+    match ce_chunks
+        .chain(me_chunks)
         .try_for_each(|(entropy_type, log_lh)| -> std::io::Result<()> {
             check_abort_signal!();
             let mut buffer = ryu::Buffer::new();
@@ -238,7 +246,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             writeln!(file, "{}", line)?;
             Ok(())
-        })?;
+        }) {
+        Ok(()) => {}
+        Err(error) => {
+            log::error!("Error: {:?}", error);
+            worker_info.error = Some(format!("{}", error))
+        }
+    }
 
     worker_info.end_time = Some(
         chrono::Local::now()
@@ -246,11 +260,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .parse()
             .expect("could not parse current time"),
     );
-    write!(
-        File::create(conf.output.join("worker.toml"))?,
-        "{}",
-        toml::to_string_pretty(&worker_info)?
-    )?;
+    let mut worker_toml = File::create(conf.output.join("worker.toml"))?;
+    write!(worker_toml, "{}", toml::to_string_pretty(&worker_info)?)?;
+    worker_toml.set_permissions(Permissions::from_mode(0o444))?;
 
     Ok(())
 }
@@ -261,6 +273,7 @@ struct WorkerInfo {
     worker_id: Option<String>,
     start_time: toml::value::Datetime,
     end_time: Option<toml::value::Datetime>,
+    error: Option<String>,
     version: VersionInfo,
 }
 
