@@ -17,6 +17,7 @@ use gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
 use ndarray::{array, Array, Array1, Array2, Axis};
+use netcdf;
 use rand::SeedableRng;
 use rand_pcg::Pcg64Mcg;
 use rayon;
@@ -154,24 +155,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conf = parse_configuration(configuration_filename)?;
 
     create_dir_if_not_exists(&conf.output)?;
-    let file_marginal = Mutex::new(
-        OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .mode(0o444)
-            .open(conf.output.join("marginal_entropy.txt"))?,
-    );
-    writeln!(file_marginal.lock().unwrap(), "# marginal entropies")?;
-    let file_conditional = Mutex::new(
-        OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .mode(0o444)
-            .open(conf.output.join("conditional_entropy.txt"))?,
-    );
-    writeln!(file_conditional.lock().unwrap(), "# conditional entropies")?;
-
-    let traj_lengths = Array::linspace(0.0, conf.length, conf.num_trajectory_lengths);
 
     let worker_name = env::var("GILLESPIE_WORKER_ID").ok();
 
@@ -201,6 +184,49 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         toml::to_string_pretty(&worker_info)?
     )?;
 
+    let traj_lengths = Array::linspace(0.0, conf.length, conf.num_trajectory_lengths);
+
+    let mut output_file = netcdf::create(conf.output.join("data.nc"))?;
+    output_file.add_dimension("time", conf.num_trajectory_lengths)?;
+    output_file.add_attribute("institution", "AMOLF, Amsterdam, NL")?;
+    output_file.add_attribute(
+        "source",
+        format!(
+            "`accelerate` (version {}, commit {}) gillespie simulator",
+            env!("VERGEN_SEMVER"),
+            env!("VERGEN_SHA")
+        ),
+    )?;
+    output_file.add_attribute("p0_samples", conf.p0_samples.unwrap_or(1000) as u32)?;
+    let mut time_var = output_file.add_variable::<f64>("time", &["time"])?;
+    time_var.put_values(traj_lengths.as_slice().unwrap(), None, None)?;
+
+    output_file.add_dimension("category", 2)?;
+    let mut cat_var = output_file.add_string_variable("category", &["category"])?;
+    cat_var.put_string("log likelihood", Some(&[0]))?;
+    cat_var.put_string("error", Some(&[1]))?;
+
+    output_file.add_dimension("ce_num_signals", conf.conditional_entropy.num_signals)?;
+    output_file.add_dimension("me_num_responses", conf.marginal_entropy.num_responses)?;
+
+    let mut ce_var = output_file.add_variable::<f64>(
+        "conditional_entropy",
+        &["ce_num_signals", "category", "time"],
+    )?;
+    ce_var.set_fill_value(std::f64::NAN)?;
+    ce_var.add_attribute("units", "nats")?;
+    ce_var.add_attribute("num_signals", conf.conditional_entropy.num_signals as u32)?;
+
+    let mut me_var = output_file.add_variable::<f64>(
+        "marginal_entropy",
+        &["me_num_responses", "category", "time"],
+    )?;
+    me_var.set_fill_value(std::f64::NAN)?;
+    me_var.add_attribute("units", "nats")?;
+    me_var.add_attribute("num_responses", conf.marginal_entropy.num_responses as u32)?;
+
+    let output_file = Mutex::new(output_file);
+
     let seed_base = conf.get_relevant_hash() ^ calculate_hash(&worker_name);
 
     let ce_chunks = (0..conf.conditional_entropy.num_signals)
@@ -218,7 +244,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "timing: conditional_entropy: {:.2} s",
                 (std::time::Instant::now() - before).as_secs_f64()
             );
-            (-ce, ce_err)
+            (num, -ce, ce_err)
         })
         .map(|log_lh| (EntropyType::Conditional, log_lh));
 
@@ -254,33 +280,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "timing: marginal_entropy: {:.2} s",
                 (std::time::Instant::now() - before).as_secs_f64()
             );
-            (-me, me_err)
+            (num, -me, me_err)
         })
         .map(|log_lh| (EntropyType::Marginal, log_lh));
 
     match ce_chunks.chain(me_chunks).try_for_each(
-        |(entropy_type, (log_lh, log_lh_err))| -> std::io::Result<()> {
+        |(entropy_type, (row, log_lh, log_lh_err))| -> std::io::Result<()> {
             check_abort_signal!();
-            let mut buffer = ryu::Buffer::new();
-            let mut line1 = String::with_capacity(log_lh.dim() * 22);
-            for &val in &log_lh {
-                line1 += buffer.format(val);
-                line1 += " ";
-            }
-            let mut line2 = String::with_capacity(log_lh.dim() * 22);
-            for &val in &log_lh_err {
-                line2 += buffer.format(val);
-                line2 += " ";
-            }
-            let mut file = match entropy_type {
-                EntropyType::Conditional => file_conditional.lock().unwrap(),
-                EntropyType::Marginal => file_marginal.lock().unwrap(),
+            let mut file = output_file.lock().unwrap();
+            let mut var = match entropy_type {
+                EntropyType::Conditional => file.variable_mut("conditional_entropy").unwrap(),
+                EntropyType::Marginal => file.variable_mut("marginal_entropy").unwrap(),
             };
-            writeln!(
-                file,
-                "\n# log likelihood\n{}\n# error estimate\n{}",
-                line1, line2
-            )?;
+            var.put_values(
+                log_lh.as_slice().unwrap(),
+                Some(&[row, 0, 0]),
+                Some(&[1, 1, log_lh.len()]),
+            )
+            .unwrap();
+            var.put_values(
+                log_lh_err.as_slice().unwrap(),
+                Some(&[row, 1, 0]),
+                Some(&[1, 1, log_lh.len()]),
+            )
+            .unwrap();
             Ok(())
         },
     ) {

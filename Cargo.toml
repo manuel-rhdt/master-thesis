@@ -1,6 +1,6 @@
 [package]
 name = "accelerate"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Manuel Reinhardt <M.Reinhardt@amolf.nl>"]
 edition = "2018"
 
@@ -21,6 +21,7 @@ env_logger = "0.7.1"
 tera = { version = "1", default-features = false }
 ndarray-stats = "0.3.0"
 noisy_float = "0.1.11"
+netcdf = "0.4"
 
 [profile.dev]
 opt-level = 0
