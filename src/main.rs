@@ -6,7 +6,7 @@ mod likelihood;
 use std::env;
 use std::fs::{File, OpenOptions, Permissions};
 use std::io::prelude::*;
-use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+use std::os::unix::fs::PermissionsExt;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Mutex,
@@ -209,21 +209,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     output_file.add_dimension("ce_num_signals", conf.conditional_entropy.num_signals)?;
     output_file.add_dimension("me_num_responses", conf.marginal_entropy.num_responses)?;
 
-    let mut ce_var = output_file.add_variable::<f64>(
-        "conditional_entropy",
-        &["ce_num_signals", "category", "time"],
-    )?;
+    let mut ce_var =
+        output_file.add_variable::<f64>("conditional_entropy", &["ce_num_signals", "time"])?;
     ce_var.set_fill_value(std::f64::NAN)?;
     ce_var.add_attribute("units", "nats")?;
     ce_var.add_attribute("num_signals", conf.conditional_entropy.num_signals as u32)?;
+    output_file.add_variable::<f64>("conditional_entropy_err", &["ce_num_signals", "time"])?;
 
-    let mut me_var = output_file.add_variable::<f64>(
-        "marginal_entropy",
-        &["me_num_responses", "category", "time"],
-    )?;
+    let mut me_var =
+        output_file.add_variable::<f64>("marginal_entropy", &["me_num_responses", "time"])?;
     me_var.set_fill_value(std::f64::NAN)?;
     me_var.add_attribute("units", "nats")?;
     me_var.add_attribute("num_responses", conf.marginal_entropy.num_responses as u32)?;
+    output_file.add_variable::<f64>("marginal_entropy_err", &["me_num_responses", "time"])?;
 
     let output_file = Mutex::new(output_file);
 
@@ -294,14 +292,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
             var.put_values(
                 log_lh.as_slice().unwrap(),
-                Some(&[row, 0, 0]),
-                Some(&[1, 1, log_lh.len()]),
+                Some(&[row, 0]),
+                Some(&[1, log_lh.len()]),
             )
             .unwrap();
+            let mut var = match entropy_type {
+                EntropyType::Conditional => file.variable_mut("conditional_entropy_err").unwrap(),
+                EntropyType::Marginal => file.variable_mut("marginal_entropy_err").unwrap(),
+            };
             var.put_values(
                 log_lh_err.as_slice().unwrap(),
-                Some(&[row, 1, 0]),
-                Some(&[1, 1, log_lh.len()]),
+                Some(&[row, 0]),
+                Some(&[1, log_lh.len()]),
             )
             .unwrap();
             Ok(())
