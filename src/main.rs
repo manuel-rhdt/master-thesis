@@ -16,7 +16,7 @@ use configuration::{calculate_hash, create_dir_if_not_exists, parse_configuratio
 use gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator};
 use likelihood::log_likelihood;
 
-use ndarray::{array, Array, Array1, Array2, ArrayView1, Axis};
+use ndarray::{array, Array, Array1, Array2, Axis};
 use rand::SeedableRng;
 use rand_pcg::Pcg64Mcg;
 use rayon;
@@ -47,7 +47,7 @@ fn conditional_likelihood(
     traj_lengths: &[f64],
     num_res: usize,
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
-) -> Array1<f64> {
+) -> (Array1<f64>, Array1<f64>) {
     let res_network = coordinator.res_network.clone();
     let sig = coordinator.generate_signal().collect();
 
@@ -55,14 +55,17 @@ fn conditional_likelihood(
 
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
-        check_abort_signal!(array![]);
+        check_abort_signal!((array![], array![]));
         let res = coordinator.generate_response(sig.iter());
         let log_p0 = kde.pdf(res.components()[0]).ln();
         for (ll, out) in log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(&mut out) {
             *out = log_p0 + ll;
         }
     }
-    result.mean_axis(Axis(0)).unwrap()
+    (
+        result.mean_axis(Axis(0)).unwrap(),
+        result.std_axis(Axis(0), 1.0) / (num_res as f64).sqrt(),
+    )
 }
 
 fn marginal_likelihood(
@@ -72,13 +75,13 @@ fn marginal_likelihood(
         kde::NormalKernelDensityEstimate,
     )],
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
-) -> Array1<f64> {
+) -> (Array1<f64>, Array1<f64>) {
     let sig = coordinator.generate_signal().collect();
     let res = coordinator.generate_response(sig.iter()).collect();
 
-    let mut result = Array2::zeros((signals_pre.len(), traj_lengths.len()));
-    for ((sig, kde), ref mut out) in signals_pre.iter().zip(result.outer_iter_mut()) {
-        check_abort_signal!(array![]);
+    let mut likelihoods = Array2::zeros((signals_pre.len(), traj_lengths.len()));
+    for ((sig, kde), ref mut out) in signals_pre.iter().zip(likelihoods.outer_iter_mut()) {
+        check_abort_signal!((array![], array![]));
         let logp = kde.pdf(res.iter().components()[0]).ln();
         for (ll, out) in log_likelihood(
             traj_lengths,
@@ -92,20 +95,25 @@ fn marginal_likelihood(
         }
     }
 
-    result.map_axis(Axis(0), log_mean_exp)
-}
+    let max_elements = likelihoods.fold_axis(Axis(0), std::f64::NAN, |a, &b| a.max(b));
+    likelihoods -= &max_elements;
+    likelihoods.mapv_inplace(|x| x.exp());
 
-pub fn log_mean_exp(values: ArrayView1<f64>) -> f64 {
-    use std::ops::Div;
+    let num_signals = signals_pre.len() as f64;
 
-    let max = values.fold(std::f64::NEG_INFINITY, |a, &b| a.max(b));
-    values
-        .iter()
-        .map(|&x| (x - max).exp())
-        .sum::<f64>()
-        .div(values.len() as f64)
-        .ln()
-        + max
+    let mean_likelihood = likelihoods
+        .mean_axis(Axis(0))
+        .unwrap()
+        .mapv_into(|x| x.ln())
+        + &max_elements;
+    let std_err_likelihood = likelihoods
+        .std_axis(Axis(0), 1.0)
+        .mapv_into(|x| x.ln() / (num_signals.sqrt()))
+        + &max_elements;
+    // this line is needed to account for error propagation through the logarithm.
+    let std_err_likelihood = (std_err_likelihood - &mean_likelihood).mapv_into(|x| x.exp());
+
+    (mean_likelihood, std_err_likelihood)
 }
 
 enum EntropyType {
@@ -153,6 +161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .mode(0o444)
             .open(conf.output.join("marginal_entropy.txt"))?,
     );
+    writeln!(file_marginal.lock().unwrap(), "# marginal entropies")?;
     let file_conditional = Mutex::new(
         OpenOptions::new()
             .create_new(true)
@@ -160,6 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .mode(0o444)
             .open(conf.output.join("conditional_entropy.txt"))?,
     );
+    writeln!(file_conditional.lock().unwrap(), "# conditional entropies")?;
 
     let traj_lengths = Array::linspace(0.0, conf.length, conf.num_trajectory_lengths);
 
@@ -199,7 +209,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let seed = num as u64 ^ seed_base ^ 0xabcd_abcd;
             let mut coordinator = conf.create_coordinator(seed);
             let before = std::time::Instant::now();
-            let ce = -conditional_likelihood(
+            let (ce, ce_err) = conditional_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 conf.conditional_entropy.responses_per_signal,
                 &mut coordinator,
@@ -208,7 +218,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "timing: conditional_entropy: {:.2} s",
                 (std::time::Instant::now() - before).as_secs_f64()
             );
-            ce
+            (-ce, ce_err)
         })
         .map(|log_lh| (EntropyType::Conditional, log_lh));
 
@@ -235,7 +245,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let seed = num as u64 ^ seed_base ^ 0x1234_1234;
             let mut coordinator = conf.create_coordinator(seed);
             let before = std::time::Instant::now();
-            let me = -marginal_likelihood(
+            let (me, me_err) = marginal_likelihood(
                 traj_lengths.as_slice().unwrap(),
                 &signals_pre,
                 &mut coordinator,
@@ -244,27 +254,36 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 "timing: marginal_entropy: {:.2} s",
                 (std::time::Instant::now() - before).as_secs_f64()
             );
-            me
+            (-me, me_err)
         })
         .map(|log_lh| (EntropyType::Marginal, log_lh));
 
-    match ce_chunks
-        .chain(me_chunks)
-        .try_for_each(|(entropy_type, log_lh)| -> std::io::Result<()> {
+    match ce_chunks.chain(me_chunks).try_for_each(
+        |(entropy_type, (log_lh, log_lh_err))| -> std::io::Result<()> {
             check_abort_signal!();
             let mut buffer = ryu::Buffer::new();
-            let mut line = String::with_capacity(log_lh.dim() * 22);
+            let mut line1 = String::with_capacity(log_lh.dim() * 22);
             for &val in &log_lh {
-                line += buffer.format(val);
-                line += " ";
+                line1 += buffer.format(val);
+                line1 += " ";
+            }
+            let mut line2 = String::with_capacity(log_lh.dim() * 22);
+            for &val in &log_lh_err {
+                line2 += buffer.format(val);
+                line2 += " ";
             }
             let mut file = match entropy_type {
                 EntropyType::Conditional => file_conditional.lock().unwrap(),
                 EntropyType::Marginal => file_marginal.lock().unwrap(),
             };
-            writeln!(file, "{}", line)?;
+            writeln!(
+                file,
+                "\n# log likelihood\n{}\n# error estimate\n{}",
+                line1, line2
+            )?;
             Ok(())
-        }) {
+        },
+    ) {
         Ok(()) => {}
         Err(error) => {
             log::error!("Error: {:?}", error);
