@@ -51,7 +51,7 @@ fn conditional_likelihood(
     let res_network = coordinator.res_network.clone();
     let sig = coordinator.generate_signal().collect();
 
-    let kde = coordinator.equilibrate_respones_dist(sig.iter().components(), 1000);
+    let kde = coordinator.equilibrate_respones_dist(sig.iter().components());
 
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
     for mut out in result.outer_iter_mut() {
@@ -230,7 +230,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             check_abort_signal!();
             coordinator.rng = Pcg64Mcg::seed_from_u64(seed_base ^ i as u64);
             let sig = coordinator.generate_signal().collect();
-            let kde = coordinator.equilibrate_respones_dist(sig.iter().components(), 1_000);
+            let kde = coordinator.equilibrate_respones_dist(sig.iter().components());
             Ok((sig, kde))
         })
         .collect::<Result<Vec<_>, std::io::Error>>()?;

@@ -453,6 +453,8 @@ pub struct SimulationCoordinator<Rng: rand::Rng> {
     pub response_mean: f64,
     pub signal_mean: f64,
 
+    pub p0_samples: usize,
+
     pub sig_network: ReactionNetwork,
     pub res_network: ReactionNetwork,
 
@@ -485,9 +487,8 @@ impl<Rng: rand::Rng> SimulationCoordinator<Rng> {
     pub fn equilibrate_respones_dist(
         &mut self,
         sig_initial: &[Count],
-        num_samples: usize,
     ) -> NormalKernelDensityEstimate {
-        let data = (0..num_samples)
+        let data = (0..self.p0_samples)
             .map(|_| self.equilibrate_response(sig_initial))
             .collect();
         NormalKernelDensityEstimate::new(data)

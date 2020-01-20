@@ -22,6 +22,7 @@ pub struct Config {
     pub batch_size: usize,
     pub length: f64,
     pub num_trajectory_lengths: usize,
+    pub p0_samples: Option<usize>,
     pub conditional_entropy: ConfigConditionalEntropy,
     pub marginal_entropy: ConfigMarginalEntropy,
     pub signal: ConfigReactionNetwork,
@@ -33,6 +34,7 @@ impl Config {
         self.conditional_entropy.hash(hasher);
         self.marginal_entropy.hash(hasher);
         self.length.to_bits().hash(hasher);
+        self.p0_samples.hash(hasher);
         self.num_trajectory_lengths.hash(hasher);
         self.signal.hash(hasher);
         self.response.hash(hasher);
@@ -51,6 +53,8 @@ impl Config {
 
             signal_mean: self.signal.mean,
             response_mean: self.response.mean,
+
+            p0_samples: self.p0_samples.unwrap_or(1000),
 
             sig_network: self.signal.to_reaction_network(),
             res_network: self.response.to_reaction_network(),
