@@ -283,19 +283,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|log_lh| (EntropyType::Marginal, log_lh));
 
     match ce_chunks.chain(me_chunks).try_for_each(
-        |(entropy_type, (row, log_lh, log_lh_err))| -> std::io::Result<()> {
-            check_abort_signal!();
+        |(entropy_type, (row, log_lh, log_lh_err))| -> netcdf::error::Result<()> {
+            check_abort_signal!(Err("Received signal".into()));
             let mut file = output_file.lock().unwrap();
             let mut var = match entropy_type {
-                EntropyType::Conditional => file.variable_mut("conditional_entropy").unwrap(),
-                EntropyType::Marginal => file.variable_mut("marginal_entropy").unwrap(),
-            };
+                EntropyType::Conditional => file.variable_mut("conditional_entropy"),
+                EntropyType::Marginal => file.variable_mut("marginal_entropy"),
+            }
+            .expect("could not find variable");
             var.put_values(
                 log_lh.as_slice().unwrap(),
                 Some(&[row, 0]),
                 Some(&[1, log_lh.len()]),
-            )
-            .unwrap();
+            )?;
             let mut var = match entropy_type {
                 EntropyType::Conditional => file.variable_mut("conditional_entropy_err").unwrap(),
                 EntropyType::Marginal => file.variable_mut("marginal_entropy_err").unwrap(),
@@ -304,8 +304,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 log_lh_err.as_slice().unwrap(),
                 Some(&[row, 0]),
                 Some(&[1, log_lh.len()]),
-            )
-            .unwrap();
+            )?;
             Ok(())
         },
     ) {
