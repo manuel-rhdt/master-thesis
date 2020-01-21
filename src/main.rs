@@ -109,7 +109,7 @@ fn marginal_likelihood(
         + &max_elements;
     let std_err_likelihood = likelihoods
         .std_axis(Axis(0), 1.0)
-        .mapv_into(|x| x.ln() / (num_signals.sqrt()))
+        .mapv_into(|x| (x / num_signals.sqrt()).ln())
         + &max_elements;
     // this line is needed to account for error propagation through the logarithm.
     let std_err_likelihood = (std_err_likelihood - &mean_likelihood).mapv_into(|x| x.exp());
