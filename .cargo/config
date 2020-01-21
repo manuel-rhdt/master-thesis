@@ -1,2 +1,0 @@
-[build]
-rustflags = ["-L", "/home/ipausers/reinhardt/opt/anaconda3/lib/", "-C", "link-args=-Wl,-rpath=/home/ipausers/reinhardt/opt/anaconda3/lib/"]
