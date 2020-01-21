@@ -69,12 +69,11 @@ fn conditional_likelihood(
     )
 }
 
+type TrajectoryCollected = Trajectory<Vec<f64>, Vec<f64>, Vec<u32>>;
+
 fn marginal_likelihood(
     traj_lengths: &[f64],
-    signals_pre: &[(
-        Trajectory<Vec<f64>, Vec<f64>, Vec<u32>>,
-        kde::NormalKernelDensityEstimate,
-    )],
+    signals_pre: &[(TrajectoryCollected, kde::NormalKernelDensityEstimate)],
     coordinator: &mut SimulationCoordinator<impl rand::Rng>,
 ) -> (Array1<f64>, Array1<f64>) {
     let sig = coordinator.generate_signal().collect();
