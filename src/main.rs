@@ -116,6 +116,7 @@ fn marginal_likelihood(
     (mean_likelihood, std_err_likelihood)
 }
 
+#[derive(Copy, Debug, Clone)]
 enum EntropyType {
     Conditional,
     Marginal,
@@ -133,6 +134,132 @@ Arguments:
 "
     );
     std::process::exit(0)
+}
+
+fn calculate_entropy(
+    entropy_type: EntropyType,
+    output_file: &Mutex<netcdf::MutableFile>,
+    conf: Config,
+    traj_lengths: &[f64],
+    seed: u64,
+) -> netcdf::error::Result<()> {
+    let dimension_name = match entropy_type {
+        EntropyType::Conditional => "ce",
+        EntropyType::Marginal => "me",
+    };
+    let name = match entropy_type {
+        EntropyType::Conditional => "conditional_entropy",
+        EntropyType::Marginal => "marginal_entropy",
+    };
+
+    let mut file = output_file.lock().unwrap();
+
+    match entropy_type {
+        EntropyType::Conditional => file.add_dimension(
+            dimension_name,
+            conf.conditional_entropy.unwrap().num_signals,
+        )?,
+        EntropyType::Marginal => {
+            file.add_dimension(dimension_name, conf.marginal_entropy.unwrap().num_responses)?
+        }
+    };
+
+    let mut var = file.add_variable::<f64>(name, &[dimension_name, "time"])?;
+    var.set_fill_value(std::f64::NAN)?;
+    var.add_attribute("units", "nats")?;
+
+    match entropy_type {
+        EntropyType::Conditional => {
+            var.add_attribute(
+                "responses_per_signal",
+                conf.conditional_entropy.unwrap().responses_per_signal as u32,
+            )?;
+        }
+        EntropyType::Marginal => {
+            var.add_attribute(
+                "signals_per_response",
+                conf.marginal_entropy.unwrap().num_signals as u32,
+            )?;
+        }
+    }
+
+    let err_name = &format!("{}_err", name);
+    let mut err = file.add_variable::<f64>(err_name, &[dimension_name, "time"])?;
+    err.set_fill_value(std::f64::NAN)?;
+    let timing_name = &format!("{}_timing", name);
+    let mut timing = file.add_variable::<f64>(timing_name, &[dimension_name])?;
+    timing.add_attribute("unit", "s")?;
+    timing.set_fill_value(std::f64::NAN)?;
+
+    // unlock mutex
+    std::mem::drop(file);
+
+    let signals_pre = if let EntropyType::Marginal = entropy_type {
+        let coordinator = conf.create_coordinator(seed);
+        (0..conf.marginal_entropy.unwrap().num_signals)
+            .into_par_iter()
+            .map_with(coordinator, |coordinator, i| {
+                check_abort_signal!(Err("interrupted".to_string().into()));
+                coordinator.rng = Pcg64Mcg::seed_from_u64(seed ^ i as u64);
+                let sig = coordinator.generate_signal().collect();
+                let kde = coordinator.equilibrate_respones_dist(sig.iter().components());
+                Ok((sig, kde))
+            })
+            .collect::<netcdf::error::Result<Vec<_>>>()?
+            .into()
+    } else {
+        None
+    };
+    let signals_pre = signals_pre.unwrap_or_default();
+
+    let num_samples = match entropy_type {
+        EntropyType::Conditional => conf.conditional_entropy.unwrap().num_signals,
+        EntropyType::Marginal => conf.marginal_entropy.unwrap().num_responses,
+    };
+
+    (0..num_samples)
+        .into_par_iter()
+        .try_for_each(|row| -> netcdf::error::Result<()> {
+            let seed = row as u64 ^ seed ^ 0xabcd_abcd;
+            let mut coordinator = conf.create_coordinator(seed);
+            let before = std::time::Instant::now();
+
+            let (log_lh, log_lh_err) = match entropy_type {
+                EntropyType::Conditional => conditional_likelihood(
+                    traj_lengths,
+                    conf.conditional_entropy.unwrap().responses_per_signal,
+                    &mut coordinator,
+                ),
+                EntropyType::Marginal => {
+                    marginal_likelihood(traj_lengths, &signals_pre, &mut coordinator)
+                }
+            };
+
+            let time = (std::time::Instant::now() - before).as_secs_f64();
+
+            let mut file = output_file.lock().unwrap();
+            let mut var = file.variable_mut(name).expect("could not find variable");
+            var.put_values(
+                log_lh.as_slice().unwrap(),
+                Some(&[row, 0]),
+                Some(&[1, log_lh.len()]),
+            )?;
+            let mut var = file
+                .variable_mut(err_name)
+                .expect("could not find variable");
+            var.put_values(
+                log_lh_err.as_slice().unwrap(),
+                Some(&[row, 0]),
+                Some(&[1, log_lh.len()]),
+            )?;
+            let mut var = file
+                .variable_mut(timing_name)
+                .expect("could not find variable");
+            var.put_value(time, Some(&[row]))?;
+            Ok(())
+        })?;
+
+    Ok(())
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -203,126 +330,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut time_var = output_file.add_variable::<f64>("time", &["time"])?;
     time_var.put_values(traj_lengths.as_slice().unwrap(), None, None)?;
 
-    output_file.add_dimension("ce", conf.conditional_entropy.num_signals)?;
-    output_file.add_dimension("me", conf.marginal_entropy.num_responses)?;
-
-    let mut ce_var = output_file.add_variable::<f64>("conditional_entropy", &["ce", "time"])?;
-    ce_var.set_fill_value(std::f64::NAN)?;
-    ce_var.add_attribute("units", "nats")?;
-    ce_var.add_attribute(
-        "responses_per_signal",
-        conf.conditional_entropy.responses_per_signal as u32,
-    )?;
-    let mut ce_err = output_file.add_variable::<f64>("conditional_entropy_err", &["ce", "time"])?;
-    ce_err.set_fill_value(std::f64::NAN)?;
-    let mut ce_timing = output_file.add_variable::<f64>("conditional_entropy_timing", &["ce"])?;
-    ce_timing.add_attribute("unit", "s")?;
-    ce_timing.set_fill_value(std::f64::NAN)?;
-
-    let mut me_var = output_file.add_variable::<f64>("marginal_entropy", &["me", "time"])?;
-    me_var.set_fill_value(std::f64::NAN)?;
-    me_var.add_attribute("units", "nats")?;
-    me_var.add_attribute(
-        "signals_per_response",
-        conf.marginal_entropy.num_signals as u32,
-    )?;
-    let mut me_err = output_file.add_variable::<f64>("marginal_entropy_err", &["me", "time"])?;
-    me_err.set_fill_value(std::f64::NAN)?;
-    let mut me_timing = output_file.add_variable::<f64>("marginal_entropy_timing", &["me"])?;
-    me_timing.add_attribute("unit", "s")?;
-    me_timing.set_fill_value(std::f64::NAN)?;
-
     let output_file = Mutex::new(output_file);
 
     let seed_base = conf.get_relevant_hash() ^ calculate_hash(&worker_name);
 
-    let ce = (0..conf.conditional_entropy.num_signals)
+    let result = conf
+        .conditional_entropy
+        .map(|_| EntropyType::Conditional)
         .into_par_iter()
-        .map(|num| {
-            let seed = num as u64 ^ seed_base ^ 0xabcd_abcd;
-            let mut coordinator = conf.create_coordinator(seed);
-            let before = std::time::Instant::now();
-            let (ce, ce_err) = conditional_likelihood(
+        .chain(conf.marginal_entropy.map(|_| EntropyType::Marginal))
+        .try_for_each(|entropy_type| {
+            calculate_entropy(
+                entropy_type,
+                &output_file,
+                conf.clone(),
                 traj_lengths.as_slice().unwrap(),
-                conf.conditional_entropy.responses_per_signal,
-                &mut coordinator,
-            );
-            let time = (std::time::Instant::now() - before).as_secs_f64();
-            (num, -ce, ce_err, time)
-        })
-        .map(|log_lh| (EntropyType::Conditional, log_lh));
+                seed_base ^ 0xabcd_abcd ^ entropy_type as u64,
+            )
+        });
 
-    let coordinator = conf.create_coordinator(seed_base);
-    let before = std::time::Instant::now();
-    let signals_pre = (0..conf.marginal_entropy.num_signals)
-        .into_par_iter()
-        .map_with(coordinator, |coordinator, i| {
-            check_abort_signal!();
-            coordinator.rng = Pcg64Mcg::seed_from_u64(seed_base ^ i as u64);
-            let sig = coordinator.generate_signal().collect();
-            let kde = coordinator.equilibrate_respones_dist(sig.iter().components());
-            Ok((sig, kde))
-        })
-        .collect::<Result<Vec<_>, std::io::Error>>()?;
-    log::info!(
-        "timing: generate_signals: {:.2} s",
-        (std::time::Instant::now() - before).as_secs_f64()
-    );
-
-    let me = (0..conf.marginal_entropy.num_responses)
-        .into_par_iter()
-        .map(|num| {
-            let seed = num as u64 ^ seed_base ^ 0x1234_1234;
-            let mut coordinator = conf.create_coordinator(seed);
-            let before = std::time::Instant::now();
-            let (me, me_err) = marginal_likelihood(
-                traj_lengths.as_slice().unwrap(),
-                &signals_pre,
-                &mut coordinator,
-            );
-            let time = (std::time::Instant::now() - before).as_secs_f64();
-            (num, -me, me_err, time)
-        })
-        .map(|log_lh| (EntropyType::Marginal, log_lh));
-
-    match ce.chain(me).try_for_each(
-        |(entropy_type, (row, log_lh, log_lh_err, time))| -> netcdf::error::Result<()> {
-            check_abort_signal!(Err("Received signal".into()));
-            let mut file = output_file.lock().unwrap();
-            let mut var = match entropy_type {
-                EntropyType::Conditional => file.variable_mut("conditional_entropy"),
-                EntropyType::Marginal => file.variable_mut("marginal_entropy"),
-            }
-            .expect("could not find variable");
-            var.put_values(
-                log_lh.as_slice().unwrap(),
-                Some(&[row, 0]),
-                Some(&[1, log_lh.len()]),
-            )?;
-            let mut var = match entropy_type {
-                EntropyType::Conditional => file.variable_mut("conditional_entropy_err"),
-                EntropyType::Marginal => file.variable_mut("marginal_entropy_err"),
-            }
-            .expect("could not find variable");
-            var.put_values(
-                log_lh_err.as_slice().unwrap(),
-                Some(&[row, 0]),
-                Some(&[1, log_lh.len()]),
-            )?;
-            let mut var = match entropy_type {
-                EntropyType::Conditional => file.variable_mut("conditional_entropy_timing"),
-                EntropyType::Marginal => file.variable_mut("marginal_entropy_timing"),
-            }
-            .expect("could not find variable");
-            var.put_value(time, Some(&[row]))?;
-            Ok(())
-        },
-    ) {
-        Ok(()) => {}
-        Err(error) => {
-            log::error!("Error: {:?}", error);
-            worker_info.error = Some(format!("{}", error))
-        }
+    if let Err(error) = result {
+        log::error!("Error: {:?}", error);
+        worker_info.error = Some(format!("{}", error))
     }
 
     worker_info.end_time = Some(
