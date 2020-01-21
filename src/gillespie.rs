@@ -28,16 +28,18 @@ impl ReactionNetwork {
     }
 }
 
-pub fn calc_propensities(
+unsafe fn calc_propensities(
     propensities: &mut [f64],
     components: &[Count],
     reactions: &ReactionNetwork,
 ) {
+    assert_eq!(propensities.len(), reactions.len());
     #[allow(clippy::needless_range_loop)]
     for i in 0..reactions.len() {
-        propensities[i] = reactions.k[i];
-        for &reactant in reactions.reactants[i].iter() {
-            propensities[i] *= components[reactant as usize] as f64
+        *propensities.get_unchecked_mut(i) = *reactions.k.get_unchecked(i);
+        for &reactant in reactions.reactants.get_unchecked(i).iter() {
+            *propensities.get_unchecked_mut(i) *=
+                *components.get_unchecked(reactant as usize) as f64
         }
     }
 }
@@ -247,7 +249,7 @@ impl<'a, Rng: rand::Rng> SimulatedTrajectory<'a, Rng> {
         rng: &'a mut Rng,
     ) -> Self {
         assert_eq!(propensities.len(), reactions.len());
-        calc_propensities(&mut propensities, &components, reactions);
+        unsafe { calc_propensities(&mut propensities, &components, reactions) };
         SimulatedTrajectory {
             log_rand_var: -rng.gen::<f64>().ln(),
             propensities,
@@ -283,7 +285,9 @@ impl<'a, Rng: rand::Rng> SimulatedTrajectory<'a, Rng> {
     }
 
     fn total_propensity(&mut self) -> f64 {
-        calc_propensities(&mut self.propensities, &self.components, self.reactions);
+        unsafe {
+            calc_propensities(&mut self.propensities, &self.components, self.reactions);
+        }
         self.propensities.iter().sum()
     }
 
