@@ -4,6 +4,9 @@ version = "0.2.0"
 authors = ["Manuel Reinhardt <M.Reinhardt@amolf.nl>"]
 edition = "2018"
 
+[lib]
+name = "accelerate"
+
 [dependencies]
 rand = "0.7.3"
 toml = "0.5"
@@ -35,3 +38,7 @@ vergen = "3"
 
 [dev-dependencies]
 criterion = "0.3"
+
+[[bench]]
+name = "simulate"
+harness = false
