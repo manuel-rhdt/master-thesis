@@ -201,11 +201,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut time_var = output_file.add_variable::<f64>("time", &["time"])?;
     time_var.put_values(traj_lengths.as_slice().unwrap(), None, None)?;
 
-    output_file.add_dimension("category", 2)?;
-    let mut cat_var = output_file.add_string_variable("category", &["category"])?;
-    cat_var.put_string("log likelihood", Some(&[0]))?;
-    cat_var.put_string("error", Some(&[1]))?;
-
     output_file.add_dimension("ce_num_signals", conf.conditional_entropy.num_signals)?;
     output_file.add_dimension("me_num_responses", conf.marginal_entropy.num_responses)?;
 
@@ -214,14 +209,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     ce_var.set_fill_value(std::f64::NAN)?;
     ce_var.add_attribute("units", "nats")?;
     ce_var.add_attribute("num_signals", conf.conditional_entropy.num_signals as u32)?;
-    output_file.add_variable::<f64>("conditional_entropy_err", &["ce_num_signals", "time"])?;
+    let mut ce_err = output_file.add_variable::<f64>("conditional_entropy_err", &["ce_num_signals", "time"])?;
+    ce_err.set_fill_value(std::f64::NAN)?;
 
     let mut me_var =
         output_file.add_variable::<f64>("marginal_entropy", &["me_num_responses", "time"])?;
     me_var.set_fill_value(std::f64::NAN)?;
     me_var.add_attribute("units", "nats")?;
     me_var.add_attribute("num_responses", conf.marginal_entropy.num_responses as u32)?;
-    output_file.add_variable::<f64>("marginal_entropy_err", &["me_num_responses", "time"])?;
+    let mut me_err = output_file.add_variable::<f64>("marginal_entropy_err", &["me_num_responses", "time"])?;
+    me_err.set_fill_value(std::f64::NAN)?;
 
     let output_file = Mutex::new(output_file);
 
