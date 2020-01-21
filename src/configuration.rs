@@ -1,7 +1,7 @@
 use crate::gillespie::{ReactionNetwork, SimulationCoordinator};
 
 use std::collections::hash_map::DefaultHasher;
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::path::PathBuf;
 
@@ -16,6 +16,42 @@ pub fn calculate_hash<T: Hash + ?Sized>(t: &T) -> u64 {
     s.finish()
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum Value {
+    Uint(u32),
+    Uints(Vec<u32>),
+    Int(i32),
+    Ints(Vec<i32>),
+    Ulonglong(u64),
+    Ulonglongs(Vec<u64>),
+    Longlong(i64),
+    Longlongs(Vec<i64>),
+    Double(f64),
+    Doubles(Vec<f64>),
+    Datetime(toml::value::Datetime),
+    Str(String),
+}
+
+impl From<Value> for netcdf::AttrValue {
+    fn from(val: Value) -> Self {
+        match val {
+            Value::Uint(val) => val.into(),
+            Value::Uints(val) => val.into(),
+            Value::Int(val) => val.into(),
+            Value::Ints(val) => val.into(),
+            Value::Ulonglong(val) => val.into(),
+            Value::Ulonglongs(val) => val.into(),
+            Value::Longlong(val) => val.into(),
+            Value::Longlongs(val) => val.into(),
+            Value::Double(val) => val.into(),
+            Value::Doubles(val) => val.into(),
+            Value::Datetime(val) => val.to_string().into(),
+            Value::Str(val) => val.into(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
     pub output: PathBuf,
@@ -27,6 +63,7 @@ pub struct Config {
     pub marginal_entropy: ConfigMarginalEntropy,
     pub signal: ConfigReactionNetwork,
     pub response: ConfigReactionNetwork,
+    pub attributes: BTreeMap<String, Value>,
 }
 
 impl Config {
