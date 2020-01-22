@@ -25,10 +25,27 @@ use rayon::prelude::*;
 use serde::Serialize;
 use toml;
 
+use jemalloc_ctl::{epoch, stats};
+use lazy_static::lazy_static;
+
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
+lazy_static! {
+    static ref MEMORY_LIMIT: Mutex<Option<u64>> = Mutex::new(None);
+}
+
 static UNCAUGHT_SIGNAL: AtomicBool = AtomicBool::new(false);
+
+fn check_oom() {
+    epoch::advance().unwrap();
+    let allocated = stats::allocated::read().unwrap() as u64;
+    let limit = MEMORY_LIMIT.lock().unwrap().unwrap_or(std::u64::MAX);
+    if allocated > limit {
+        log::error!("used too much memory: {} > {}", allocated, limit);
+        UNCAUGHT_SIGNAL.store(true, Ordering::SeqCst);
+    }
+}
 
 macro_rules! check_abort_signal {
     () => {
@@ -38,6 +55,7 @@ macro_rules! check_abort_signal {
     };
 
     ($default:expr) => {
+        check_oom();
         if UNCAUGHT_SIGNAL.load(Ordering::SeqCst) {
             return $default;
         }
@@ -136,13 +154,41 @@ Arguments:
     std::process::exit(0)
 }
 
+#[derive(Debug, Clone)]
+enum Error {
+    NetCdfError(String),
+    InterruptSignal,
+}
+
+use std::fmt;
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::NetCdfError(val) => write!(f, "{}", val),
+            Error::InterruptSignal => write!(f, "Process was interrupted by signal."),
+        }
+    }
+}
+
+impl From<netcdf::error::Error> for Error {
+    fn from(nerror: netcdf::error::Error) -> Self {
+        Error::NetCdfError(nerror.to_string())
+    }
+}
+
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
 fn calculate_entropy(
     entropy_type: EntropyType,
     output_file: &Mutex<netcdf::MutableFile>,
     conf: Config,
     traj_lengths: &[f64],
     seed: u64,
-) -> netcdf::error::Result<()> {
+) -> Result<(), Error> {
     let dimension_name = match entropy_type {
         EntropyType::Conditional => "ce",
         EntropyType::Marginal => "me",
@@ -199,13 +245,13 @@ fn calculate_entropy(
         (0..conf.marginal_entropy.unwrap().num_signals)
             .into_par_iter()
             .map_with(coordinator, |coordinator, i| {
-                check_abort_signal!(Err("interrupted".to_string().into()));
                 coordinator.rng = Pcg64Mcg::seed_from_u64(seed ^ i as u64);
                 let sig = coordinator.generate_signal().collect();
+                check_abort_signal!(Err(Error::InterruptSignal));
                 let kde = coordinator.equilibrate_respones_dist(sig.iter().components());
                 Ok((sig, kde))
             })
-            .collect::<netcdf::error::Result<Vec<_>>>()?
+            .collect::<Result<Vec<_>, _>>()?
             .into()
     } else {
         None
@@ -219,7 +265,7 @@ fn calculate_entropy(
 
     (0..num_samples)
         .into_par_iter()
-        .try_for_each(|row| -> netcdf::error::Result<()> {
+        .try_for_each(|row| -> Result<(), Error> {
             let seed = row as u64 ^ seed ^ 0xabcd_abcd;
             let mut coordinator = conf.create_coordinator(seed);
             let before = std::time::Instant::now();
@@ -234,6 +280,7 @@ fn calculate_entropy(
                     marginal_likelihood(traj_lengths, &signals_pre, &mut coordinator)
                 }
             };
+            check_abort_signal!(Err(Error::InterruptSignal));
 
             let time = (std::time::Instant::now() - before).as_secs_f64();
 
@@ -283,6 +330,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     create_dir_if_not_exists(&conf.output)?;
 
     let worker_name = env::var("GILLESPIE_WORKER_ID").ok();
+
+    let memory_limit: Option<u64> = env::var("GILLESPIE_MEMORY_LIMIT")
+        .ok()
+        .and_then(|val| val.parse().ok());
+    *MEMORY_LIMIT.lock().unwrap() = memory_limit;
 
     let mut worker_info = WorkerInfo {
         hostname: env::var("HOSTNAME").ok(),
@@ -350,7 +402,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
 
     if let Err(error) = result {
-        log::error!("Error: {:?}", error);
+        log::error!("Abort calculation: {}", error);
         worker_info.error = Some(format!("{}", error))
     }
 

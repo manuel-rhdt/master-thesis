@@ -25,6 +25,8 @@ tera = { version = "1", default-features = false }
 ndarray-stats = "0.3.0"
 noisy_float = "0.1.11"
 netcdf = "0.4"
+jemalloc-ctl = "0.3.3"
+lazy_static = "1.4.0"
 
 [profile.dev]
 opt-level = 0
