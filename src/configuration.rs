@@ -63,6 +63,7 @@ pub struct Config {
     pub marginal_entropy: Option<ConfigMarginalEntropy>,
     pub signal: ConfigReactionNetwork,
     pub response: ConfigReactionNetwork,
+    #[serde(default)]
     pub attributes: BTreeMap<String, Value>,
 }
 
