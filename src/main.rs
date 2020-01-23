@@ -71,8 +71,10 @@ fn conditional_likelihood(
     let kde = coordinator.equilibrate_respones_dist(sig.iter().components());
 
     let mut result = Array2::zeros((num_res, traj_lengths.len()));
-    for mut out in result.outer_iter_mut() {
-        check_abort_signal!((array![], array![]));
+    for (i, mut out) in result.outer_iter_mut().enumerate() {
+        if i % 100 == 0 {
+            check_abort_signal!((array![], array![]));
+        }
         let res = coordinator.generate_response(sig.iter());
         let log_p0 = kde.pdf(res.components()[0]).ln();
         for (ll, out) in log_likelihood(traj_lengths, sig.iter(), res, &res_network).zip(&mut out) {
@@ -96,8 +98,14 @@ fn marginal_likelihood(
     let res = coordinator.generate_response(sig.iter()).collect();
 
     let mut likelihoods = Array2::zeros((signals_pre.len(), traj_lengths.len()));
-    for ((sig, kde), ref mut out) in signals_pre.iter().zip(likelihoods.outer_iter_mut()) {
-        check_abort_signal!((array![], array![]));
+    for (i, ((sig, kde), ref mut out)) in signals_pre
+        .iter()
+        .zip(likelihoods.outer_iter_mut())
+        .enumerate()
+    {
+        if i % 100 == 0 {
+            check_abort_signal!((array![], array![]));
+        }
         let logp = kde.pdf(res.iter().components()[0]).ln();
         for (ll, out) in log_likelihood(
             traj_lengths,
@@ -243,9 +251,10 @@ fn calculate_entropy(
         (0..conf.marginal_entropy.unwrap().num_signals)
             .into_par_iter()
             .map_with(coordinator, |coordinator, i| {
+                check_abort_signal!(Err(Error::InterruptSignal));
+
                 coordinator.rng = Pcg64Mcg::seed_from_u64(seed ^ i as u64);
                 let sig = coordinator.generate_signal().collect();
-                check_abort_signal!(Err(Error::InterruptSignal));
                 let kde = coordinator.equilibrate_respones_dist(sig.iter().components());
                 Ok((sig, kde))
             })
