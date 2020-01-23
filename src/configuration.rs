@@ -55,7 +55,6 @@ impl From<Value> for netcdf::AttrValue {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Config {
     pub output: PathBuf,
-    pub batch_size: usize,
     pub length: f64,
     pub num_trajectory_lengths: usize,
     pub p0_samples: Option<usize>,
