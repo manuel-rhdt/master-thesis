@@ -34,12 +34,14 @@ static MEMORY_LIMIT: AtomicU64 = AtomicU64::new(0);
 static UNCAUGHT_SIGNAL: AtomicBool = AtomicBool::new(false);
 
 fn check_oom() {
-    epoch::advance().unwrap();
-    let allocated = stats::allocated::read().unwrap() as u64;
     let limit = MEMORY_LIMIT.load(Ordering::Relaxed);
-    if limit != 0 && allocated > limit {
-        log::error!("used too much memory: {} > {}", allocated, limit);
-        UNCAUGHT_SIGNAL.store(true, Ordering::SeqCst);
+    if limit != 0 {
+        epoch::advance().unwrap();
+        let allocated = stats::allocated::read().unwrap() as u64;
+        if allocated > limit {
+            log::error!("used too much memory: {} > {}", allocated, limit);
+            UNCAUGHT_SIGNAL.store(true, Ordering::SeqCst);
+        }
     }
 }
 
