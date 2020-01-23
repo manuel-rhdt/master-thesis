@@ -38,6 +38,7 @@ fn check_oom() {
     if limit != 0 {
         epoch::advance().unwrap();
         let allocated = stats::allocated::read().unwrap() as u64;
+        log::debug!("allocated memory: {}", allocated);
         if allocated > limit {
             log::error!("used too much memory: {} > {}", allocated, limit);
             UNCAUGHT_SIGNAL.store(true, Ordering::SeqCst);
@@ -290,6 +291,8 @@ fn calculate_entropy(
             check_abort_signal!(Err(Error::InterruptSignal));
 
             let time = (std::time::Instant::now() - before).as_secs_f64();
+
+            log::info!("{:?}: Finished row {} in {:.2} s", entropy_type, row, time);
 
             let mut file = output_file.lock().unwrap();
             let mut var = file.variable_mut(name).expect("could not find variable");

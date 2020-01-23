@@ -19,7 +19,7 @@ jemallocator = "0.3.0"
 chrono = "0.4.10"
 ryu = "1"
 ctrlc = { version = "3.0", features = ["termination"] }
-log = "0.4.0"
+log = { version = "0.4", features = ["max_level_debug", "release_max_level_debug"] }
 env_logger = "0.7.1"
 tera = { version = "1", default-features = false }
 ndarray-stats = "0.3.0"
