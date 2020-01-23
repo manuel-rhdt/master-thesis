@@ -8,7 +8,7 @@ use std::fs::{File, OpenOptions, Permissions};
 use std::io::prelude::*;
 use std::os::unix::fs::PermissionsExt;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
     Mutex,
 };
 
@@ -26,22 +26,18 @@ use serde::Serialize;
 use toml;
 
 use jemalloc_ctl::{epoch, stats};
-use lazy_static::lazy_static;
 
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 
-lazy_static! {
-    static ref MEMORY_LIMIT: Mutex<Option<u64>> = Mutex::new(None);
-}
-
+static MEMORY_LIMIT: AtomicU64 = AtomicU64::new(0);
 static UNCAUGHT_SIGNAL: AtomicBool = AtomicBool::new(false);
 
 fn check_oom() {
     epoch::advance().unwrap();
     let allocated = stats::allocated::read().unwrap() as u64;
-    let limit = MEMORY_LIMIT.lock().unwrap().unwrap_or(std::u64::MAX);
-    if allocated > limit {
+    let limit = MEMORY_LIMIT.load(Ordering::Relaxed);
+    if limit != 0 && allocated > limit {
         log::error!("used too much memory: {} > {}", allocated, limit);
         UNCAUGHT_SIGNAL.store(true, Ordering::SeqCst);
     }
@@ -334,7 +330,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let memory_limit: Option<u64> = env::var("GILLESPIE_MEMORY_LIMIT")
         .ok()
         .and_then(|val| val.parse().ok());
-    *MEMORY_LIMIT.lock().unwrap() = memory_limit;
+    if let Some(val) = memory_limit {
+        log::info!("Setting memory limit to {} bytes", val);
+        MEMORY_LIMIT.store(val, Ordering::SeqCst);
+    }
 
     let mut worker_info = WorkerInfo {
         hostname: env::var("HOSTNAME").ok(),
