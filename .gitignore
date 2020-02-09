@@ -42,3 +42,4 @@ testrun*
 dask-worker-space
 data*
 result*
+histogram.json
