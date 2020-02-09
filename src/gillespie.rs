@@ -236,6 +236,7 @@ impl<'traj, T: AsRef<[f64]>, C: AsRef<[Count]>, R: AsRef<[u32]>> TrajectoryItera
 struct SimulatedTrajectory<'a, Rng: rand::Rng> {
     rng: &'a mut Rng,
     propensities: Vec<f64>,
+    total_propensity: f64,
     components: Vec<f64>,
     reactions: &'a ReactionNetwork,
     log_rand_var: f64,
@@ -250,9 +251,11 @@ impl<'a, Rng: rand::Rng> SimulatedTrajectory<'a, Rng> {
     ) -> Self {
         assert_eq!(propensities.len(), reactions.len());
         unsafe { calc_propensities(&mut propensities, &components, reactions) };
+        let total_propensity = propensities.iter().sum();
         SimulatedTrajectory {
             log_rand_var: -rng.gen::<f64>().ln(),
             propensities,
+            total_propensity,
             components,
             reactions,
             rng,
@@ -285,10 +288,14 @@ impl<'a, Rng: rand::Rng> SimulatedTrajectory<'a, Rng> {
     }
 
     fn total_propensity(&mut self) -> f64 {
+        self.total_propensity
+    }
+
+    fn calc_propensities(&mut self) {
         unsafe {
             calc_propensities(&mut self.propensities, &self.components, self.reactions);
         }
-        self.propensities.iter().sum()
+        self.total_propensity = self.propensities.iter().sum();
     }
 
     fn time_step(&mut self) -> f64 {
@@ -298,6 +305,7 @@ impl<'a, Rng: rand::Rng> SimulatedTrajectory<'a, Rng> {
     fn update_components(&mut self) -> u32 {
         let selected_reaction = self.select_reaction();
         self.update_components_with_reaction(selected_reaction);
+        self.calc_propensities();
         selected_reaction as u32
     }
 }
@@ -350,6 +358,7 @@ impl<'a, Rng: rand::Rng, ExtTraj: TrajectoryIterator> DrivenTrajectory<'a, Rng, 
             self.external_trajectory.update();
             let components = self.external_trajectory.components();
             self.sim.components[..components.len()].copy_from_slice(components);
+            self.sim.calc_propensities();
 
             self.remaining_constant_signal_time = self
                 .external_trajectory
