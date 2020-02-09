@@ -1,7 +1,7 @@
 use accelerate::likelihood::log_likelihood;
 use accelerate::{
     configuration,
-    gillespie::{SimulationCoordinator, Trajectory, TrajectoryIterator},
+    gillespie::{SimulationCoordinator, TrajectoryIterator},
 };
 
 use std::io::Write;
