@@ -6,12 +6,22 @@
 
 \usepackage{amssymb,amsmath}
 
-\usepackage[a4paper, margin=2cm]{geometry}
+\usepackage[a4paper, margin=2cm, bottom=4cm]{geometry}
 
-\usepackage{biblatex}
-
+\usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
+\usepackage{graphicx}
+% -- We will generate all images so they have a width \maxwidth. This means
+% -- that they will get their normal width if they fit onto the page, but
+% -- are scaled down if they would overflow the margins.
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth
+\else\Gin@nat@width\fi}
+\makeatother
+\let\Oldincludegraphics\includegraphics
+\renewcommand{\includegraphics}[1]{\Oldincludegraphics[width=\maxwidth]{#1}}
 
+\renewcommand{\baselinestretch}{1.5} 
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
@@ -52,6 +62,9 @@ $if(logo)$
 $endif$
 $endif$
 
+\providecommand{\pandoccheck}[1]{%
+  \textcolor{red}{ #1 }
+}
 
 \begin{document}
 
@@ -96,9 +109,6 @@ $endif$
 
 $endif$
 $endif$
-
-\printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
-
 
 
 $for(include-after)$

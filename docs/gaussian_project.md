@@ -84,34 +84,61 @@ Z =  \begin{pmatrix}
 C_{ss} & C_{xs} \\
 C_{sx} & C_{xx}
 \end{pmatrix}
-$$
-with $C_{ij}\in\mathbb R^{d\times d}$. For this distribution there exists a simple analytical expression to compute the mutual information [@Tostevin2010]
+$$ {#eq:corr_z}
+with $C_{\alpha\beta}\in\mathbb R^{d\times d}$. For this distribution there exists a simple analytical expression to compute the mutual information [@Tostevin2010]
 $$
 \mathrm I(\mathcal S, \mathcal X) = \frac 12 \ln\left( \frac{\det C_{ss} \det C_{xx}}{\det Z} \right)
 $$
-which will be our benchmark to compare our statistical analysis against.
+which will be our benchmark to compare our statistical analysis against. In a similar way we can also acquire analytical equations for both the marginal entropy $\mathrm H(\mathcal X)$ and the conditional entropy $\mathrm H(\mathcal X | \mathcal S)$.
 
-We want to estimate the mutual information using +@eq:mutual_information, i.e. by separately computing the marginal entropy $\mathrm H(\mathcal X)$ and the conditional entropy $\mathrm H(\mathcal X | \mathcal S)$ from observed data. In the present case we have the full information about our system which allows us to generate correctly distributed random observations as test data.
+We want to estimate the mutual information using +@eq:mutual_information, i.e. by separately computing the marginal entropy $\mathrm H(\mathcal X)$ and the conditional entropy $\mathrm H(\mathcal X | \mathcal S)$ from observed data. In the present case we have the full information about our system which allows us to generate correctly distributed random observations as test data. In the following we will first look at the marginal entropy and how we can properly estimate it. We then give an overview over what differences arise when trying to estimate the conditional entropy. We then conclude with an analysis how both these estimates can be used to correctly estimate the mutual information for systems with high-dimensional state spaces.
 
 ## Marginal Entropy
 
-We compute the marginal entropy using Monte-Carlo sampling to evaluate the integrals in +@eq:marginal. To do that we first generate a number of samples $(\mathbf x_i)_{i=1,\ldots,N_x}$ that are distributed according to the distribution of $\mathcal X$ and then make the estimate
+We compute the marginal entropy using Monte-Carlo sampling to evaluate the integrals in eq. \ref{eq:marginal}. To do that we first generate a number of samples $(\mathbf x_i)_{i=1,\ldots,N_x}$ that are distributed according to the distribution of $\mathcal X$ and then make the estimate
 $$
 \mathrm H(\mathcal X) = -\int\mathrm d\mathbf x\ \mathrm P(\mathbf x)\ln \mathrm P(\mathbf x) \approx \frac{\sum\limits_{i=1}^{N_x} \ln\mathrm P(\mathbf x_i)}{N_x} \,.
 $${#eq:mc_entropy}
 
 It is important to realize that we do not actually need to know the distribution of $\mathcal X$ to do create appropriate Monte-Carlo samples. Since our model provides us with the distributions $\mathrm P(\mathbf s)$ and $\mathrm P(\mathbf x|\mathbf s)$ we can generate samples from $\mathrm P(\mathbf x)$ by first generating a sample $\mathbf s_j$ from $\mathrm P(\mathbf s)$ and then use $P(\mathbf x|\mathbf s_j)$ to generate a sample $\mathbf x_i$.
 
-Nonetheless we see from +@eq:mc_entropy that we _do_ have to evaluate $\mathrm P(\mathbf x_i)$ for every generated sample. We are only allowed to use probabilities that are part of our prior beliefs. Therefore we can only evaluate $\mathrm P(\mathbf x_i)$ by doing a Monte-Carlo using signal samples $(\mathbf s_j)_{j=1,\ldots,N_s}$ that are distributed according to $\mathrm P(\mathcal S)$:
+Nonetheless we see from +@eq:mc_entropy that we _do_ have to evaluate $\mathrm P(\mathbf x_i)$ for every generated sample. However, we merely have access to the probability distributions that are part of our prior beliefs. Therefore we choose to evaluate $\mathrm P(\mathbf x_i)$ by doing a Monte-Carlo integration using signal samples $(\mathbf s_j)_{j=1,\ldots,N_s}$ that are distributed according to $\mathrm P(\mathcal S)$:
 $$
 \mathrm P(\mathbf x_i) = \int\mathrm d\mathbf s\ \mathrm P(\mathbf s)\ \mathrm P(\mathbf x|\mathbf s) \approx \frac{\sum\limits_{j=1}^{N_s} \mathrm P(\mathbf x_i | \mathbf s_j)}{N_s} \,.
 $${#eq:mc_marginal}
+While in low-dimensional cases it might be feasible to compute the marginalization integral using direct numerical integration methods we choose to use a MC scheme to also be able to handle high-dimensional problems.
 
 Eq. @eq:mc_entropy and +@eq:mc_marginal together allow us to find a good estimate for the marginal entropy of $\mathcal X$ _in principle_. In the following we show for which conditions and sample sizes you can expect a good entropy estimate from this method.
+
+### Choice of Covariance Matrices
+
+We want to carefully choose the covariance matrices such that we can expect any sampling issues that arise in the gaussian framework to also be present when dealing with stochastic trajectories. Therefore we chose to model a very simple gene expression model described by the reaction equations
+\begin{align}
+\emptyset &\longrightarrow S \longrightarrow \emptyset \\
+S &\longrightarrow S + X \\
+X &\longrightarrow \emptyset
+\end{align}
+where $X$ are particles representing the cell response and $S$ are particles that will be interpreted as the signal. We describe the signal and response trajectories as a vector of values at discrete sample times, e.g. $\mathbf s = \left(s(t_1),\ldots,s(t_N)\right)^T$. For this model we can analytically compute the correlation function. For simplicity we assume that the system is in steady state such that the correlation function does only depend on time differences, i.e. $C_{\alpha\beta}(t, t^\prime) = C_{\alpha\beta}(t^\prime-t)$. The correlation functions then give us the elements of the covariance matrices
+$$
+C_{\alpha\beta}^{ij} = C_{\alpha\beta}(t_j - t_i) = \langle\alpha(t_i)\beta(t_j)\rangle\,.
+$$
+
+![Matrix plots of the full correlation matrix $Z$ from +@eq:corr_z for different values of $N$ and $\Delta t$. Brighter colors indicate higher matrix element values. We can clearly observe the block structure of $Z$ where the top left quadrant of each plot shows $C_{ss}$ and the other quadrants visualize $C_{xs}, C_{sx}$ and $C_{xx}$. The values of $N$ and $\Delta t$ were chosen such that the product $N\Delta t$ for a plot is the same as that for the plot diagonally upwards to the right.](matrix_plots.png){#fig:corr}
+
+Using this system we have two parameters left to tune. We can freely choose the number $N$ and offsets $\Delta t$ of our time samples. The duration of the trajectories $\mathbf s$ and $\mathbf x$ is given by the product $T=N\Delta t$. In figure @fig:corr we show matrix plots of the joint covariance matrix $Z$ for different values of $N$ and $\Delta t$. We can also observe that $N$ determines the dimensionality of the problem while the product $N \Delta t$ serves as a measure for the sparsity of the correlation matrices.
+
+### Results
+
+
 
 ## Conditional Entropy
 
 _TODO_
+
+
+## Suitable Test Parameters
+
+
 
 <!-- blabla
 
