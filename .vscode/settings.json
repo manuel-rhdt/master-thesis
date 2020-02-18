@@ -1,0 +1,9 @@
+{
+    "markdown.styles": [
+        "docs/styling.css"
+    ],
+    "pandoc.htmlOptString": "--filter pandoc-xnos -M eqnos-warning-level=1 --mathjax --filter pandoc-citeproc --bibliography library.bib -s --csl ieee.csl --css styling.css",
+    "pandoc.pdfOptString": "--filter pandoc-xnos -M eqnos-warning-level=1 --filter pandoc-citeproc --lua-filter latex_styles.lua --bibliography library.bib --csl ieee.csl --template='template.latex'",
+    "pandocMarkdownPreview.extraPandocArguments": "--filter pandoc-citeproc --bibliography library.bib --csl ieee.csl",
+    "markdown.preview.fontSize": 15
+}
