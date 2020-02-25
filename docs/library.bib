@@ -122,7 +122,7 @@
   publisher    = {Institute of Electrical and Electronics Engineers (IEEE)},
 }
 
-@Article{meijers-2019,
+@Article{Meijers2019,
   author        = {Matthijs Meijers and Sosuke Ito and Pieter Rein ten Wolde},
   title         = {The behaviour of information flow near criticality},
   date          = {2019-06-03},
@@ -132,9 +132,22 @@
   url           = {https://arxiv.org/abs/1906.00787},
   abstract      = {Recent experiments have indicated that many biological systems self-organise near their critical point, which hints at a common design principle. While it has been suggested that information transmission is optimized near the critical point, it remains unclear how information transmission depends on the dynamics of the input signal, the distance over which the information needs to be transmitted, and the distance to the critical point. Here we employ stochastic simulations of a driven 2D Ising system and study the instantaneous mutual information and the information transmission rate between a driven input spin and an output spin. The instantaneous mutual information varies non-monotonically with the temperature, but increases monotonically with the correlation time of the input signal. In contrast, the information transmission rate exhibits a maximum as a function of the input correlation time. Moreover, there exists an optimal temperature that maximizes this maximum information transmission rate. It arises from a tradeoff between the necessity to respond fast to changes in the input so that more information per unit amount of time can be transmitted, and the need to respond to reliably. The optimal temperature lies above the critical point, but moves towards it as the distance between the input and output spin is increased.},
   archiveprefix = {arXiv},
-  file          = {:http\://arxiv.org/pdf/1906.00787v1:PDF},
+  file          = {:http\:/arxiv.org/pdf/1906.00787v1:PDF},
   keywords      = {cond-mat.stat-mech, cond-mat.soft, physics.bio-ph, q-bio.OT},
   primaryclass  = {cond-mat.stat-mech},
+}
+
+@Article{Blanchard2019,
+  author      = {Pierre Blanchard and Desmond J. Higham and Nicholas J. Higham},
+  title       = {Accurate Computation of the Log-Sum-Exp and Softmax Functions},
+  date        = {2019-09-08},
+  eprint      = {http://arxiv.o rg/abs/1909.03469v1},
+  eprintclass = {math.NA},
+  eprinttype  = {arXiv},
+  url         = {http://arxiv.org/abs/1909.03469v1},
+  abstract    = {Evaluating the log-sum-exp function or the softmax function is a key step in many modern data science algorithms, notably in inference and classification. Because of the exponentials that these functions contain, the evaluation is prone to overflow and underflow, especially in low precision arithmetic. Software implementations commonly use alternative formulas that avoid overflow and reduce the chance of harmful underflow, employing a shift or another rewriting. Although mathematically equivalent, these variants behave differently in floating-point arithmetic. We give rounding error analyses of different evaluation algorithms and interpret the error bounds using condition numbers for the functions. We conclude, based on the analysis and numerical experiments, that the shifted formulas are of similar accuracy to the unshifted ones and that the shifted softmax formula is typically more accurate than a division-free variant.},
+  file        = {:http\:/arxiv.org/pdf/1909.03469v1:PDF},
+  keywords    = {math.NA, cs.NA, 97N20, G.1.3; I.2.8; G.3; G.4},
 }
 
 @Comment{jabref-meta: databaseType:biblatex;}
