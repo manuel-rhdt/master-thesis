@@ -4,12 +4,34 @@
 \usepackage{libertine}
 \usepackage{libertinust1math}
 
-\usepackage{amssymb,amsmath}
+\usepackage{amssymb,amsmath,mathtools}
 
 \usepackage[a4paper, margin=2cm, bottom=4cm]{geometry}
 
 \usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
+\hypersetup{
+$if(title-meta)$
+            pdftitle={$title-meta$},
+$endif$
+$if(author-meta)$
+            pdfauthor={$author-meta$},
+$endif$
+$if(keywords)$
+            pdfkeywords={$for(keywords)$$keywords$$sep$, $endfor$},
+$endif$
+$if(colorlinks)$
+            colorlinks=true,
+            linkcolor=$if(linkcolor)$$linkcolor$$else$Maroon$endif$,
+            citecolor=$if(citecolor)$$citecolor$$else$Blue$endif$,
+            urlcolor=$if(urlcolor)$$urlcolor$$else$Blue$endif$,
+$else$
+            pdfborder={0 0 0},
+$endif$
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+
+
 \usepackage{graphicx}
 % -- We will generate all images so they have a width \maxwidth. This means
 % -- that they will get their normal width if they fit onto the page, but
@@ -25,60 +47,42 @@
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
-%% pandoc-eqnos: required package 
-\usepackage{cleveref} 
-%% pandoc-eqnos: disable brackets around cleveref numbers 
-\creflabelformat{equation}{#2#1#3}
 
-%%%% pandoc-fignos: required package
+$if(tables)$
+\usepackage{longtable,booktabs}
+$if(beamer)$
 \usepackage{caption}
-
-%% pandoc-fignos: environment to disable figure caption prefixes
+% These lines are needed to make table captions work with longtable:
 \makeatletter
-\newcounter{figno}
-\newenvironment{fignos:no-prefix-figure-caption}{
-  \caption@ifcompatibility{}{
-    \let\oldthefigure\thefigure
-    \let\oldtheHfigure\theHfigure
-    \renewcommand{\thefigure}{figno:\thefigno}
-    \renewcommand{\theHfigure}{figno:\thefigno}
-    \stepcounter{figno}
-    \captionsetup{labelformat=empty}
-  }
-}{
-  \caption@ifcompatibility{}{
-    \captionsetup{labelformat=default}
-    \let\thefigure\oldthefigure
-    \let\theHfigure\oldtheHfigure
-    \addtocounter{figure}{-1}
-  }
-}
+\def\fnum@table{\tablename~\thetable}
 \makeatother
+$else$
+% Fix footnotes in tables (requires footnote package)
+\IfFileExists{footnote.sty}{\usepackage{footnote}\makesavenoteenv{longtable}}{}
+$endif$
+$endif$
 
+
+$for(header-includes)$
+$header-includes$
+$endfor$
 
 $if(title)$
 \title{$title$$if(thanks)$\thanks{$thanks$}$endif$}
 $endif$
-
 $if(subtitle)$
-$if(beamer)$
-$else$
-\usepackage{etoolbox}
-\makeatletter
-\providecommand{\subtitle}[1]{% add subtitle to \maketitle
-  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
-}
-\makeatother
-$endif$
+\providecommand{\subtitle}[1]{}
 \subtitle{$subtitle$}
 $endif$
-
+$if(author)$
 \author{$for(author)$$author$$sep$ \and $endfor$}
-\date{$date$}
-$if(beamer)$
+$endif$
 $if(institute)$
+\providecommand{\institute}[1]{}
 \institute{$for(institute)$$institute$$sep$ \and $endfor$}
 $endif$
+\date{$date$}
+$if(beamer)$
 $if(titlegraphic)$
 \titlegraphic{\includegraphics{$titlegraphic$}}
 $endif$
@@ -92,8 +96,10 @@ $endif$
 }
 
 \begin{document}
-
 $if(title)$
+$if(beamer)$
+\frame{\titlepage}
+$else$
 \maketitle
 $endif$
 $if(abstract)$
@@ -101,17 +107,26 @@ $if(abstract)$
 $abstract$
 \end{abstract}
 $endif$
+$endif$
 
 $for(include-before)$
 $include-before$
 
 $endfor$
 $if(toc)$
+$if(beamer)$
+\begin{frame}
+\tableofcontents[hideallsubsections]
+\end{frame}
+$else$
 {
-\hypersetup{linkcolor=$if(toccolor)$$toccolor$$else$black$endif$}
+$if(colorlinks)$
+\hypersetup{linkcolor=$if(toccolor)$$toccolor$$else$$endif$}
+$endif$
 \setcounter{tocdepth}{$toc-depth$}
 \tableofcontents
 }
+$endif$
 $endif$
 $if(lot)$
 \listoftables
@@ -130,12 +145,28 @@ $else$
 \renewcommand\refname{$biblio-title$}
 $endif$
 $endif$
+$if(beamer)$
+\begin{frame}[allowframebreaks]{$biblio-title$}
+\bibliographytrue
+$endif$
 \bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
+$if(beamer)$
+\end{frame}
+$endif$
 
 $endif$
 $endif$
+$if(biblatex)$
+$if(beamer)$
+\begin{frame}[allowframebreaks]{$biblio-title$}
+\bibliographytrue
+\printbibliography[heading=none]
+\end{frame}
+$else$
+\printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
+$endif$
 
-
+$endif$
 $for(include-after)$
 $include-after$
 

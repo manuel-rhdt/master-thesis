@@ -153,11 +153,6 @@ We find that the main difficulty in estimating the marginal entropy is the Monte
 
 _TODO_
 
-
-## Suitable Test Parameters
-
-
-
 # Mutual Information between Stochastic Trajectories
 
 ## Information theory for trajectories
