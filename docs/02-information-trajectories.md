@@ -1,6 +1,4 @@
-# Mutual Information between Trajectories
-
-## Information theory for trajectories
+# Information theory for trajectories
 
 A trajectory $X$ with $N$ steps is defined by a set of pairs $X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}$ where $\mathbf{x}_i$ defines the trajectory value at time $t_i$. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories.
 
