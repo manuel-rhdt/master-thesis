@@ -105,7 +105,7 @@
 
                     <li class="expanded">
                     {% if chapter.link %}
-                    <a href="{{chapter.link}}" class="{{ 'active' if chapter.link == path }}">
+                    <a href="{{ path_to_root }}{{chapter.link}}" class="{{ 'active' if chapter.link == path }}">
                     {% endif %}
                     {{chapter.name|safe}}
                     {% if chapter.link %}</a>{% endif %}

@@ -134,7 +134,7 @@ def render(book):
         output.append(
             template.render(
                 content=content,
-                path_to_root="master-thesis/",
+                path_to_root="",
                 mathjax_support=True,
                 default_theme="Light",
                 language="en-us",
