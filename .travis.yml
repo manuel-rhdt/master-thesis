@@ -6,6 +6,7 @@ addons:
   apt:
     packages:
       - pandoc
+      - pandoc-citeproc
 install:
   - pip install -r requirements.txt
 # command to build documentation
