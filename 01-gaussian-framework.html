@@ -1,0 +1,582 @@
+<!DOCTYPE HTML>
+<html lang="en-us" class="sidebar-visible no-js Light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Mutual Information between Trajectories</title>
+        
+
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800" rel="stylesheet" type="text/css">
+        <link href="https://fonts.googleapis.com/css?family=Source+Code+Pro:500" rel="stylesheet" type="text/css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        
+
+        
+        <!-- MathJax -->
+        <script async type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "" : "Light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('Light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter">
+                
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="01-gaussian-framework.html" class="active">
+                    
+                    Mutual Information for Trajectories in a Gaussian Framework
+                    </a>
+                    </li>
+                
+                    
+                    <li>
+                    <ol class="section">
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#introduction" class="">
+                    
+                    Introduction
+                    </a>
+                    </li>
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#monte-carlo-estimate-for-the-marginal-entropy" class="">
+                    
+                    Monte-Carlo Estimate for the Marginal Entropy
+                    </a>
+                    </li>
+                
+                    
+                    <li>
+                    <ol class="section">
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#choice-of-covariance-matrices" class="">
+                    
+                    Choice of Covariance Matrices
+                    </a>
+                    </li>
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#results" class="">
+                    
+                    Results
+                    </a>
+                    </li>
+                
+                    
+
+                    
+                    </ol>
+                    </li>
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#estimating-the-conditional-entropy" class="">
+                    
+                    Estimating the Conditional Entropy
+                    </a>
+                    </li>
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#references" class="">
+                    
+                    References
+                    </a>
+                    </li>
+                
+                    
+
+                    
+                    </ol>
+                    </li>
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="02-information-trajectories.html" class="">
+                    
+                    Information theory for trajectories
+                    </a>
+                    </li>
+                
+                    
+                    <li>
+                    <ol class="section">
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#monte-carlo-simulation" class="">
+                    
+                    Monte-Carlo simulation
+                    </a>
+                    </li>
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#estimating-the-likelihood" class="">
+                    
+                    Estimating the likelihood
+                    </a>
+                    </li>
+                
+                    
+                    <li>
+                    <ol class="section">
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#the-probability-density-for-the-starting-point-of-a-trajectory" class="">
+                    
+                    The probability density for the starting point of a trajectory
+                    </a>
+                    </li>
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#the-transition-probabilities" class="">
+                    
+                    The transition probabilities
+                    </a>
+                    </li>
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#estimating-the-marginal-probability-of-response-trajectories" class="">
+                    
+                    Estimating the marginal probability of response trajectories
+                    </a>
+                    </li>
+                
+                    
+
+                    
+                    </ol>
+                    </li>
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#simulating-chemical-networks" class="">
+                    
+                    Simulating chemical networks
+                    </a>
+                    </li>
+                
+
+                
+                    </ol>
+                    </li>
+                
+                </ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                
+<!-- pandoc-eqnos: equation style -->
+<style>
+    .eqnos {
+        display: inline-block;
+        position: relative;
+        width: 100%;
+    }
+
+    .eqnos br {
+        display: none;
+    }
+
+    .eqnos-number {
+        position: absolute;
+        right: 0em;
+        top: 50%;
+        line-height: 0;
+    }
+</style>
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        
+                    </div>
+
+                    <h1 class="menu-title">Mutual Information between Trajectories</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        
+                    </div>
+                </div>
+
+                
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="mutual-information-for-trajectories-in-a-gaussian-framework">Mutual Information for Trajectories in a Gaussian Framework</h1>
+<h2 id="introduction">Introduction</h2>
+<p>After taking measurements of an uncertain quantity <span class="math inline">\(\mathcal S\)</span> we hope that the produced observations <span class="math inline">\(\mathcal X\)</span> can lead to a reduction of our uncertainty. We use entropies to quantify uncertainty and by rephrasing Bayes' theorem as a relation of uncertainties <span class="math display">\[
+\mathrm H(\mathcal S|\mathcal X) = \mathrm H(\mathcal X|\mathcal S) - \mathrm H(\mathcal X) + \mathrm H(\mathcal S) \equiv \mathrm H(\mathcal S) - \mathrm I(\mathcal S, \mathcal X)
+\]</span> we can read off that the observations <span class="math inline">\(\mathcal X\)</span> decrease our uncertainty in <span class="math inline">\(\mathcal S\)</span> on average by <span class="math inline">\(\mathrm I(\mathcal S, \mathcal X) = \mathrm H(\mathcal X) - \mathrm H(\mathcal X|\mathcal S)\)</span>. We call <span class="math inline">\(\mathrm I(\mathcal S, \mathcal X)\)</span> the <em>mutual information between <span class="math inline">\(\mathcal S\)</span> and <span class="math inline">\(\mathcal X\)</span></em>, <span class="math inline">\(\mathrm H(\mathcal X)\)</span> is the <em>marginal entropy of <span class="math inline">\(\mathcal X\)</span></em> and <span class="math inline">\(\mathrm H(\mathcal X|\mathcal S)\)</span> the <em>conditional entropy of <span class="math inline">\(\mathcal X\)</span> given <span class="math inline">\(\mathcal S\)</span></em>. Therefore to understand e.g. the quality of our measurements (or of the measurement device) it can be insightful to be able to estimate the mutual information.</p>
+<p>When we consider the point of view of a signal-processing device (e.g. a cell) we might be interested in cases where both the quantity <span class="math inline">\(\mathcal S\)</span> and the data <span class="math inline">\(\mathcal X\)</span> change over time. We then consider the values of the random variables <span class="math inline">\(\mathcal S, \mathcal X\)</span> to be trajectories or sequences of states over time. Trajectories are usually represented as high-dimensional vectors (e.g. as a sequence of states and transition times). Our motivation is to compute the mutual information between such trajectories. To do this we intend to generate trajectories using a fully stochastic model of a biochemical network based on its master equation to compute the likelihoods of individual trajectories. In these notes however we only consider a very simple multi-dimensional Gaussian system because it allows us to test and understand the pitfalls of information estimation for high-dimensional systems with relatively low amounts of computing power. Additionally for a multivariate Gaussian system there exists a simple analytical expressions for the mutual information that we use to verify our estimates.</p>
+<p>Hence we consider the case where the joint probability distribution <span class="math inline">\(\mathrm P(\mathbf{s}, \mathbf{x})\)</span> is given by a multivariate normal distribution <span class="math display">\[
+\mathrm P(\mathbf{s}, \mathbf{x}) = \frac{1}{\sqrt{\left( 2\pi  \right)^{2d} \det Z}} \;\exp\left[-\frac12\ (\mathbf s^T\; \mathbf x^T)\ Z^{-1}\ \binom{\mathbf s}{\mathbf x}\right]
+\]</span> where <span class="math inline">\(\mathbf s, \mathbf x \in \mathbb R^d\)</span> are the signal and response vectors respectively and the symmetric positive-definite covariance matrix <span class="math inline">\(Z\in\mathbb R^{2d\times 2d}\)</span> has the block form <span id="eq:corr_z" class="eqnos"><span class="math display">\[
+Z =  \begin{pmatrix}
+C_{ss} &amp; C_{xs} \\
+C_{sx} &amp; C_{xx}
+\end{pmatrix}
+\]</span><span class="eqnos-number">(1)</span></span>  with <span class="math inline">\(C_{\alpha\beta}\in\mathbb R^{d\times d}\)</span>. For this distribution there exists a simple analytical expression to compute the mutual information<span class="citation"><sup><a href="#ref-Tostevin2010">1</a>,<a href="#ref-Shannon1948">2</a></sup></span> <span class="math display">\[
+\mathrm I(\mathcal S, \mathcal X) = \frac 12 \ln\left( \frac{\det C_{ss} \det C_{xx}}{\det Z} \right)
+\]</span> which will be our benchmark to compare the proposed Monte-Carlo estimation procedure against. In a similar way we can also acquire analytical equations for both the marginal entropy <span class="math inline">\(\mathrm H(\mathcal X)\)</span> and the conditional entropy <span class="math inline">\(\mathrm H(\mathcal X | \mathcal S)\)</span>.</p>
+<p>We want to estimate the mutual information by separately computing the marginal entropy <span class="math inline">\(\mathrm H(\mathcal X)\)</span> and the conditional entropy <span class="math inline">\(\mathrm H(\mathcal X | \mathcal S)\)</span> from simulated data. In the present case we have the full information about our system which allows us to generate correctly distributed random observations as test data.</p>
+<p>As it turns out the main difficulty of our estimation procedure is to get an unbiased estimate of <span class="math inline">\(\mathrm H(\mathcal X)\)</span> whereas it is much more straightforward to get a good estimate for <span class="math inline">\(\mathrm H(\mathcal X | \mathcal S)\)</span>. Therefore in these notes we focus on the computation of the marginal entropy and consider the conditional entropy at the end.</p>
+<h2 id="monte-carlo-estimate-for-the-marginal-entropy">Monte-Carlo Estimate for the Marginal Entropy</h2>
+<p>We compute the marginal entropy <span class="math inline">\(\mathrm H(\mathcal X)\)</span> using Monte-Carlo sampling to evaluate the necessary integrals. First we generate a number of samples <span class="math inline">\((\mathbf x_i)_{i=1,\ldots,N_x}\)</span> that are distributed according to the distribution of <span class="math inline">\(\mathcal X\)</span>. We use these to estimate the entropy <span id="eq:mc_entropy" class="eqnos"><span class="math display">\[
+\mathrm H(\mathcal X) = -\int\mathrm d\mathbf x\ \mathrm P(\mathbf x)\ln \mathrm P(\mathbf x) \approx \frac{\sum\limits_{i=1}^{N_x} \ln\mathrm P(\mathbf x_i)}{N_x} \,.
+\]</span><span class="eqnos-number">(2)</span></span> </p>
+<p>It is important to realize that we do not actually need to know the distribution of <span class="math inline">\(\mathcal X\)</span> to do create appropriate Monte-Carlo samples. Since a stochastic model for trajectories provides us with the distributions <span class="math inline">\(\mathrm P(\mathbf s)\)</span> and <span class="math inline">\(\mathrm P(\mathbf x|\mathbf s)\)</span> we can generate samples from <span class="math inline">\(\mathrm P(\mathbf x)\)</span> by first generating a sample <span class="math inline">\(\mathbf s_j\)</span> from <span class="math inline">\(\mathrm P(\mathbf s)\)</span> and then use <span class="math inline">\(P(\mathbf x|\mathbf s_j)\)</span> to generate a sample <span class="math inline">\(\mathbf x_i\)</span>.</p>
+<p>Nonetheless we see from eq. <a href="#eq:mc_entropy">2</a> that we <em>do</em> have to evaluate <span class="math inline">\(\mathrm P(\mathbf x_i)\)</span> for every generated sample. However, when we want to extend the method to stochastic trajectories then the distribution of the responses <span class="math inline">\(\mathrm P(\mathbf x)\)</span> is not known a priori anymore. Therefore we choose to evaluate <span class="math inline">\(\mathrm P(\mathbf x_i)\)</span> by doing a Monte-Carlo integration using signal samples <span class="math inline">\((\mathbf s_j)_{j=1,\ldots,N_s}\)</span> that are distributed according to <span class="math inline">\(\mathrm P(\mathcal S)\)</span>: <span id="eq:mc_marginal" class="eqnos"><span class="math display">\[
+\mathrm P(\mathbf x_i) = \int\mathrm d\mathbf s\ \mathrm P(\mathbf s)\ \mathrm P(\mathbf x_i|\mathbf s) \approx \frac{\sum\limits_{j=1}^{N_s} \mathrm P(\mathbf x_i | \mathbf s_j)}{N_s} \,.
+\]</span><span class="eqnos-number">(3)</span></span>  While for a low-dimensional signal space it might be feasible to instead compute the marginalization integral using direct evaluation (see<span class="citation"><sup><a href="#ref-CepedaHumerez2019">3</a></sup></span>) we choose to use MC evaluation to also be able to handle high-dimensional signal spaces. This is crucial since eventually we are interested in computing the mutual information between trajectories where the dimensionality of the distributions increases with trajectory length.</p>
+<p>We can summarize the estimation procedure for the marginal entropy using the equation <span id="eq:mc_entropy_notation" class="eqnos"><span class="math display">\[
+\mathrm H(\mathcal X) = -\left\langle \ln \left\langle \mathrm P(\mathbf x | \mathbf s) \right\rangle_{\mathrm P(\mathbf s)} \right\rangle_{\mathrm P(\mathbf x)}
+\]</span><span class="eqnos-number">(4)</span></span>  where we use the notation <span class="math inline">\(\langle f(x)\rangle_{g(x)}\)</span> for the expected value of <span class="math inline">\(f(x)\)</span> when <span class="math inline">\(x\)</span> is distributed according to the probability density given by <span class="math inline">\(g(x)\)</span>. Thus when thinking in mathematical terms we have the shorthand <span class="math inline">\(\langle f(x)\rangle_{g(x)} \equiv\int \mathrm dx\ g(x) f(x)\)</span>. We can also easily translate this notation into a Monte-Carlo estimate, i.e. <span class="math inline">\(\langle f(x)\rangle_{g(x)} = \lim\limits_{N\rightarrow\infty}\frac{\sum_{i=1}^N f(x_i)}{N}\)</span> where <span class="math inline">\(x_1, x_2,\ldots\)</span> are independent samples of the probability distribution given by <span class="math inline">\(g(x)\)</span>.</p>
+<p>The estimates for the entropies given by eq. <a href="#eq:mc_entropy">2</a> and eq. <a href="#eq:mc_marginal">3</a> together allow us to compute the mutual information of <span class="math inline">\(\mathcal X\)</span> and <span class="math inline">\(\mathcal S\)</span> <em>in principle</em>. In the following we discuss for which conditions and sample sizes you can expect a good entropy estimate from this method.</p>
+<h3 id="choice-of-covariance-matrices">Choice of Covariance Matrices</h3>
+We want to carefully choose the covariance matrices such that we can expect any sampling issues that arise in the Gaussian framework to also be present when dealing with stochastic trajectories. Therefore we chose to model a very simple gene expression model described by the reaction equations
+\begin{align*}
+\emptyset &amp;\xrightarrow{\kappa} S \xrightarrow{\lambda} \emptyset \\
+S &amp;\xrightarrow{\rho} S + X \\
+X &amp;\xrightarrow{\mu} \emptyset
+\end{align*}
+<p>where <span class="math inline">\(X\)</span> are particles representing the cell response and <span class="math inline">\(S\)</span> are particles that will be interpreted as the signal. We describe the signal and response trajectories as a vector of values at discrete sample times, e.g. <span class="math inline">\(\mathbf s = \left(s(t_1),\ldots,s(t_d)\right)^T\)</span>. For this model we can analytically compute the correlation functions. For simplicity we assume that the system is in steady state such that the correlation functions do only depend on time differences, i.e. <span class="math inline">\(C_{\alpha\beta}(t, t^\prime) = C_{\alpha\beta}(t^\prime-t)\)</span>. The correlation functions then give us the elements of the covariance matrices <span class="math display">\[
+C_{\alpha\beta}^{ij} = C_{\alpha\beta}(t_j - t_i) = \langle\alpha(t_i)\beta(t_j)\rangle\,.
+\]</span></p>
+<div id="fig:corr" class="fignos">
+<div class="figure">
+<img src="matrix_plots.png" alt="Figure 1: Matrix plots of the full correlation matrix Z from eq. 1 for different values of dimensionality d and \Delta t. Brighter colors indicate higher matrix element values. We can clearly observe the block structure of Z in every matrix plot. For every matrix plot, the element with coordinates (i,j) in the top left quadrant shows the correlations \langle s(i\Delta t) s(j \Delta t)\rangle. In the top right quadrant we see the correlations \langle s(i\Delta t) x(j \Delta t)\rangle and in the lower quadrants we see \langle x(i\Delta t) s(j \Delta t)\rangle and \langle x(i\Delta t) x(j \Delta t)\rangle on the left and right side respectively. The product d\Delta t is the duration of the signal and response trajectories. The quantity d\Delta t also serves as a rough measure of the sparsity of the correlation matrices (i.e. the fraction of matrix elements lower than some cutoff). In the plot grid we see correlation matrices with equal sparsity diagonally adjacent along lines from top right to bottom left. As we move along such a diagonal of equal sparsity and increasing dimensionality, we see correlation matrices that display the same features in a gradually more refined and smooth way." />
+<p class="caption"><span>Figure 1:</span> Matrix plots of the full correlation matrix <span class="math inline">\(Z\)</span> from eq. <a href="#eq:corr_z">1</a> for different values of dimensionality <span class="math inline">\(d\)</span> and <span class="math inline">\(\Delta t\)</span>. Brighter colors indicate higher matrix element values. We can clearly observe the block structure of <span class="math inline">\(Z\)</span> in every matrix plot. For every matrix plot, the element with coordinates <span class="math inline">\((i,j)\)</span> in the top left quadrant shows the correlations <span class="math inline">\(\langle s(i\Delta t) s(j \Delta t)\rangle\)</span>. In the top right quadrant we see the correlations <span class="math inline">\(\langle s(i\Delta t) x(j \Delta t)\rangle\)</span> and in the lower quadrants we see <span class="math inline">\(\langle x(i\Delta t) s(j \Delta t)\rangle\)</span> and <span class="math inline">\(\langle x(i\Delta t) x(j \Delta t)\rangle\)</span> on the left and right side respectively. The product <span class="math inline">\(d\Delta t\)</span> is the duration of the signal and response trajectories. The quantity <span class="math inline">\(d\Delta t\)</span> also serves as a rough measure of the sparsity of the correlation matrices (i.e. the fraction of matrix elements lower than some cutoff). In the plot grid we see correlation matrices with equal sparsity diagonally adjacent along lines from top right to bottom left. As we move along such a diagonal of equal sparsity and increasing dimensionality, we see correlation matrices that display the same features in a gradually more refined and smooth way.</p>
+</div>
+</div>
+<p>Using this system we have two parameters left to tune. We can freely choose the number <span class="math inline">\(d\)</span> and offsets <span class="math inline">\(\Delta t\)</span> of our time samples. The duration of the trajectories <span class="math inline">\(\mathbf s\)</span> and <span class="math inline">\(\mathbf x\)</span> is given by the product <span class="math inline">\(T=d\Delta t\)</span>. In figure <a href="#fig:corr">1</a> we show matrix plots of the joint covariance matrix <span class="math inline">\(Z\)</span> for different values of <span class="math inline">\(d\)</span> and <span class="math inline">\(\Delta t\)</span>. We can also observe that <span class="math inline">\(d\)</span> determines the dimensionality of the problem while the product <span class="math inline">\(d \Delta t\)</span> serves as a measure for the sparsity of the correlation matrices. Note that the choice of <span class="math inline">\(\Delta t\)</span> affects how well the discretized trajectories approximate physical continuous-time trajectories. However here we are not interested in comparing our results to physical systems (as is done in<span class="citation"><sup><a href="#ref-Tostevin2010">1</a></sup></span>) and therefore we can simply regard <span class="math inline">\(\Delta t\)</span> as a parameter describing the sparsity of the covariance matrices.</p>
+<div id="tbl:k" class="tablenos">
+<table>
+<caption><span>Table 1:</span> Values of the reaction constants used for all computations. </caption>
+<thead>
+<tr class="header">
+<th align="center"><span class="math inline">\(\kappa\)</span></th>
+<th align="center"><span class="math inline">\(\lambda\)</span></th>
+<th align="center"><span class="math inline">\(\rho\)</span></th>
+<th align="center"><span class="math inline">\(\mu\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">0.25</td>
+<td align="center">0.005</td>
+<td align="center">0.01</td>
+<td align="center">0.01</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="results">Results</h3>
+<p>We want to use this fully Gaussian model to understand how the sample sizes of the different Monte Carlo steps affect the estimate and whether there exists a bias in the approximation. We calculate the marginal entropy as a Monte Carlo average over the logarithms of the marginal distribution densities of <span class="math inline">\(N_x\)</span> sampled responses as shown in eq. <a href="#eq:mc_entropy">2</a>. The evaluation of the marginal density itself requires a Monte Carlo average over <span class="math inline">\(N_s\)</span> sampled signals (eq. <a href="#eq:mc_marginal">3</a>). Hence to evaluate the marginal density we need to perform nested averaging as shown in eq. <a href="#eq:mc_entropy_notation">4</a>. We performed this procedure for various values of <span class="math inline">\(N_s\)</span> and <span class="math inline">\(N_x\)</span> and compared the estimate with reference results using the analytical expression for the entropy of a multivariate Gaussian distribution.</p>
+<p>Both, increase of <span class="math inline">\(N_x\)</span> and increase of <span class="math inline">\(N_s\)</span> should lead to an improved estimate of <span class="math inline">\(\mathrm H(\mathcal X)\)</span>. To understand the accuracy of an estimate with a given <span class="math inline">\(N_s\)</span> and <span class="math inline">\(N_x\)</span> we repeat the estimation procedure multiple times and compute the mean and the standard deviation of the individual estimation results.</p>
+<div id="fig:rel_err_responses" class="fignos">
+<div class="figure">
+<img src="relative_error_responses.svg" alt="Figure 2: Top: relative error \frac{\mathrm H_\text{estimate}}{\mathrm H_\text{analytical}} - 1 for the marginal entropy as a function of 1/N_x. Bottom: empirical variance of ensembles of 144 estimates. The solid lines show a linear extrapolation of the data points for N_x \rightarrow\infty. All estimates were performed using a constant number of signal samples N_s = 400 and d = 200 dimensional covariance matrices. The linear extrapolation in the bottom plot indicates that we do predict the variance of the results to vanish in the limit of infinite sampling. This behavior is generally expected for Monte Carlo estimates. Strikingly however, we find that there is a consistent offset of the average estimate from the correct result, even in the limit N_x \rightarrow\infty. We see that the bias scales with the sparsity of the covariance matrices." />
+<p class="caption"><span>Figure 2:</span> Top: relative error <span class="math inline">\(\frac{\mathrm H_\text{estimate}}{\mathrm H_\text{analytical}} - 1\)</span> for the marginal entropy as a function of <span class="math inline">\(1/N_x\)</span>. Bottom: empirical variance of ensembles of 144 estimates. The solid lines show a linear extrapolation of the data points for <span class="math inline">\(N_x \rightarrow\infty\)</span>. All estimates were performed using a constant number of signal samples <span class="math inline">\(N_s = 400\)</span> and <span class="math inline">\(d = 200\)</span> dimensional covariance matrices. The linear extrapolation in the bottom plot indicates that we do predict the variance of the results to vanish in the limit of infinite sampling. This behavior is generally expected for Monte Carlo estimates. Strikingly however, we find that there is a consistent offset of the average estimate from the correct result, even in the limit <span class="math inline">\(N_x \rightarrow\infty\)</span>. We see that the bias scales with the sparsity of the covariance matrices.</p>
+</div>
+</div>
+<p>In fig. <a href="#fig:rel_err_responses">2</a> we see how the relative error of our estimate varies with the number of simulated responses <span class="math inline">\(N_x\)</span>. Here use the same number of signals per response <span class="math inline">\(N_s\)</span> for all estimates. While---as expected---the variance of the estimate decreases when we increase <span class="math inline">\(N_x\)</span> we find that especially for very sparse covariance matrices we consistently over-estimate the marginal entropy. Indeed, we find that the systematic bias in our results seems to be independent of <span class="math inline">\(N_x\)</span>.</p>
+<p>We found that the bias is stronger for correlation matrices with higher sparsities <span class="math inline">\(d\Delta t\)</span>. Since the sparsity grows with trajectory duration we can expect an increasingly strong over-estimation for longer trajectories. The sparsity can be increased either by decreasing the time-resolution or by increasing the dimensions of the covariance matrix. To understand how these parameters relate to each other we tested how the estimation error changes when we increase the dimensionality of the correlation matrices while the sparsity remains constant.</p>
+<p>Figure <a href="#fig:sparsity">3</a> shows how large the estimation error for the marginal is on average for different levels of sparsity. We see that in all cases an increase of sparsity corresponds to an increase of estimation error. Additionally we find that increasing the dimensions of the covariance matrices while keeping the sparsity constant tends to slightly worsen the bias of the estimates as well. As we keep increasing the dimensionality at constant sparsity the matrices gradually become a more faithful representation of the continuous correlation functions of the system (see fig. <a href="#fig:corr">1</a>). Extrapolating the lines in fig. <a href="#fig:sparsity">3</a> we project that for very large covariance matrices, the sparsity is the only determining factor of the estimation bias.</p>
+<div id="fig:sparsity" class="fignos">
+<div class="figure">
+<img src="sparsity.svg" alt="Figure 3: Absolute error of marginal entropy estimates for different values of the sparsity d\Delta t of the correlation matrices. We see that for high dimensionality the lines of constant sparsity become increasingly flat. This indicates that for high-dimensional systems the sparsity of the covariance matrix is a good measure for the difficulty of correct estimation. We therefore claim that the bias of the entropy estimate for the Gaussian system primarily depends on the sparsity of the covariance matrix. Note that for lower numbers of dimensions the covariance matrices of along the diagonals of equal sparsity look more blocky (see fig. 1). That may be an indicator why the estimation error is not constant for a given sparsity at lower dimensions." />
+<p class="caption"><span>Figure 3:</span> Absolute error of marginal entropy estimates for different values of the sparsity <span class="math inline">\(d\Delta t\)</span> of the correlation matrices. We see that for high dimensionality the lines of constant sparsity become increasingly flat. This indicates that for high-dimensional systems the sparsity of the covariance matrix is a good measure for the difficulty of correct estimation. We therefore claim that the bias of the entropy estimate for the Gaussian system primarily depends on the sparsity of the covariance matrix. Note that for lower numbers of dimensions the covariance matrices of along the diagonals of equal sparsity look more blocky (see fig. <a href="#fig:corr">1</a>). That may be an indicator why the estimation error is not constant for a given sparsity at lower dimensions.</p>
+</div>
+</div>
+<div id="fig:error_regression" class="fignos">
+<div class="figure">
+<img src="error_grid.svg" alt="Figure 4: Relative error \frac{\mathrm H_\text{estimate}}{\mathrm H_\text{analytical}} - 1 as a function of \frac{1}{N_S}. We can see that the relative error in the marginal entropy estimate increases with the sparsity (i.e. with trajectory duration). The linear extrapolating lines emphasize that there is a noticable but very slight decrease in error as N_s\to\infty. This seems puzzling since for infinite sampling we should expect the error to vanish. Apparently for high sparsity covariance matrices we need extraordinarly many signal samples to achieve unbiased estimates." />
+<p class="caption"><span>Figure 4:</span> Relative error <span class="math inline">\(\frac{\mathrm H_\text{estimate}}{\mathrm H_\text{analytical}} - 1\)</span> as a function of <span class="math inline">\(\frac{1}{N_S}\)</span>. We can see that the relative error in the marginal entropy estimate increases with the sparsity (i.e. with trajectory duration). The linear extrapolating lines emphasize that there is a noticable but very slight decrease in error as <span class="math inline">\(N_s\to\infty\)</span>. This seems puzzling since for infinite sampling we should expect the error to vanish. Apparently for high sparsity covariance matrices we need extraordinarly many signal samples to achieve unbiased estimates.</p>
+</div>
+</div>
+<p>As a next step we investigated how changes in the sampling for the marginal density <span class="math inline">\(\mathrm P(\mathbf x_i)\)</span> affect the estimation bias. Thus in fig. <a href="#fig:error_regression">4</a> we show how the increase of simulated signals per response <span class="math inline">\(N_s\)</span> improves the estimate of the marginal entropy. Here we again see that for high number of dimensions we over-estimate the marginal entropy. An increase of <span class="math inline">\(N_s\)</span> does lead to slightly less over-estimation but the linear extrapolation indicates that even if we choose enormously high values for <span class="math inline">\(N_s\)</span> we can not expect to reduce the bias substantially.</p>
+<p>For a given number of samples, the fraction of the trajectory space probed by the Monte Carlo scheme decreases with the duration of the trajectories. Therefore, for a given number of Monte Carlo samples we expect the estimate to become worse for longer trajectories . This is confirmed by our results. Furthermore and more surprisingly we find that we consistently over-estimate the marginal entropy and while increasing <span class="math inline">\(N_s\)</span> <em>does</em> reduce the bias slightly it appears to require an astronomically high sampling in signal trajectory space to reach arbitrary low errors. An increase in <span class="math inline">\(N_x\)</span> however reduces the variance of the results but does not influence the bias at all.</p>
+<p>Thus we are lead to believe that the main difficulty in estimating the marginal entropy is the Monte-Carlo marginalization of the probability density function. To estimate <span class="math inline">\(\mathrm P(\mathbf x)\)</span> we sample signals from the marginal distribution <span class="math inline">\(\mathrm P(\mathbf s)\)</span> and average over the likelihoods <span class="math inline">\(\mathrm P(\mathbf x | \mathbf s)\)</span>. However as the space of signals becomes increasingly vast for longer trajectories, it becomes more and more unlikely to sample a signal where <span class="math inline">\(\mathbf x\)</span> has a non-vanishing likelihood of occurring. Indeed, when we allow ourselves to evaluate <span class="math inline">\(\mathrm P(\mathbf x)\)</span> directly from the Gaussian PDF we find that the bias of the marginal entropy estimate does not appear.</p>
+<p>To get a better estimate of <span class="math inline">\(\mathrm P(\mathbf x)\)</span> we decided to use <em>importance sampling</em>, i.e. to bias our sampling strategy towards signals that we expect to have a high likelihood for the given response. Since Monte-Carlo estimates depend on the distribution of the chosen samples we must correct our estimate by re-weighing the samples accordingly.</p>
+<p>More specifically, given a sampling distribution <span class="math inline">\(w(\mathbf s)\)</span> (which is normalized like a probability density function) we can write <span class="math display">\[
+\mathrm P(\mathbf x) = \int \mathrm d\mathbf s\ w(\mathbf s)\frac{\mathrm P(\mathbf s)\mathrm P(\mathbf x | \mathbf s)}{w(\mathbf s)} = \left\langle \frac{\mathrm P(\mathbf s)\mathrm P(\mathbf x | \mathbf s)}{w(\mathbf s)} \right\rangle_{w(\mathbf s)}
+\]</span> which shows us how to compute <span class="math inline">\(\mathrm P(\mathbf x_i)\)</span> from signal trajectories <span class="math inline">\(\mathbf s_1^w, \ldots, \mathbf s_{N_s}^w\)</span> which are distributed according to the sampling distribution given by <span class="math inline">\(w\)</span>: <span class="math display">\[
+\mathrm P(\mathbf x_i) \approx \frac1{N_s} \sum\limits_{j=1}^{N_s} \frac{\mathrm P(\mathbf s_j^w)\mathrm P(\mathbf x_i | \mathbf s_j^w)}{w(\mathbf s_j^w)} \equiv P_{\mathbf x_i, N_s}^w \,.
+\]</span></p>
+<p>The choice of the sampling distribution <span class="math inline">\(w\)</span> has a direct impact on the variance of an ensemble of estimates <span class="math inline">\(P_{\mathbf x_i, N_s}^w\)</span>. Indeed, for any given <span class="math inline">\(\mathbf x_i\)</span> there is an optimal choice for the sampling distribution <span class="math inline">\(w_\text{opt}\)</span> such that the variance of the estimates vanishes. This optimal choice is given by <span class="math inline">\(w_\text{opt}(\mathbf s) = \mathrm P(\mathbf s | \mathbf x_i)\)</span> which is easily confirmed by the calculation <span id="eq:opt_sampling" class="eqnos"><span class="math display">\[
+P_{\mathbf x_i, N_s}^{w_\text{opt}} = \frac1{N_s}\sum\limits_{j=1}^{N_s} \frac{\mathrm P(\mathbf s_j^w)\mathrm P(\mathbf x_i | \mathbf s_j^w)}{\mathrm P(\mathbf s_j^w | \mathbf x_i)} = \frac1{N_s}\sum\limits_{j=1}^{N_s} \mathrm P(\mathbf x_i)
+\]</span><span class="eqnos-number">(5)</span></span>  where in the last step we applied Bayes' rule. Since the expression above is completely independent of the chosen signal samples the result is deterministic and thus has zero variance. We also see from eq. <a href="#eq:opt_sampling">5</a> that in practice we can't directly use <span class="math inline">\(w_\text{opt}(\mathbf s) = \mathrm P(\mathbf s | \mathbf x_i)\)</span> as our sampling distribution since the evaluation of <span class="math inline">\(\mathrm P(\mathbf s | \mathbf x_i) = \frac{\mathrm P(\mathbf x_i|\mathbf s) \mathrm P(\mathbf s)}{\mathrm P(\mathbf x_i)}\)</span> itself depends on <span class="math inline">\(\mathrm P(\mathbf x_i)\)</span> which is precisely the quantity we are interested in estimating.</p>
+<div id="fig:rel_err_opt" class="fignos">
+<div class="figure">
+<img src="sampling2.svg" alt="Figure 5: Relative error as a function of the dimensionality d. The solid lines show the results using non-optimized sampling while the dashed lines show the results when using a sampling distribution close to the optimal distribution \mathrm P(\mathbf s|\mathbf x). We see that with optimized sampling there is no consistent over-estimation anymore. All estimated were done using d = 200 dimensional covariance matrices." />
+<p class="caption"><span>Figure 5:</span> Relative error as a function of the dimensionality <span class="math inline">\(d\)</span>. The solid lines show the results using non-optimized sampling while the dashed lines show the results when using a sampling distribution close to the optimal distribution <span class="math inline">\(\mathrm P(\mathbf s|\mathbf x)\)</span>. We see that with optimized sampling there is no consistent over-estimation anymore. All estimated were done using <span class="math inline">\(d = 200\)</span> dimensional covariance matrices.</p>
+</div>
+</div>
+<p>Instead, we can try to obtain a sampling distribution that is as close as possible to <span class="math inline">\(w_\text{opt}(\mathbf s)\)</span>. A known approach involves using random samples from <span class="math inline">\(\mathrm P(\mathbf s | \mathbf x_i)\)</span> to pick the most optimal sampling distribution from a family of candidate distributions<span class="citation"><sup><a href="#ref-Chan2012">4</a></sup></span>. Generating so-called <em>posterior samples</em> from <span class="math inline">\(\mathrm P(\mathbf s | \mathbf x_i) \sim \mathrm P(\mathbf x_i|\mathbf s) \mathrm P(\mathbf s)\)</span> is generally possible without knowledge of the normalization factor <span class="math inline">\(\mathrm P(\mathbf x_i)\)</span> e.g. by using Metropolis-Sampling<span class="citation"><sup><a href="#ref-Mueller1991">5</a>,<a href="#ref-Tierney1994">6</a></sup></span>. To test within the Gaussian framework whether such an approach to importance sampling could work in principle, we generate 400 posterior samples by directly sampling from the analytically known posterior distribution <span class="math inline">\(\mathrm P(\mathbf s | \mathbf x_i)\)</span>. We compute the empircial mean <span class="math inline">\(\bar{\mathbf s}\)</span> and the empirical covariance <span class="math inline">\(\bar C_{\mathbf s|\mathbf x_i}\)</span> of these samples as parameter estimates for a multivariate Gaussian <span class="math inline">\(\mathcal N(\bar{\mathbf s}, \bar C_{\mathbf s|\mathbf x_i})\)</span> and use it as an optimized sampling distribution.</p>
+<p>In fig. <a href="#fig:rel_err_opt">5</a> we show that using optimized sampling we can strongly reduce the systematic bias in marginal entropy estimation. As expected, importance sampling is especially useful when the sparsity is very high, i.e. the trajectories are long. It is clear that for longer trajectories we expect <span class="math inline">\(\mathrm P(\mathbf s | \mathbf x_i)\)</span> to be a much more narrow sampling distribution than <span class="math inline">\(\mathrm P(\mathbf s)\)</span> whenever the <span class="math inline">\(\mathcal S\)</span> and <span class="math inline">\(\mathcal X\)</span> are not completely independent. Consequently, it becomes more and more unlikely to obtain a sample <span class="math inline">\(s^\prime\)</span> from <span class="math inline">\(\mathrm P(\mathbf s)\)</span> such that <span class="math inline">\(\mathrm P(s^\prime | \mathbf x_i) &gt; \epsilon\)</span> for any <span class="math inline">\(\epsilon &gt; 0\)</span> and therefore more difficult to accurately estimate <span class="math inline">\(\mathrm P(\mathbf x_i)\)</span> using an unbiased sampling distribution.</p>
+<!-- To choose a sensible sampling distribution we use the fact that we generate the responses $\mathbf x_i$ by first picking a signal $\mathbf s_i^\star$ and subsequently picking from the likelihood distribution $\mathrm P(\mathbf x|\mathbf s_i^\star)$. As a matter of fact, $\mathbf s_i^\star$ can be regarded as a single random sample from $\mathrm P(\mathbf s | \mathbf x_i)$, i.e. the “optimal” sampling distribution. It is not unreasonable to assume in this context that a multivariate Gaussian distribution centered at $\mathbf s_i^\star$ could turn out to be a good weighing function. -->
+<h2 id="estimating-the-conditional-entropy">Estimating the Conditional Entropy</h2>
+<p>We can also estimate the <em>conditional entropy</em> and thus the mutual information within the Gaussian Framework. We express the conditional entropy using the notation introduced above <span class="math display">\[
+\mathrm H(\mathcal X|\mathcal S) = -\int \mathrm d\mathbf s\mathrm d\mathbf x\ \mathrm P(\mathbf s)\mathrm P(\mathbf x | \mathbf s) \ln\mathrm P(\mathbf x|\mathbf s) = -\left\langle\langle\ln\mathrm P(\mathbf x | \mathbf s)\rangle_{\mathrm P(\mathbf x | \mathbf s)} \right\rangle_{\mathrm P(\mathbf s)}
+\]</span> to show that we require nested Monte Carlo integrations to evaluate the integral. We first generate signal samples <span class="math inline">\(\mathbf s_1, \ldots, \mathbf s_{N_s}\)</span> from the density <span class="math inline">\(\mathrm P(\mathbf s)\)</span>. Let <span class="math inline">\(\mathbf x_i^1,\ldots,\mathbf x_i^{N_x}\)</span> be response samples generated from <span class="math inline">\(\mathrm P(\mathbf x | \mathbf s_i)\)</span>. The Monte Carlo estimate for the conditional entropy then reads <span class="math display">\[
+\mathrm H(\mathcal X|\mathcal S) \approx - \frac1{N_s N_x} \sum\limits_{i=1}^{N_s} \sum\limits_{j=1}^{N_x} \ln\mathrm P(\mathbf x_i^j | \mathbf s_i)\,.
+\]</span></p>
+<div id="fig:conditional" class="fignos">
+<div class="figure">
+<img src="conditional.svg" alt="Figure 6: Comparison of the relative error of conditional entropy estimates versus marginal error estimates. The relative errors are shown on a logarithmic scale as a function of the sparsity. We can see that the relative error for the estimate of the conditional entropy is a few orders of magnitude smaller than the estimates of the marginal entropy. All estimates were performed with N_x=25600 and N_s=1000." />
+<p class="caption"><span>Figure 6:</span> Comparison of the relative error of conditional entropy estimates versus marginal error estimates. The relative errors are shown on a logarithmic scale as a function of the sparsity. We can see that the relative error for the estimate of the conditional entropy is a few orders of magnitude smaller than the estimates of the marginal entropy. All estimates were performed with <span class="math inline">\(N_x=25600\)</span> and <span class="math inline">\(N_s=1000\)</span>.</p>
+</div>
+</div>
+<p>For both, marginal entropy and conditional entropy we have to evaluate the likelihood <span class="math inline">\(\mathrm P(\mathbf x| \mathbf s)\)</span> a total of <span class="math inline">\(N_s N_x\)</span> times. To compare the accuracy of we performed estimates of the marginal entropy with and without optimized sampling together with estimates of the conditional entropy for <span class="math inline">\(N_s = 1000\)</span> and <span class="math inline">\(N_x = 25600\)</span>. In fig. <a href="#fig:conditional">6</a> we show the relative error of both, marginal and conditional entropy estimates as a function of the sparsity. We find that the estimate of the conditional entropy is very accurate regardless of sampling size. Even with optimized sampling the marginal entropy estimate is roughly two orders of magnitude worse than a comparable conditional entropy estimate.</p>
+<p>We can thus conclude that the main difficulty of obtaining a good estimate for the mutual information between trajectories lies in the efficient and accurate computation of the marginal entropy. A viable approach for this seems to be to use importance sampling in the signal space in the computation of the marginal probability density. Our results indicate that such an approach could also work for trajectories generated using a fully stochastic model of a biochemical network.</p>
+<h2 id="references" class="unnumbered">References</h2>
+<div id="refs" class="references">
+<div id="ref-Tostevin2010">
+<p>1. Tostevin, F. &amp; Wolde, P. R. ten. Mutual information in time-varying biochemical systems. <em>Physical Review E</em> <strong>81</strong>, (2010).</p>
+</div>
+<div id="ref-Shannon1948">
+<p>2. Shannon, C. E. A mathematical theory of communication. <em>Bell System Technical Journal</em> <strong>27</strong>, 379–423 (1948).</p>
+</div>
+<div id="ref-CepedaHumerez2019">
+<p>3. Cepeda-Humerez, S. A., Ruess, J. &amp; Tkačik, G. Estimating information in time-varying signals. <em>PLOS Computational Biology</em> <strong>15</strong>, e1007290 (2019).</p>
+</div>
+<div id="ref-Chan2012">
+<p>4. Chan, J. C. C. &amp; Eisenstat, E. Marginal likelihood estimation with the cross-entropy method. <em>SSRN Electronic Journal</em> (2012) doi:<a href="https://doi.org/10.2139/ssrn.2055042">10.2139/ssrn.2055042</a>.</p>
+</div>
+<div id="ref-Mueller1991">
+<p>5. Müller, P. <em>A generic approach to posterior integration and gibbs sampling</em>. (2AD).</p>
+</div>
+<div id="ref-Tierney1994">
+<p>6. Tierney, L. Markov chains for exploring posterior distributions. <em>The Annals of Statistics</em> <strong>22</strong>, 1701–1728 (1994).</p>
+</div>
+</div>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        
+
+                        
+                            <a rel="next" href="02-information-trajectories.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                
+
+                
+                    <a rel="next" href="02-information-trajectories.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+            </nav>
+
+        </div>
+
+        
+
+        
+
+        
+        
+        
+
+        
+
+        
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        
+
+        
+
+    </body>
+</html>
