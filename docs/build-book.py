@@ -108,6 +108,7 @@ class Book(object):
 
 def get_chapters():
     chapters = sorted(glob("docs/[0-9]*-*.html"))
+    chapters.insert(0, "docs/index.html")
     return Book(chapters)
 
 
@@ -133,7 +134,7 @@ def render(book):
         output.append(
             template.render(
                 content=content,
-                path_to_root="",
+                path_to_root="master-thesis/",
                 mathjax_support=True,
                 default_theme="Light",
                 language="en-us",
@@ -168,6 +169,7 @@ def copy_static_files(book):
 
 def invoke_pandoc():
     chapters = sorted(glob("docs/[0-9]*-*.md"))
+    chapters.insert(0, "docs/index.md")
     for chapter in chapters:
         outfile = Path(chapter).with_suffix(".html")
         args = [
