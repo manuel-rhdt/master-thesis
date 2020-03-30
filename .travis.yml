@@ -3,31 +3,30 @@ dist: xenial
 
 jobs:
   include:
-  - language: python
-    python: "3.8"
-    addons:
-      apt:
-        packages:
-        - pandoc
-        - pandoc-citeproc
-    install:
-    - pip install -r requirements.txt
-    script:
-    - docs/build-book.py
-  - language: rust
-    rust: stable
-    addons:
-      apt:
-        packages:
-        - libnetcdf-dev
-    before_install: cd accelerate 
-    cache: cargo
-
-deploy:
-  provider: pages
-  token: $GITHUB_TOKEN
-  keep_history: true
-  local_dir: _site
-  edge: true
-  on:
-    branch: master
+    - language: python
+      python: "3.8"
+      addons:
+        apt:
+          packages:
+            - pandoc
+            - pandoc-citeproc
+      install:
+        - pip install -r requirements.txt
+      script:
+        - docs/build-book.py
+      deploy:
+        provider: pages
+        token: $GITHUB_TOKEN
+        keep_history: true
+        local_dir: _site
+        edge: true
+        on:
+          branch: master
+    - language: rust
+      rust: stable
+      addons:
+        apt:
+          packages:
+            - libnetcdf-dev
+      before_install: cd accelerate
+      cache: cargo
