@@ -1,6 +1,9 @@
 os: linux
 dist: xenial
 
+language: rust
+rust: stable
+
 jobs:
   include:
     - language: python
@@ -30,3 +33,14 @@ jobs:
             - libnetcdf-dev
       before_install: cd accelerate
       cache: cargo
+    - stage: deploy
+      script: skip
+      before_install: cd accelerate
+      install: cargo build --verbose --release
+      deploy:
+        provider: releases
+        edge: true
+        token: $GITHUB_TOKEN
+        file: target/release/accelerate
+        # on:
+        #   tags: true
