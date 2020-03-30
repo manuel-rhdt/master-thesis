@@ -46,5 +46,6 @@ jobs:
         edge: true
         token: $GITHUB_TOKEN
         file: target/release/accelerate
-        # on:
-        #   tags: true
+        draft: true
+        on:
+          tags: true
