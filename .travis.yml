@@ -1,6 +1,5 @@
-language: python
-python:
-  - "3.8"
+os: linux
+dist: xenial
 
 jobs:
   include:
@@ -20,9 +19,9 @@ jobs:
 
 deploy:
   provider: pages
-  skip_cleanup: true
-  github_token: $GITHUB_TOKEN # Set in the settings page of your repository, as a secure variable
+  token: $GITHUB_TOKEN
   keep_history: true
   local_dir: _site
+  edge: true
   on:
     branch: master
