@@ -28,7 +28,5 @@ jobs:
         apt:
           packages:
             - libnetcdf-dev
-      before_cache:
-        - rm -rf "$TRAVIS_HOME/.cargo/registry/src"
-        - cd accelerate
+      before_install: cd accelerate
       cache: cargo
