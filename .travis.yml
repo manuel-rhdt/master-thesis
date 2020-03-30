@@ -16,6 +16,10 @@ jobs:
     - docs/build-book.py
   - language: rust
     rust: stable
+    addons:
+      apt:
+        packages:
+        - libnetcdf-dev
     before_install: cd accelerate 
     cache: cargo
 
