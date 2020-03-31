@@ -27,18 +27,10 @@ jobs:
           branch: master
     - language: rust
       rust: stable
-      addons:
-        apt:
-          packages:
-            - libnetcdf-dev
       before_install: cd accelerate
       cache: cargo
     - stage: deploy
       script: skip
-      addons:
-        apt:
-          packages:
-            - libnetcdf-dev
       before_install: cd accelerate
       install: cargo build --verbose --release
       deploy:
