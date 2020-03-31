@@ -30,6 +30,7 @@ jobs:
       before_install: cd accelerate
       cache: cargo
     - stage: deploy
+      if: tag IS present
       script: skip
       before_install: cd accelerate
       install: cargo build --verbose --release
