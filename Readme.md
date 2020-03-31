@@ -1,7 +1,10 @@
-# Gillespie
+# Master Thesis
 
 This is a package of code used to research information processing inside of cells. In
 the `docs` directory there are some notes about the research background.
+
+- [Build status ![Build Status](https://travis-ci.com/manuel-rhdt/master-thesis.svg?branch=master)](https://travis-ci.com/manuel-rhdt/master-thesis)
+- [Rendered Thesis](https://manuel-rhdt.github.io/master-thesis/).
 
 ## What this is for
 
@@ -24,32 +27,3 @@ To estimate the mutual information between chosen signals and the responses gene
 different reaction networks we employ a monte carlo sampling technique. This way we can
 make the integration over the space of trajectories viable on today's computers.
 
-## Installation
-
-You have to install the dependencies from `requirements.txt` first.
-
-*Note: Due to access of `/dev/shm` this project currently only runs on linux.*
-
-## Usage
-
-Create `configuration.toml` to configure the individual actions. An example
-configuration is provided in `configuration_default.toml`.
-
-Then from the project directory just run
-
-```sh
-python3 mutual_information
-```
-
-from the shell to execute the calculation.
-
-The application needs a configuration file named `configuration.toml` to be present in
-the current working directory. The configuration file format used is
-[TOML](https://github.com/toml-lang/toml) which is designed to be both human-readable
-and easy to process. You can find a sample configuration file in
-`configuration_default.toml`.
-
-### Advanced configuration
-
-The configuration file can be used as a [Jinja2](https://palletsprojects.com/p/jinja/)
-Template.
