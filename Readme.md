@@ -5,7 +5,7 @@ the `docs` directory there are some notes about the research background.
 
 - [Build status ![Build Status](https://travis-ci.com/manuel-rhdt/master-thesis.svg?branch=master)](https://travis-ci.com/manuel-rhdt/master-thesis)
 - [Rendered Thesis](https://manuel-rhdt.github.io/master-thesis/).
-- [Presentation](https://serene-ardinghelli-dc7612.netlify.com/)
+- Short presentation. [Slides](https://manuel-rhdt.github.io/biomeeting-03-2020/)
 
 ## What this is for
 
