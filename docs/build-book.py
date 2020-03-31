@@ -180,7 +180,7 @@ def invoke_pandoc():
             "--filter",
             "pandoc-citeproc",
             "--csl",
-            "docs/nature-physics.csl",
+            "docs/elsevier-with-titles.csl",
             "--bibliography",
             "docs/library.bib",
             "-o",

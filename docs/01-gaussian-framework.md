@@ -53,7 +53,7 @@ Nonetheless we see from +@eq:mc_entropy that we _do_ have to evaluate $\mathrm P
 $$
 \mathrm P(\mathbf x_i) = \int\mathrm d\mathbf s\ \mathrm P(\mathbf s)\ \mathrm P(\mathbf x_i|\mathbf s) \approx \frac{\sum\limits_{j=1}^{N_s} \mathrm P(\mathbf x_i | \mathbf s_j)}{N_s} \,.
 $$ {#eq:mc_marginal}
-While for a low-dimensional signal space it might be feasible to instead compute the marginalization integral using direct evaluation (see [@CepedaHumerez2019]) we choose to use MC evaluation to also be able to handle high-dimensional signal spaces. This is crucial since eventually we are interested in computing the mutual information between trajectories where the dimensionality of the distributions increases with trajectory length.
+While for a low-dimensional signal space it is feasible to instead compute the marginalization integral using direct evaluation [@CepedaHumerez2019] we choose to use MC evaluation to also be able to handle high-dimensional signal spaces. This is crucial since eventually we are interested in computing the mutual information between trajectories where the dimensionality of the distributions increases with trajectory length.
 
 We can summarize the estimation procedure for the marginal entropy using the equation
 $$
