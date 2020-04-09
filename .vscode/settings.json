@@ -2,9 +2,9 @@
     "markdown.styles": [
         "docs/styling.css"
     ],
-    "pandoc.htmlOptString": "--filter pandoc-xnos -M eqnos-warning-level=1 --mathjax --filter pandoc-citeproc --bibliography library.bib -s --csl ieee.csl --css styling.css",
-    "pandoc.pdfOptString": "--filter pandoc-xnos -M eqnos-warning-level=1 --filter pandoc-citeproc --lua-filter latex_styles.lua --bibliography library.bib --csl ieee.csl --template='template.latex'",
-    "pandocMarkdownPreview.extraPandocArguments": "--filter pandoc-citeproc --bibliography library.bib --csl ieee.csl",
+    "pandoc.htmlOptString": "--filter pandoc-crossref --filter pandoc-citeproc --mathjax --bibliography library.bib -s  --csl elsevier-with-titles.csl --css styling.css",
+    "pandoc.pdfOptString": "--filter pandoc-crossref --filter pandoc-citeproc --lua-filter latex_styles.lua --bibliography library.bib --csl elsevier-with-titles.csl --template='template.latex'",
+    "pandocMarkdownPreview.extraPandocArguments": "--filter pandoc-citeproc --bibliography library.bib --csl elsevier-with-titles.csl",
     "markdown.preview.fontSize": 15,
     "cSpell.words": [
         "discretized"
