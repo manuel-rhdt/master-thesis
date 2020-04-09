@@ -183,6 +183,7 @@ def invoke_pandoc():
             "--mathjax",
             "--bibliography",
             "docs/library.bib",
+            "--number-sections",
             "-o",
             str(outfile),
             chapter,
