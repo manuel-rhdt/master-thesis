@@ -171,9 +171,23 @@
 
                     <li class="expanded">
                     
-                    <a href="#results" class="">
+                    <a href="#direct-importance-sampling" class="">
                     
-                    Results
+                    Direct Importance Sampling
+                    </a>
+                    </li>
+                
+                    
+
+                    
+
+                    
+
+                    <li class="expanded">
+                    
+                    <a href="#umbrella-sampling" class="">
+                    
+                    Umbrella Sampling
                     </a>
                     </li>
                 
@@ -433,7 +447,7 @@
 \mathrm P(X) = \mathrm P(x_0,t_0;x_1,t_1;\ldots;x_{N-1},t_{N-1}) = \mathrm P(x_0,t_0 ) \prod\limits^{N-1}_{n=1} \mathrm P(x_n,t_n|x_{n-1},t_{n-1}) \,.
 \]</span></p>
 <p>Therefore the problem of calculating the likelihood for a particular trajectory amounts to solving two independent problems:</p>
-<ol style="list-style-type: decimal">
+<ol type="1">
 <li>estimating the probability density of the starting point <span class="math inline">\(\mathrm P (x_0, t_0)\)</span> of a response</li>
 <li>calculating the transition probabilities <span class="math inline">\(\mathrm P(x_n,t_n|x_{n-1},t_{n-1})\)</span></li>
 </ol>
@@ -473,7 +487,7 @@
 <p><span class="math display">\[
 \ln \sum^{N_S}_{i=1} \mathrm P(X|S^{(i)}) = \ln \sum\limits^{N_S}_{i=1} \exp \ell(X|S^{(i)}) \equiv \mathrm{LSE}\left( \ell(X|S^{(1)}),\ldots, \ell(X|S^{(N_S)})\right)
 \]</span></p>
-<p>where <span class="math inline">\(\mathrm{LSE} : \mathbb{R}^n \rightarrow \mathbb{R}\)</span> is called log-sum-exp . An interesting property of <span class="math inline">\(\mathrm{LSE}\)</span> is that it's a smooth approximation to the <span class="math inline">\(\max\)</span> function. This means that for finite sample sizes the monte-carlo estimate of the averaged likelihood will always be too small!</p>
+<p>where <span class="math inline">\(\mathrm{LSE} : \mathbb{R}^n \rightarrow \mathbb{R}\)</span> is called log-sum-exp . An interesting property of <span class="math inline">\(\mathrm{LSE}\)</span> is that it’s a smooth approximation to the <span class="math inline">\(\max\)</span> function. This means that for finite sample sizes the monte-carlo estimate of the averaged likelihood will always be too small!</p>
 <p>We approximate the mutual information between trajectories as</p>
 <p><span class="math display">\[
 \mathrm{I}(\mathcal{X}; \mathcal{S}) = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\left\langle\mathrm P(X | S) \right\rangle_\mathcal{S}} \right\rangle_{\mathcal{X},\mathcal{S}} = \left\langle \ell ( X |  S) - \mathrm{LSE}\left( \ell(X|S^{(1)}),\ldots, \ell(X|S^{(N_S)})\right) + \ln N_S\right\rangle_{\mathcal{X},\mathcal{S}}
@@ -482,15 +496,12 @@
 <p>Another way to phrase this insight is that to get a good approximation for the logarithmic average likelihood, our set of signals that we use for monte-carlo sampling should contain many signals that produce a high likelihood. <strong>Therefore it probably is necessary to come up with a scheme to specifically sample signal trajectories for which the likelihood of a particular trajectory is high</strong>. On the other hand the results do not seem to get significantly better when averaging over more trajectories.</p>
 <h2 id="simulating-chemical-networks">Simulating chemical networks</h2>
 <p>As a model for the biochemical processing that takes place inside a cell we suppose that all interactions can be described by a chemical networks composed of a number of components (different types of molecules) and a number of reactions between them. As a very basic example we consider a highly simplified model of gene expression consisting of two components and four reactions:</p>
-\begin{align}
+<p><span class="math display">\[\begin{align}
 \emptyset &amp;\longrightarrow S \longrightarrow \emptyset \\
 S &amp;\longrightarrow S + X \\
 X &amp;\longrightarrow \emptyset \,.
-\end{align}
-<p>We might interpret <span class="math inline">\(S\)</span> as some signal whose quantity varies stochastically. Then there is a certain chance that a signal molecule is registered by the cell which triggers the creation of an <span class="math inline">\(X\)</span>. The amount of <span class="math inline">\(X\)</span> then also decays over time. We call the trajectory of <span class="math inline">\(S\)</span> the &quot;signal&quot; and the trajectory of <span class="math inline">\(X\)</span> the &quot;response&quot;.</p>
-<div id="refs" class="references">
-
-</div>
+\end{align}\]</span></p>
+<p>We might interpret <span class="math inline">\(S\)</span> as some signal whose quantity varies stochastically. Then there is a certain chance that a signal molecule is registered by the cell which triggers the creation of an <span class="math inline">\(X\)</span>. The amount of <span class="math inline">\(X\)</span> then also decays over time. We call the trajectory of <span class="math inline">\(S\)</span> the “signal” and the trajectory of <span class="math inline">\(X\)</span> the “response”.</p>
 
                     </main>
 
