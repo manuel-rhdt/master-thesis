@@ -4,6 +4,7 @@ import subprocess
 import sys
 from glob import glob
 from html.parser import HTMLParser
+from io import StringIO
 from pathlib import Path
 from shutil import copyfile
 
@@ -86,8 +87,6 @@ class HeadingParser(HTMLParser):
             self.current_tag = None
         self.add_content("</" + tag + ">")
 
-
-from io import StringIO
 
 
 class ChapterSeparator(HTMLParser):
