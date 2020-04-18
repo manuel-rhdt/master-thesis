@@ -1,0 +1,42 @@
+os: linux
+dist: xenial
+
+language: rust
+rust: stable
+
+jobs:
+  include:
+    - language: python
+      python: "3.8"
+      before_install:
+        - curl -SL https://github.com/jgm/pandoc/releases/download/2.9.2/pandoc-2.9.2-1-amd64.deb -o pandoc-2.9.2-1-amd64.deb
+        - sudo dpkg -i pandoc-2.9.2-1-amd64.deb
+        - curl -SL https://github.com/lierdakil/pandoc-crossref/releases/download/v0.3.6.2/linux-pandoc_2_9_2.tar.gz | tar --extract --gunzip --verbose
+        - sudo mv -t /usr/bin pandoc-crossref
+      install:
+        - pip install -r requirements.txt
+      script:
+        - docs/build-book.py
+      deploy:
+        provider: pages
+        token: $GITHUB_TOKEN
+        keep_history: true
+        local_dir: _site
+        edge: true
+        on:
+          branch: master
+    - language: rust
+      rust: stable
+      before_install: cd accelerate
+      cache: cargo
+    - stage: deploy
+      if: tag IS present
+      script: skip
+      before_install: cd accelerate
+      install: cargo build --verbose --release
+      deploy:
+        provider: releases
+        edge: true
+        token: $GITHUB_TOKEN
+        file: target/release/accelerate
+        draft: true
