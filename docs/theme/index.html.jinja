@@ -89,32 +89,22 @@
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
                 <ol class="chapter">
-                {% set level = namespace(current=1) %}
-                {% for chapter in chapters %}
-                    {% for _ in range(chapter.level - level.current) %}
-                    <li>
-                    <ol class="section">
-                    {% endfor %}
-
-                    {% for _ in range(level.current - chapter.level) %}
-                    </ol>
-                    </li>
-                    {% endfor %}
-
-                    {% set level.current = chapter.level %}
-
+                {%- for section in chapters recursive -%}
                     <li class="expanded">
-                    {% if chapter.link %}
-                    <a href="{{ path_to_root }}{{chapter.link}}" class="{{ 'active' if chapter.link == path }}">
-                    {% endif %}
-                    {{chapter.name|safe}}
-                    {% if chapter.link %}</a>{% endif %}
+                    {%- if section.path -%}
+                    <a href="{{ path_to_root }}{{section.path}}" class="{{ 'active' if section.path == path }}">
+                    {%- endif -%}
+                    {{section.title|safe}}
+                    {% if section.link %}</a>{% endif %}
                     </li>
-                {% endfor %}
 
-                {% for _ in range(level.current - 1) %}
+                    {%- if section.subsections -%}
+                    <li class="expanded">
+                    <ol class="section">
+                        {{ loop(section.subsections) }}
                     </ol>
                     </li>
+                    {%- endif -%}
                 {% endfor %}
                 </ol>
             </div>

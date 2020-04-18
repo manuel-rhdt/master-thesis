@@ -46,64 +46,25 @@ class StaticFileFinder:
                 self.static_files.append(attrs["src"])
 
 
-class HeadingParser(HTMLParser):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.current_tag = None
-        self.toc = []
-        self.static_file_finder = StaticFileFinder()
-
-    def add_content(self, content):
-        if self.toc:
-            if self.current_tag is not None:
-                key = "name"
-            else:
-                key = "content"
-            self.toc[-1][key] += content
-
-    def handle_starttag(self, tag, attrs):
-        self.static_file_finder.handle_starttag(tag, attrs)
-        if tag in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-            assert self.current_tag is None
-            self.current_tag = tag
-            ident = dict(attrs).get("id", "")
-            self.toc.append(
-                {
-                    "level": int(tag[1]),
-                    "name": "",
-                    "link": "#" + ident,
-                    "content": self.get_starttag_text(),
-                }
-            )
-        else:
-            self.add_content(self.get_starttag_text())
-
-    def handle_data(self, data):
-        self.add_content(data)
-
-    def handle_endtag(self, tag):
-        if tag in ["h1", "h2", "h3", "h4", "h5", "h6"]:
-            assert self.current_tag == tag
-            self.current_tag = None
-        self.add_content("</" + tag + ">")
-
-
-
 class ChapterSeparator(HTMLParser):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.chapters = []
+        self.static_file_finder = StaticFileFinder()
         self.depth = 0
+        self.current_chapter = None
+        self.current_section = None
+        self.current_heading = None
 
     @property
-    def current_chapter(self):
-        self.chapters.get(-1)
+    def static_files(self):
+        return self.static_file_finder.static_files
 
     def add_subsection_to(self, section, name):
         new_section = {
             "name": name,
             "parent": section,
-            "path": section["path"],
+            "path": self.current_chapter["path"] + f"#{name}",
             "depth": self.depth + 1,
         }
         if "subsections" in section:
@@ -117,19 +78,21 @@ class ChapterSeparator(HTMLParser):
             self.chapters.append(
                 {"name": name, "path": name + ".html", "content": StringIO()}
             )
+            self.current_chapter = self.chapters[-1]
             self.current_section = self.current_chapter
         else:
             self.current_section = self.add_subsection_to(self.current_section, name)
         self.depth += 1
 
     def end_section(self):
-        self.current_section = self.current_section["parent"]
+        self.current_section = self.current_section.get("parent")
 
         if self.depth > 0:
             self.depth -= 1
 
         if self.depth == 0:
             self.current_chapter["content"] = self.current_chapter["content"].getvalue()
+            self.current_chapter = None
 
     def add_to_chapter(self, content):
         if self.current_chapter is not None:
@@ -147,25 +110,25 @@ class ChapterSeparator(HTMLParser):
         self.add_to_heading(content)
 
     def handle_starttag(self, tag, attrs):
+        self.static_file_finder.handle_starttag(tag, attrs)
         if tag.lower() == "section":
             self.start_section(dict(attrs)["id"])
-        elif tag.lower() in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+        self.handle_html_content(self.get_starttag_text())
+        if tag.lower() in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             assert self.current_heading is None, "Nested Headings are not allowed"
             self.current_heading = StringIO()
-
-        self.handle_html_content(self.get_starttag_text())
 
     def handle_data(self, data):
         self.handle_html_content(data)
 
     def handle_endtag(self, tag):
-        self.handle_html_content(f"</{tag}>")
-        if tag.lower() == "section":
-            self.end_section()
-        elif tag.lower() in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+        if tag.lower() in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             assert self.current_heading is not None, "Spurious " + tag + " end tag."
             self.current_section["title"] = self.current_heading.getvalue()
             self.current_heading = None
+        self.handle_html_content(f"</{tag}>")
+        if tag.lower() == "section":
+            self.end_section()
 
 
 class Book(object):
@@ -173,21 +136,14 @@ class Book(object):
         super().__init__()
         self.static_files = set()
         self.content = content
-        self.build_toc()
         self.build_chapters()
-
-    def build_toc(self):
-        heading_parser = HeadingParser(convert_charrefs=False)
-        heading_parser.feed(self.content)
-        self.toc = heading_parser.toc
-        self.static_files |= set(heading_parser.static_file_finder.static_files)
 
     def build_chapters(self):
         chapter_separator = ChapterSeparator(convert_charrefs=False)
-        print(self.content)
         chapter_separator.feed(self.content)
         self.chapters = chapter_separator.chapters
-        self.chapter_names = chapter_separator.chapter_names
+        self.static_files = set(chapter_separator.static_files)
+        self.content = "\n".join(ch["content"] for ch in self.chapters)
 
 
 def render(book):
@@ -197,25 +153,23 @@ def render(book):
     )
     template = env.get_template("index.html.jinja")
 
-    output = []
+    output = {}
     for i, chapter in enumerate(book.chapters):
-        chapter_name = book.chapter_names[i]
-        output.append(
-            template.render(
-                content=chapter,
-                path_to_root="",
-                mathjax_support=True,
-                default_theme="Light",
-                language="en-us",
-                title="Mutual Information between Trajectories",
-                book_title="Mutual Information between Trajectories",
-                path=chapter_name,
-                next={"link": book.chapter_names[i + 1]}
-                if len(book.chapters) > i + 1
-                else None,
-                previous={"link": book.chapter_names[i - 1]} if i > 0 else None,
-                chapters=book.toc,
-            )
+        chapter_path = chapter["path"]
+        output[chapter_path] = template.render(
+            content=chapter["content"],
+            path_to_root="",
+            mathjax_support=True,
+            default_theme="Light",
+            language="en-us",
+            title="Mutual Information between Trajectories",
+            book_title="Mutual Information between Trajectories",
+            path=chapter_path,
+            next={"link": book.chapters[i + 1]["path"]}
+            if len(book.chapters) > i + 1
+            else None,
+            previous={"link": book.chapters[i - 1]["path"]} if i > 0 else None,
+            chapters=book.chapters,
         )
 
     print_html = template.render(
@@ -226,16 +180,12 @@ def render(book):
         language="en-us",
         title="Mutual Information between Trajectories",
         book_title="Mutual Information between Trajectories",
-        path=chapter_name,
-        next={"link": book.chapter_names[i + 1]}
-        if len(book.chapters) > i + 1
-        else None,
-        previous={"link": book.chapter_names[i - 1]} if i > 0 else None,
-        chapters=book.toc,
+        path="print.html",
+        chapters=book.chapters,
         is_print=True,
     )
 
-    book.print_html = print_html
+    output["print.html"] = print_html
 
     return output
 
@@ -294,14 +244,10 @@ def main():
     copy_static_files(book)
 
     output = render(book)
-    for chapter_name, result in zip(book.chapter_names, output):
+    for chapter_name, result in output.items():
         with (path / chapter_name).open("w") as file:
             file.write(result)
             print(f"wrote {file.name}", file=sys.stderr)
-
-    with (path / "print.html").open("w") as file:
-        file.write(book.print_html)
-        print(f"wrote {file.name}", file=sys.stderr)
 
 
 if __name__ == "__main__":
