@@ -161,7 +161,7 @@ def render(book):
             path_to_root="",
             mathjax_support=True,
             default_theme="Light",
-            language="en-us",
+            language="en",
             title="Mutual Information between Trajectories",
             book_title="Mutual Information between Trajectories",
             path=chapter_path,
@@ -170,6 +170,8 @@ def render(book):
             else None,
             previous={"link": book.chapters[i - 1]["path"]} if i > 0 else None,
             chapters=book.chapters,
+            git_repository_url="https://github.com/manuel-rhdt/master-thesis",
+            git_repository_icon="fa-github",
         )
 
     print_html = template.render(
@@ -183,6 +185,8 @@ def render(book):
         path="print.html",
         chapters=book.chapters,
         is_print=True,
+        git_repository_url="https://github.com/manuel-rhdt/master-thesis",
+        git_repository_icon="fa-github",
     )
 
     output["print.html"] = print_html

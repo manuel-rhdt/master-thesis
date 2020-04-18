@@ -95,7 +95,7 @@
                     <a href="{{ path_to_root }}{{section.path}}" class="{{ 'active' if section.path == path }}">
                     {%- endif -%}
                     {{section.title|safe}}
-                    {% if section.link %}</a>{% endif %}
+                    {% if section.path %}</a>{% endif %}
                     </li>
 
                     {%- if section.subsections -%}
@@ -105,7 +105,7 @@
                     </ol>
                     </li>
                     {%- endif -%}
-                {% endfor %}
+                {%- endfor -%}
                 </ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
