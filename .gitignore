@@ -142,3 +142,5 @@ result*
 histogram.json
 
 _site
+plots
+.vscode/settings.json
