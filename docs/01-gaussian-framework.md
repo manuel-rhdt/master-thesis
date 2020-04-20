@@ -70,11 +70,13 @@ The estimates for the entropies given by @eq:mc_entropy and @eq:mc_marginal toge
 ### Choice of Covariance Matrices
 
 We want to carefully choose the covariance matrices such that we can expect any sampling issues that arise in the Gaussian framework to also be present when dealing with stochastic trajectories. Therefore we chose to model a very simple gene expression model described by the reaction equations
-\begin{align}
-\emptyset &\xrightarrow{\kappa} S \xrightarrow{\lambda} \emptyset \\
-S &\xrightarrow{\rho} S + X \\
-X &\xrightarrow{\mu} \emptyset
-\end{align}
+$$
+\begin{gathered}
+\emptyset \xrightarrow{\kappa} S \xrightarrow{\lambda} \emptyset\\
+S \xrightarrow{\rho} S + X\\
+X \xrightarrow{\mu}\emptyset
+\end{gathered}
+$$
 where $X$ are particles representing the cell response and $S$ are particles that will be interpreted as the signal. We describe the signal and response trajectories as a vector of values at discrete sample times, e.g. $\mathbf s = \left(s(t_1),\ldots,s(t_d)\right)^T$. For this model we can analytically compute the correlation functions. For simplicity we assume that the system is in steady state such that the correlation functions do only depend on time differences, i.e. $C_{\alpha\beta}(t, t^\prime) = C_{\alpha\beta}(t^\prime-t)$. The correlation functions then give us the elements of the covariance matrices
 $$
 C_{\alpha\beta}^{ij} = C_{\alpha\beta}(t_j - t_i) = \langle\alpha(t_i)\beta(t_j)\rangle\,.

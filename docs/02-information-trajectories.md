@@ -138,11 +138,11 @@ Another way to phrase this insight is that to get a good approximation for the l
 ## Simulating chemical networks
 
 As a model for the biochemical processing that takes place inside a cell we suppose that all interactions can be described by a chemical networks composed of a number of components (different types of molecules) and a number of reactions between them. As a very basic example we consider a highly simplified model of gene expression consisting of two components and four reactions:
-
-\begin{align}
-\emptyset &\longrightarrow S \longrightarrow \emptyset \\
-S &\longrightarrow S + X \\
-X &\longrightarrow \emptyset \,.
-\end{align}
-
+$$
+\begin{gathered}
+\emptyset \longrightarrow S \longrightarrow \emptyset\\
+S \longrightarrow S + X\\
+X \longrightarrow \emptyset \,.
+\end{gathered}
+$$
 We might interpret $S$ as some signal whose quantity varies stochastically. Then there is a certain chance that a signal molecule is registered by the cell which triggers the creation of an $X$. The amount of $X$ then also decays over time. We call the trajectory of $S$ the "signal" and the trajectory of $X$ the "response".

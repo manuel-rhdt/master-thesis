@@ -159,7 +159,7 @@ def render(book):
         output[chapter_path] = template.render(
             content=chapter["content"],
             path_to_root="",
-            mathjax_support=True,
+            katex_support=True,
             default_theme="Light",
             language="en",
             title="Mutual Information between Trajectories",
@@ -177,7 +177,7 @@ def render(book):
     print_html = template.render(
         content=book.content,
         path_to_root="",
-        mathjax_support=True,
+        katex_support=True,
         default_theme="Light",
         language="en-us",
         title="Mutual Information between Trajectories",
@@ -222,7 +222,7 @@ def invoke_pandoc() -> str:
             "pandoc-citeproc",
             "--csl",
             "docs/elsevier-with-titles.csl",
-            "--mathjax",
+            "--katex",
             "--bibliography",
             "docs/library.bib",
             "--number-sections",
