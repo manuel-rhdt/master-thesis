@@ -1,28 +1,9 @@
 import numpy
+import pandas as pd
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
-from .correlation_funcs import System
-
-# log likelihood (evaluation of the log density of a conditional Gaussian distribution)
-# evaluates P(x|s)
-def log_likelihood(x, s, sys: System, t):
-    c_ss = sys.corr_ss(t)
-    c_sx = sys.corr_sx(t)
-    c_xs = sys.corr_xs(t)
-    c_xx = sys.corr_xx(t)
-    regression_coef = c_xs @ numpy.linalg.inv(c_ss)
-    mean = numpy.inner(s, regression_coef)
-
-    # generate the covariance matrix and compute the square root of its inverse
-    p_x_given_s_cov = c_xx - regression_coef @ c_sx
-    e_val, e_vec = numpy.linalg.eigh(p_x_given_s_cov)
-    prec_U = numpy.sqrt(numpy.reciprocal(e_val)) * e_vec
-
-    maha = numpy.sum(numpy.square(numpy.inner(x - mean, prec_U.T)), axis=-1)
-    return -0.5 * (
-        numpy.log(2 * numpy.pi) * len(e_val) + numpy.sum(numpy.log(e_val)) + maha
-    )
+from .correlation_funcs import System, time_matrix
 
 
 def log_marginal_entropy_power(sys: System, t, num_x: int, num_s: int, power: int):
@@ -34,12 +15,70 @@ def log_marginal_entropy_power(sys: System, t, num_x: int, num_s: int, power: in
     s_shape = (num_x, num_s, power)
     s_samples = marg_s.rvs(s_shape).reshape(s_shape + (-1,))
 
-    log_l = log_likelihood(x_samples, s_samples, sys, t)
-    return logsumexp(numpy.sum(log_l, axis=-1), axis=(0, 1)) - numpy.log(
-        numpy.double(num_x * num_s)
+    log_l = sys.log_likelihood(x_samples, s_samples, t)
+    return logsumexp(numpy.sum(log_l, axis=-1), axis=1) - numpy.log(numpy.double(num_s))
+
+
+def replica_estimate_sim(
+    sys: System, dim: int, delta_t: float, num_x: int, num_s: int, max_n: int
+):
+    t = time_matrix(dim, delta_t)
+    c_ss = sys.corr_ss(t)
+    c_sx = sys.corr_sx(t)
+    c_xs = sys.corr_xs(t)
+    c_xx = sys.corr_xx(t)
+
+    n = numpy.arange(1, max_n + 1)
+
+    data = []
+    for n in n:
+        # this performs the monte carlo estimate of ln P(x)^n
+        z_n = log_marginal_entropy_power(sys, t, num_x, num_s, n)
+        data.append(
+            pd.DataFrame(
+                {
+                    "n": n,
+                    "log_marginal_power": z_n,
+                    "num_responses": 1,
+                    "num_signals": num_s * n,
+                    "dim": dim,
+                    "delta_t": delta_t,
+                }
+            )
+        )
+
+    return pd.concat(data, ignore_index=True)
+
+
+def estimate_entropy_replica(data):
+    def logmeanexp(data):
+        import scipy
+
+        return scipy.special.logsumexp(data, b=1 / len(data))
+
+    def replica_marginal_entropy(data):
+        import statsmodels.formula.api as smf
+
+        res = smf.ols("log_marginal_power ~ 0 + n", data=data).fit()
+        return pd.Series(
+            {
+                "num_signals": data.num_signals.sum(),
+                "num_responses": data.num_responses.sum(),
+                "marginal_entropy": -res.params[0],
+                "stderr": res.bse[0],
+            },
+            dtype=object,
+        )
+
+    data = (
+        data.groupby(["dim", "delta_t", "n"])
+        .agg(
+            log_marginal_power=("log_marginal_power", "mean"),
+            num_responses=("num_responses", "sum"),
+            num_signals=("num_signals", "sum"),
+        )
+        .reset_index(level=2)
     )
-
-
-log_marginal_entropy_power = numpy.vectorize(
-    log_marginal_entropy_power, excluded=["sys", "t", 0, 1]
-)
+    return (
+        data.groupby(["dim", "delta_t"]).apply(replica_marginal_entropy).reset_index()
+    )
