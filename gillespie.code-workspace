@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"path": "python"
+		},
+		{
+			"path": "accelerate"
+		},
+		{
+			"path": "notebooks"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"pandoc.htmlOptString": "--filter pandoc-crossref --filter pandoc-citeproc --mathjax --bibliography library.bib -s  --csl elsevier-with-titles.csl --css styling.css",
+		"pandoc.pdfOptString": "--filter pandoc-crossref --filter pandoc-citeproc --lua-filter latex_styles.lua --bibliography library.bib --csl elsevier-with-titles.csl --template='template.latex'",
+		"pandocMarkdownPreview.extraPandocArguments": "--filter pandoc-citeproc --bibliography library.bib --csl elsevier-with-titles.csl"
+	}
+}
