@@ -15,10 +15,11 @@ def time_matrix(N: int, delta_t: float):
     target="parallel",
     fastmath=True,
 )
-def log_likelihood_jit(x, s, regression_coef, prec_U, e_val, result):
+def log_likelihood_jit(x, s, regression_coef, prec_U, e_val, result=None):
     mean = regression_coef @ s
     maha = np.sum(np.square(prec_U.T @ (x - mean)))
-    result[0] = -0.5 * (np.log(2 * np.pi) * len(e_val) + np.sum(np.log(e_val)) + maha)
+    result[0] = -0.5 * (np.log(2 * np.pi) * len(e_val) +
+                        np.sum(np.log(e_val)) + maha)
 
 
 # from https://blogs.sas.com/content/iml/2012/10/31/compute-the-log-determinant-of-a-matrix.html
@@ -63,7 +64,8 @@ class System:
     def corr_xx(self, t):
         c1 = np.exp(-self.mu * np.abs(t)) - np.exp(-self.lamda * np.abs(t))
         c2 = np.exp(-self.mu * np.abs(t))
-        d1 = self.rho ** 2 / (self.lamda ** 2 - self.mu ** 2) * self.kappa / self.lamda
+        d1 = self.rho ** 2 / (self.lamda ** 2 - self.mu **
+                              2) * self.kappa / self.lamda
         d2 = (
             (1 + self.rho / (self.lamda + self.mu))
             * self.kappa

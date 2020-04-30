@@ -50,7 +50,7 @@ def replica_estimate_sim(
     return pd.concat(data, ignore_index=True)
 
 
-def estimate_entropy_replica(data):
+def estimate_entropy_replica(data, allow_intercept=True):
     def logmeanexp(data):
         import scipy
 
@@ -59,13 +59,17 @@ def estimate_entropy_replica(data):
     def replica_marginal_entropy(data):
         import statsmodels.formula.api as smf
 
-        res = smf.ols("log_marginal_power ~ 0 + n", data=data).fit()
+        model = "log_marginal_power ~ n"
+        if not allow_intercept:
+            model += " - 1"
+        res = smf.ols(model, data=data).fit()
         return pd.Series(
             {
                 "num_signals": data.num_signals.sum(),
                 "num_responses": data.num_responses.sum(),
-                "marginal_entropy": -res.params[0],
-                "stderr": res.bse[0],
+                "intercept": res.params[0] if allow_intercept else 0.0,
+                "marginal_entropy": -res.params[-1],
+                "stderr": res.bse[-1],
             },
             dtype=object,
         )
@@ -73,12 +77,13 @@ def estimate_entropy_replica(data):
     data = (
         data.groupby(["dim", "delta_t", "n"])
         .agg(
-            log_marginal_power=("log_marginal_power", "mean"),
+            log_marginal_power=("log_marginal_power", logmeanexp),
             num_responses=("num_responses", "sum"),
             num_signals=("num_signals", "sum"),
         )
         .reset_index(level=2)
     )
     return (
-        data.groupby(["dim", "delta_t"]).apply(replica_marginal_entropy).reset_index()
+        data.groupby(["dim", "delta_t"]).apply(
+            replica_marginal_entropy).reset_index(), data.reset_index()
     )
