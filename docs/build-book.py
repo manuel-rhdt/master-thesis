@@ -75,6 +75,8 @@ class ChapterSeparator(HTMLParser):
 
     def start_section(self, name):
         if self.depth == 0:
+            if not name:
+                name = f"chapter_{len(self.chapters) + 1}"
             self.chapters.append(
                 {"name": name, "path": name + ".html", "content": StringIO()}
             )
