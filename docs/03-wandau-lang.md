@@ -11,6 +11,8 @@ autoEqnLabels: true
 cref: true
 ---
 
+# Estimates Using the Density of States
+
 The goal of the Wand and Landau algorithm is to compute the density of states $\rho(E)$ for a system using an adaptive Metropolis scheme where the sampling distribution is changing throughout one simulation. We want to show that this algorithm can be used to get a better estimate of the marginal probability density for random trajectories.
 
 In the context of statistical physics we often look at configurations of a system that can be described by a parameter vector $\mathbf{n}\in\Omega$ where $\Omega$ is the state space of the system. We can typically assign a probability (density) to each configuration. For example, by considering the canonical ensemble for a given temperature and Hamiltonian $H$ we get

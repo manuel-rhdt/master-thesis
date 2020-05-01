@@ -112,7 +112,7 @@ class ChapterSeparator(HTMLParser):
     def handle_starttag(self, tag, attrs):
         self.static_file_finder.handle_starttag(tag, attrs)
         if tag.lower() == "section":
-            self.start_section(dict(attrs)["id"])
+            self.start_section(dict(attrs).get("id"))
         self.handle_html_content(self.get_starttag_text())
         if tag.lower() in ["h1", "h2", "h3", "h4", "h5", "h6"]:
             assert self.current_heading is None, "Nested Headings are not allowed"
