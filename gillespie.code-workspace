@@ -4,9 +4,6 @@
 			"path": "python"
 		},
 		{
-			"path": "accelerate"
-		},
-		{
 			"path": "notebooks"
 		},
 		{
