@@ -1,8 +1,8 @@
 os: linux
 dist: xenial
 
-language: rust
-rust: stable
+language: python
+python: "3.8"
 
 jobs:
   include:
@@ -25,18 +25,3 @@ jobs:
         edge: true
         on:
           branch: master
-    - language: rust
-      rust: stable
-      before_install: cd accelerate
-      cache: cargo
-    - stage: deploy
-      if: tag IS present
-      script: skip
-      before_install: cd accelerate
-      install: cargo build --verbose --release
-      deploy:
-        provider: releases
-        edge: true
-        token: $GITHUB_TOKEN
-        file: target/release/accelerate
-        draft: true
