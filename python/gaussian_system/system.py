@@ -1,11 +1,25 @@
 import numpy as np
 import scipy
-from numba import guvectorize, float64
+from numba import guvectorize, float64, njit
 
 
 def time_matrix(N: int, delta_t: float):
     time_stamps = np.expand_dims(np.linspace(0, (N - 1) * delta_t, N), 0)
     return np.atleast_2d(time_stamps - time_stamps.T)
+
+
+@njit
+def decompose(cov):
+    e_val, e_vec = np.linalg.eigh(cov)
+    prec_U = np.sqrt(np.reciprocal(e_val)) * e_vec
+    return e_val, prec_U
+
+
+@njit
+def multivariate_gaussian_logpdf(x, e_val, prec_U):
+    maha = np.sum(np.square(prec_U.T @ x))
+    return -0.5 * (np.log(2 * np.pi) * len(e_val) + np.sum(np.log(e_val)) + maha)
+
 
 
 @guvectorize(
@@ -119,6 +133,16 @@ class System:
 
         return log_likelihood_jit(x, s, regression_coef, prec_U, e_val)
 
+
+    def peak_s(self, x, t):
+        c_ss = self.corr_ss(t)
+        c_sx = self.corr_sx(t)
+        c_xs = self.corr_xs(t)
+        c_xx = self.corr_xx(t)
+        regression_coef = c_xs @ np.linalg.inv(c_xx)
+        return regression_coef @ x
+
+
     def log_posterior(self, s, x, t):
         c_ss = self.corr_ss(t)
         c_sx = self.corr_sx(t)
@@ -157,3 +181,6 @@ class System:
     def marginal_entropy(self, t):
         c_xx = self.corr_xx(t)
         return scipy.stats.multivariate_normal(cov=c_xx).entropy()
+
+    def energy(self, s, x, t):
+        return - self.log_prior(s, t) - self.log_likelihood(x, s, t)

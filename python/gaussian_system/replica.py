@@ -3,7 +3,7 @@ import pandas as pd
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
-from .correlation_funcs import System, time_matrix
+from .system import System, time_matrix
 
 
 def log_marginal_entropy_power(sys: System, t, num_x: int, num_s: int, power: int):
