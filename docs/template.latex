@@ -1,8 +1,6 @@
 \documentclass[12pt]{scrartcl}
 
-\usepackage[utf8]{inputenc}
-\usepackage{libertine}
-\usepackage{libertinust1math}
+\usepackage{fontspec}
 
 \usepackage{amssymb,amsmath,mathtools}
 
