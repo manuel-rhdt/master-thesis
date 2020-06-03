@@ -150,9 +150,9 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="references.html" class=""><span class="header-section-number">4</span> References
+                    </li><li class="expanded"><a href="references.html" class="active"><span class="header-section-number">4</span> References
                     </a>
-                    </li><li class="expanded"><a href="estimates-using-the-density-of-states.html" class="active"><span class="header-section-number">4</span> Estimates Using the Density of States
+                    </li><li class="expanded"><a href="estimates-using-the-density-of-states.html" class=""><span class="header-section-number">4</span> Estimates Using the Density of States
                     </a>
                     </li><li class="expanded"><a href="chapter_6.html" class="">
                     </a>
@@ -211,43 +211,21 @@
 
                 <div id="content" class="content">
                     <main>
-                        <section id="estimates-using-the-density-of-states" class="level1" data-number="1">
-<h1 data-number="4"><span class="header-section-number">4</span> Estimates Using the Density of States</h1>
-<p>The goal of the Wang and Landau algorithm is to compute the density of states <span class="math inline">\rho(E)</span> for a system using an adaptive Metropolis scheme where the sampling distribution is changing throughout one simulation. We want to show that this algorithm can be used to get a better estimate of the marginal probability density for random trajectories.</p>
-<p>In the context of statistical physics we often look at configurations of a system that can be described by a parameter vector <span class="math inline">\mathbf{n}\in\Omega</span> where <span class="math inline">\Omega</span> is the state space of the system. We can typically assign a probability (density) to each configuration. For example, by considering the canonical ensemble for a given temperature and Hamiltonian <span class="math inline">H</span> we get <span id="eq:canonical_probability"><span class="math display">
-\mathrm{P}(\mathbf{n}) = \frac{1}{Z(\beta)} e^{-\beta H(\mathbf{n})}
-\qquad(1)</span></span> with the inverse temperature <span class="math inline">\beta</span> and the partition function <span class="math inline">Z(\beta)=\int \mathrm{d}\mathbf{n}\ e^{-\beta H(\mathbf{n})}</span>. The Hamiltonian assigns an energy to every state, i.e. for every state <span class="math inline">\mathbf{n}</span> we have an associated energy <span class="math inline">H(\mathbf{n})</span>. To learn more about the distribution of energies in our system we can now define the <em>density of states</em> <span class="math inline">\rho(E)</span> at a given energy <span class="math inline">E</span> as the probability density of a random<a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a> state <span class="math inline">\hat{\mathbf{n}}</span> to have energy <span class="math inline">H(\hat{\mathbf{n}}) = E</span>. More precisely, let <span class="math inline">\mathcal{N}</span> be a random variable distributed according to eq. <a href="#eq:canonical_probability">1</a>, then <span><span class="math display">
-\rho(E) = \mathrm{P}\left(H(\mathcal N) = E\right)\,.
-\qquad(2)</span></span></p>
-<p>Since the state spaces <span class="math inline">\Omega</span> are usually very large, one typically resorts to Monte-Carlo methods to estimate the density of states. There we generate a sequence of states <span class="math inline">\mathbf{n}_i</span> that are approximately independent and distributed according to <span class="math inline">\mathrm{P}(\mathcal{N})</span>, e.g. by using the Metropolis-Hastings algorithm. For every sampled state <span class="math inline">\mathbf{n}_i</span> we can compute the Energy <span class="math inline">H(\mathbf{n}_i)</span> and then approximate the density of states by a histogram of the energy values. To get an accurate estimate of the density of states for energy values <span class="math inline">E</span> where <span class="math inline">\rho(E)</span> is very small we need a lot of simulation time since we will on average pick very few samples with low probability.</p>
-<p>The idea of the Wang and Landau algorithm is instead to not generate samples that are distributed according to the equilibrium distribution <span class="math inline">\mathrm{P}(\mathbf{n})</span> but to adaptively vary the sampling distribution throuhgout the simulation. (TODO: I think I understand how the algorithm works but I have not yet found the time to write it down accurately.)</p>
-<p>We can use the Wang and Landau algorithm to compute the marginal probability density <span class="math inline">\mathrm{P}(\mathbf{x})</span> for a given response trajectory <span class="math inline">\mathbf{x}</span>. To estimate this we make use of the marginalization <span class="math inline">\mathrm{P}(\mathbf{x}) = \int \mathrm{d}\mathbf{s}\ \mathrm{P}(\mathbf{s})\ \mathrm P(\mathbf{x}|\mathbf{s})</span> over the signals <span class="math inline">\mathbf s</span>. To make the connection to the statistical physics context for the Wang and Landau algorithm notationally clear, we formally introduce the <em>energy</em> of a signal trajectory <span class="math inline">\mathbf s</span> with respect to a given response <span class="math inline">\mathbf x</span> and define it as <span class="math inline">E_\mathbf{x}(\mathbf s) = -\ln\mathrm{P}(\mathbf{x}|\mathbf{s})</span>. Since there is little potential for confusion we will just drop the index <span class="math inline">\mathbf x</span> from now on. Then we can define the density of states by analogy to be <span><span class="math display">
-\rho(E) = \mathrm P\left(E(\mathcal S) = E\right)
-\qquad(3)</span></span> which allows us to express the marginal probability as <span id="eq:integrated_dos"><span class="math display">
-\mathrm{P}(\mathbf{x}) = \int \mathrm{d}\mathbf{s}\ \mathrm{P}(\mathbf{s})\ \mathrm P(\mathbf{x}|\mathbf{s}) = \int \mathrm{d}\mathbf{s}\ \mathrm{P}(\mathbf{s})\ e^{-E(\mathbf s)} = \int\mathrm{d}E\ \rho(E) e^{-E}\,.
-\qquad(4)</span></span> Therefore a viable approach to estimate the marginal entropy might be to compute the approximate density of states using the Wang and Landau algorithm and then to directly perform the integral in eq. <a href="#eq:integrated_dos">4</a>.</p>
-<p>When we perform a standard Monte-Carlo estimate of <span class="math inline">\mathrm{P}(\mathbf{x})</span> we generate indipendent samples <span class="math inline">\mathbf{s}_1,\ldots,\mathbf{s}_M</span>, all identically distributed according to <span class="math inline">\mathrm P(\mathcal{S})</span> and then compute <span><span class="math display">
-\hat{\mathrm{P}}(\mathbf{x}) = \frac{1}{M} \sum\limits^M_{i=1} \mathrm{P}(\mathbf x|\mathbf s_i) \,.
-\qquad(5)</span></span> This estimate is essentially the same as performing the integral from eq. <a href="#eq:integrated_dos">4</a> where the density of states <span class="math inline">\rho(E)</span> is just approximated as the histogram of the energies <span class="math inline">E(\mathbf{s}_1),\ldots,E(\mathbf{s}_M)</span>. Specifically in the limit of the width of histogram bins approaching 0, the approximate density of states becomes <span class="math inline">\hat{\rho}(E)=1/M\ \sum^M_{i=1} \delta(E-E(\mathbf{s}_i))</span> and therefore <span><span class="math display">
-\int\mathrm{d}E\ \hat{\rho}(E) e^{-E} = \frac{1}{M}\int\mathrm dE \left[\sum^M_{i=1} \delta(E-E(\mathbf{s}_i)) e^{-E}\right] = \frac{1}{M} \sum\limits^M_{i=1} e^{-E(\mathbf{s}_i)} = \hat{\mathrm{P}}(\mathbf{x})\,.
-\qquad(6)</span></span></p>
-<figure>
-<embed src="figures/density-of-states.pdf" id="fig:density-of-states" /></embed><figcaption>Figure 1: Histograms of the negative log-likelihoods per unit time for various signals and one given response. The y-axis shows probability densities which are akin to the density of states in statistical physics. The data are from Gillespie simulations using a single random trajectory <span class="math inline">\mathbf x</span> of duration <span class="math inline">T</span> and 10000 signal trajectories <span class="math inline">\mathbf{s}_i</span>, each sampled from <span class="math inline">\mathrm{P}(\mathbf s)</span>.</figcaption>
-</figure>
-<p>In fig. <a href="#fig:density-of-states">1</a> we show several histograms of the density of states (however with finite bin width) for a Gillespie simulation of <span class="math inline">M=10000</span> signals. In these simulations we typically under-estimate the marginal probability density (and therefore over-estimate the marginal entropy). We propose that the bias arises because we do not have good enough sampling in the low-density regions of the density of states. From eq. <a href="#eq:integrated_dos">4</a> we see that due to the factor <span class="math inline">e^{-E}</span> especially trajectories with low energy contribute strongly to the overall estimate. This suggests that we should try to bias our sampling distribution towards trajectories with low energies. One way to do this might be the Wang and Landau algorithm.</p>
+                        <section id="references" class="level1" data-number="2">
+<h1 data-number="4"><span class="header-section-number">4</span> References</h1>
 </section>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="references.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="information-theory-for-trajectories.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="chapter_6.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="estimates-using-the-density-of-states.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -259,13 +237,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="references.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="information-theory-for-trajectories.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a rel="next" href="chapter_6.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="estimates-using-the-density-of-states.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
