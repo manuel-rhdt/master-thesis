@@ -1,3 +1,7 @@
+---
+autoEqnLabels: true
+---
+
 # Information theory for trajectories
 
 A trajectory $X$ with $N$ steps is defined by a set of pairs $X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}$ where $\mathbf{x}_i$ defines the trajectory value at time $t_i$. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories.
@@ -6,7 +10,7 @@ As a next step we can make sense of the entropy of a trajectory. Let $\mathcal{X
 
 $$
 \mathrm H(\mathcal{X}_N) = - \int\limits_{X\in \sigma(\mathcal{X}_N)} dX\; \mathrm{P}(\mathcal{X}_N = X)\; \ln \mathrm{P} (\mathcal{X}_N = X)
-$$
+$$ {#eq:entropy_integral}
 
 the entropy of $\mathcal{X}_N$ where $\mathrm{P}(\mathcal{X}_N = X)$ is the probability density function of a trajectory $X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}$. We can also define the conditional entropy for trajectories
 
@@ -135,14 +139,70 @@ which means that for finite amount of signal samples we will _systematically ove
 
 Another way to phrase this insight is that to get a good approximation for the logarithmic average likelihood, our set of signals that we use for monte-carlo sampling should contain many signals that produce a high likelihood. **Therefore it probably is necessary to come up with a scheme to specifically sample signal trajectories for which the likelihood of a particular trajectory is high**. On the other hand the results do not seem to get significantly better when averaging over more trajectories.
 
-## Simulating chemical networks
+## Chemical Master Equation
 
-As a model for the biochemical processing that takes place inside a cell we suppose that all interactions can be described by a chemical networks composed of a number of components (different types of molecules) and a number of reactions between them. As a very basic example we consider a highly simplified model of gene expression consisting of two components and four reactions:
+As a model for the biochemical processing that takes place inside a cell we suppose that all interactions can be described by a chemical networks composed of different molecular species and reactions between them. Such networks can be described by a _chemical master equation_ which makes it possible to compute all the probabilities associated with the time-evolution of such a system.
+
+For illustrative purposes, let's consider a highly simplified model of gene expression consisting of two components and four reactions 
+
+$$ \begin{gathered}
+\emptyset \xrightarrow{\kappa} S \xrightarrow{\lambda} \emptyset\\
+S \xrightarrow{\rho} S + X\\
+X \xrightarrow{\mu}\emptyset
+\end{gathered} $$
+
+The constants $\kappa, \lambda, \rho, \mu$ determine the rates at which the individual reactions occur. For example, assuming a well stirred system in thermal equilibrium, it can be shown that the probabilities for the individual reactions happening at least once in the time interval $[t, t+\mathrm\delta t]$ are
+
 $$
-\begin{gathered}
-\emptyset \longrightarrow S \longrightarrow \emptyset\\
-S \longrightarrow S + X\\
-X \longrightarrow \emptyset \,.
-\end{gathered}
+\begin{aligned}
+p^{(\kappa)}_{[t, t+\mathrm\delta t]} &= \kappa\delta t + \mathcal{O}(\delta t^2)\\
+p^{(\lambda)}_{[t, t+\mathrm\delta t]}(s) &= s\lambda\delta t + \mathcal{O}(\delta t^2)\\
+p^{(\rho)}_{[t, t+\mathrm\delta t]}(s) &= s\rho\delta t + \mathcal{O}(\delta t^2)\\
+p^{(\mu)}_{[t, t+\mathrm\delta t]}(x) &= x\mu\delta t + \mathcal{O}(\delta t^2)
+\end{aligned}
+$$ {#eq:transition_probabilities}
+
+where $s$ and $x$ denote the particle numbers of the respective species at time $t$. Consequently, the probability for _any_ of the reactions to occur at least once in the time interval $[t, t+\mathrm\delta t]$ is
+
+$$p_{[t, t+\mathrm\delta t]}(s, x) = (\kappa + s\lambda + s\rho + x\mu)\ \mathrm \delta t + \mathcal{O}(\delta t^2)$$ {#eq:exit_probability}
+
+Using these expressions we can write down the so-called _chemical master equation_ for this network. Let $\mathrm P_{s,x}(t)$ be the probability that the system is in state $(s, x)$ at time $t$. Assuming that at most one reaction happens in the small time interval $[t, t+\delta t]$ we can use the transition probabilities from [@eq:transition_probabilities;@eq:exit_probability] to write
+
 $$
-We might interpret $S$ as some signal whose quantity varies stochastically. Then there is a certain chance that a signal molecule is registered by the cell which triggers the creation of an $X$. The amount of $X$ then also decays over time. We call the trajectory of $S$ the "signal" and the trajectory of $X$ the "response".
+\begin{aligned}
+\mathrm P_{s,x}(t + \delta t) =& \phantom{+}p^{(\kappa)}_{[t, t+\mathrm\delta t]}\ \mathrm P_{s-1,x}(t)\\ &+
+p^{(\lambda)}_{[t, t+\mathrm\delta t]}(s + 1)\ \mathrm P_{s+1,x}(t)\\ &+
+p^{(\rho)}_{[t, t+\mathrm\delta t]}(s)\ \mathrm P_{s,x-1}(t)\\ &+
+p^{(\mu)}_{[t, t+\mathrm\delta t]}(x + 1)\ \mathrm P_{s, x + 1}(t)\\ &+ 
+\left[1 - p_{[t, t+\mathrm\delta t]}(s, x)\right]\ \mathrm P_{s,x}(t)
+\end{aligned}
+$$
+
+and by taking the limit $\delta t\rightarrow 0$ we arrive at the chemical master equation
+
+$$
+\begin{aligned}
+\frac{\partial \mathrm P_{s,x}(t)}{\partial t} &= \lim\limits_{\delta t\rightarrow 0} \frac{\mathrm P_{s,x}(t + \delta t) -  \mathrm P_{s,x}(t)}{\delta t}\\
+&= \kappa\ \mathrm P_{s-1,x}(t) +
+(s+1)\lambda\ \mathrm P_{s+1,x}(t) +
+s\rho\ \mathrm P_{s,x-1}(t) +
+(x+1)\mu\ \mathrm P_{s, x + 1}(t)\\ &\phantom{=} - 
+(\kappa + s\lambda + s\rho + x\mu)\ \mathrm P_{s,x}(t)
+\end{aligned}
+$$ {#eq:chemical_master_equation}
+
+In an analogous way the chemical master equation can be derived for any biochemical network [@2009:Gardiner] and thus forms the basis for our further computations.
+
+In our example we might interpret $S$ as some signal whose quantity varies stochastically. For every signal molecule there is a constant probability to be sensed by the cell which triggers the creation of an $X$. Additionally, $X$ molecules decays by themselves over time. We call the trajectory of $S$ the "signal" and the trajectory of $X$ the "response". This nomenclature will we used throughout the thesis.
+
+## Jump Processes
+
+Since particle counts can't ever become negative, @eq:chemical_master_equation describes a Markov process in continuous time with the state space $\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}$. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called _jump processes_ since they generate discontinuous sample paths [@2017:Weber].
+
+A jump process with state space $\mathcal{U}$ and an initial state $\mathbf{x}_0\in\mathcal{U}$ at time $t_0$ generates trajectories that can be described by a sequence of pairs $(\mathbf{x}_i, t_i)_{i=1,2,\ldots}$ where at every _transition time_ $(t_i)_{i=1,2,\ldots}$ there occurs a jump in state space $\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}$. 
+
+<!-- A trajectory $X$ with $N$ steps is defined by a set of pairs $X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}$ where $\mathbf{x}_i$ defines the trajectory value at time $t_i$. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories. -->
+
+# References
+
+
