@@ -122,7 +122,7 @@
                     </a>
                     </li><li class="expanded"><a href="mutual-information-for-trajectories-in-a-gaussian-framework.html#discussion" class=""><span class="header-section-number">2.4</span> Discussion
                     </a>
-                    </li><li class="expanded"><a href="mutual-information-for-trajectories-in-a-gaussian-framework.html#references" class="">References
+                    </li><li class="expanded"><a href="mutual-information-for-trajectories-in-a-gaussian-framework.html#references" class=""><span class="header-section-number">2.5</span> References
                     </a>
                     </li>
                     </ol>
@@ -148,13 +148,35 @@
                     </a>
                     </li><li class="expanded"><a href="information-theory-for-trajectories.html#jump-processes" class=""><span class="header-section-number">3.4</span> Jump Processes
                     </a>
+                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#simulating-a-biochemical-network-driven-by-an-external-signal" class=""><span class="header-section-number">3.5</span> Simulating a Biochemical Network Driven by an External Signal
+                    </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="references.html" class=""><span class="header-section-number">4</span> References
+                    </li><li class="expanded"><a href="references.html" class="">References
                     </a>
-                    </li><li class="expanded"><a href="estimates-using-the-density-of-states.html" class=""><span class="header-section-number">4</span> Estimates Using the Density of States
+                    </li><li class="expanded"><a href="borrowing-terminology-from-statistical-physics.html" class=""><span class="header-section-number">4</span> Borrowing Terminology from Statistical Physics
                     </a>
-                    </li><li class="expanded"><a href="chapter_6.html" class="">
+                    </li><li class="expanded"><a href="estimates-using-the-density-of-states.html" class=""><span class="header-section-number">5</span> Estimates Using the Density of States
+                    </a>
+                    </li><li class="expanded">
+                    <ol class="section">
+                        <li class="expanded"><a href="estimates-using-the-density-of-states.html#wang-and-landau-algorithm" class=""><span class="header-section-number">5.1</span> Wang and Landau Algorithm
+                    </a>
+                    </li>
+                    </ol>
+                    </li><li class="expanded"><a href="path-sampling.html" class=""><span class="header-section-number">6</span> Path Sampling
+                    </a>
+                    </li><li class="expanded">
+                    <ol class="section">
+                        <li class="expanded"><a href="path-sampling.html#summary-of-path-sampling" class=""><span class="header-section-number">6.1</span> Summary of Path Sampling
+                    </a>
+                    </li><li class="expanded"><a href="path-sampling.html#markov-chain-monte-carlo" class=""><span class="header-section-number">6.2</span> Markov Chain Monte Carlo
+                    </a>
+                    </li>
+                    </ol>
+                    </li><li class="expanded"><a href="references.html" class="">References
+                    </a>
+                    </li><li class="expanded"><a href="chapter_9.html" class="">
                     </a>
                     </li></ol>
             </div>
@@ -350,13 +372,17 @@ s\rho\ \mathrm P_{s,x-1}(t) +
 (\kappa + s\lambda + s\rho + x\mu)\ \mathrm P_{s,x}(t)
 \end{aligned}
 \qquad(21)</span></span></p>
-<p>In an analogous way the chemical master equation can be derived for any biochemical network <span class="citation" data-cites="2009:Gardiner">[<span class="citeproc-not-found" data-reference-id="2009:Gardiner"><strong>???</strong></span>]</span> and thus forms the basis for our further computations.</p>
+<p>In an analogous way a chemical master equation can be derived for any biochemical network <span class="citation" data-cites="2009:Gardiner">[1]</span> and thus forms the basis for our further computations. Eq. 21 describes a special kind of <em>stochastic process</em>, a so-called <em>jump process</em>.</p>
 <p>In our example we might interpret <span class="math inline">S</span> as some signal whose quantity varies stochastically. For every signal molecule there is a constant probability to be sensed by the cell which triggers the creation of an <span class="math inline">X</span>. Additionally, <span class="math inline">X</span> molecules decays by themselves over time. We call the trajectory of <span class="math inline">S</span> the “signal” and the trajectory of <span class="math inline">X</span> the “response”. This nomenclature will we used throughout the thesis.</p>
 </section>
 <section id="jump-processes" class="level2" data-number="1.4">
 <h2 data-number="3.4"><span class="header-section-number">3.4</span> Jump Processes</h2>
-<p>Since particle counts can’t ever become negative, eq. 21 describes a Markov process in continuous time with the state space <span class="math inline">\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}</span>. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called <em>jump processes</em> since they generate discontinuous sample paths <span class="citation" data-cites="2017:Weber">[<span class="citeproc-not-found" data-reference-id="2017:Weber"><strong>???</strong></span>]</span>.</p>
-<p>A jump process with state space <span class="math inline">\mathcal{U}</span> and an initial state <span class="math inline">\mathbf{x}_0\in\mathcal{U}</span> at time <span class="math inline">t_0</span> generates trajectories that can be described by a sequence of pairs <span class="math inline">(\mathbf{x}_i, t_i)_{i=1,2,\ldots}</span> where at every <em>transition time</em> <span class="math inline">(t_i)_{i=1,2,\ldots}</span> there occurs a jump in state space <span class="math inline">\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}</span>.</p>
+<p>Since particle counts can’t ever become negative, eq. 21 describes a Markov process in continuous time with the state space <span class="math inline">\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}</span>. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called <em>jump processes</em> since they generate discontinuous sample paths <span class="citation" data-cites="2017:Weber">[2]</span>.</p>
+<p>A jump process <span class="math inline">\mathcal{X}</span> with state space <span class="math inline">\mathcal{U}</span> and an initial state <span class="math inline">\mathbf{x}_0\in\mathcal{U}</span> at time <span class="math inline">t_0</span> generates trajectories that can be described by a sequence of pairs <span class="math inline">(\mathbf{x}_i, t_i)_{i=1,2,\ldots}</span> where at every <em>transition time</em> <span class="math inline">t_i</span> there occurs a jump in state space <span class="math inline">\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}</span>. The trajectories generated by a jump process are infinitely long and we denote the set of all possible trajectories by <span class="math inline">\mathcal K(\mathcal X)</span>. For a given duration <span class="math inline">\tau0</span> we denote the set of all unique trajectory segments of duration <span class="math inline">\tau</span> by <span class="math inline">\mathcal K_\tau[\mathcal X]</span>. The master equation allows to express the probability distribution in trajectory space…</p>
+</section>
+<section id="simulating-a-biochemical-network-driven-by-an-external-signal" class="level2" data-number="1.5">
+<h2 data-number="3.5"><span class="header-section-number">3.5</span> Simulating a Biochemical Network Driven by an External Signal</h2>
+<p>When we want to compute information transmission in a biological context it is often</p>
 
 </section>
 </section>

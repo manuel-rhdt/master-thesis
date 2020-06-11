@@ -152,7 +152,7 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="references.html" class="active">References
+                    </li><li class="expanded"><a href="references.html" class="">References
                     </a>
                     </li><li class="expanded"><a href="borrowing-terminology-from-statistical-physics.html" class=""><span class="header-section-number">4</span> Borrowing Terminology from Statistical Physics
                     </a>
@@ -164,7 +164,7 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="path-sampling.html" class=""><span class="header-section-number">6</span> Path Sampling
+                    </li><li class="expanded"><a href="path-sampling.html" class="active"><span class="header-section-number">6</span> Path Sampling
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
@@ -174,7 +174,7 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="references.html" class="active">References
+                    </li><li class="expanded"><a href="references.html" class="">References
                     </a>
                     </li><li class="expanded"><a href="chapter_9.html" class="">
                     </a>
@@ -233,32 +233,67 @@
 
                 <div id="content" class="content">
                     <main>
-                        <section id="references" class="level1 unnumbered" data-number="">
-<h1 class="unnumbered" data-number="3">References</h1>
-<div id="refs" class="references" role="doc-bibliography">
-<div id="ref-2001:Wangg8b">
-<p>[1] F. Wang, D.P. Landau, Determining the density of states for classical statistical models: A random walk algorithm to produce a flat histogram, Physical Review E. 64 (2001) 056101. <a href="https://doi.org/10.1103/physreve.64.056101">https://doi.org/10.1103/physreve.64.056101</a>.</p>
-</div>
-<div id="ref-1998:Gelman">
-<p>[2] A. Gelman, X.-L. Meng, Simulating normalizing constants: from importance sampling to bridge sampling to path sampling, Statistical Science. 13 (1998) 163–185. <a href="https://doi.org/10.1214/ss/1028905934">https://doi.org/10.1214/ss/1028905934</a>.</p>
-</div>
-<div id="ref-1970:Hastings">
-<p>[3] W.K. Hastings, Monte Carlo sampling methods using Markov chains and their applications, Biometrika. 57 (1970) 97–109. <a href="https://doi.org/10.1093/biomet/57.1.97">https://doi.org/10.1093/biomet/57.1.97</a>.</p>
-</div>
-</div>
+                        <section id="path-sampling" class="level1" data-number="3">
+<h1 data-number="6"><span class="header-section-number">6</span> Path Sampling</h1>
+<p>A further technique to estimate free energy (differences) that is inspired by thermodynamic integration is <em>path sampling</em> <span class="citation" data-cites="1998:Gelman">[<a href="#ref-1998:Gelman" role="doc-biblioref">2</a>]</span>. It allows the accurate computation of the ratio between the normalization constants of two different probability distributions using a continuous path in <em>distribution space</em> that connects both. Since this strategy uses random samples taken from many different distributions along this path it is especially robust when the two distributions have very little overlap. For the computation of the marginal density <span class="math inline">\mathrm P(\mathbf x)</span> we can (for a given <span class="math inline">\mathbf x</span>) define a suitable path in distribution space between <span class="math inline">\mathrm P(\mathbf s)</span> and <span class="math inline">\mathrm P(\mathbf s, \mathbf x)</span>. The normalization constants of these distributions are <span class="math inline">z_0 = 1</span> and <span class="math inline">z_1 = \mathrm P(\mathbf x)</span>, respectively such that the ratio <span class="math inline">r=z_1/z_0</span> of these normalization constants directly corresponds to the marginal density. Using path sampling we estimate this ratio using approximately independent samples from a <em>Markov chain Monte Carlo</em> (MCMC) simulation.</p>
+<p>In the following sections we will give a quick summary of path sampling followed by an explanation of the Markov chain Monte Carlo simulation and a discussion of the resulting accuracy of the estimates.</p>
+<section id="summary-of-path-sampling" class="level2" data-number="3.1">
+<h2 data-number="6.1"><span class="header-section-number">6.1</span> Summary of Path Sampling</h2>
+<p>Let <span class="math inline">q_0</span> and <span class="math inline">q_1</span> be the unnormalized distribution functions and <span class="math inline">z_0, z_1</span> the corrsponding normalization constants such that <span class="math inline">z_i=\int\mathrm d\mathbf s\ q_i(\mathbf s)</span>. Next we construct a path between <span class="math inline">q_0</span> and <span class="math inline">q_1</span>, parametrized by <span class="math inline">\theta\in[0,1]</span> such that <span class="math inline">q_\theta</span> smoothly connects the end points. We similarly define <span class="math inline">z(\theta)</span> as the normalization constant of <span class="math inline">q_\theta</span>. A smooth path that can be constructed for any pair of distributions <span class="math inline">(q_0, q_1)</span> is the <em>geometric path</em> given by <span class="math inline">q_\theta=q^{1-\theta}_0\ q^\theta_1</span>. Note however that variance of the estimate depends on the chosen path and that the geometric path is not the optimal path in general.</p>
+<p>For the estimation of free energy differences we are interested in the ratio <span class="math inline">r=z(1)/z(0)</span>. To find an estimate we differentiate the logarithm of <span class="math inline">z(\theta)</span> with respect to <span class="math inline">\theta</span> to arrive at <span><span class="math display">
+\frac{\mathrm d\ln z(\theta)}{\mathrm d\theta} = \frac{1}{z(\theta)} \frac{\partial}{\partial\theta}  \int\mathrm d\mathbf s\ q_\theta(\mathbf s) = \int\mathrm d\mathbf s\ \frac{q_\theta(\mathbf s)}{z(\theta)} \frac{\partial}{\partial\theta} \ln q_\theta(\mathbf s) = \left\langle \frac{\partial}{\partial\theta} \ln q_\theta(\mathbf s) \right\rangle_{p_\theta(\mathbf s)}
+\qquad(15)</span></span> where <span class="math inline">p_\theta(\mathbf s) = q_\theta(\mathbf s)/z(\theta)</span> is the normalized probability distribution corresponding to <span class="math inline">q_\theta</span>. By analogy to the potential in statistical physics we define <span><span class="math display">
+U(\mathbf s, \theta) = \frac{\partial}{\partial\theta} \ln q_\theta(\mathbf s)\,.
+\qquad(16)</span></span> Now we can express the log-ratio <span class="math inline">\lambda=\ln r</span> by the integral <span id="eq:path_sampling_int"><span class="math display">
+\lambda = \ln z(1) - \ln z(0) = \int\limits^1_0 \mathrm d\theta\ \left\langle 
+U(\mathbf s, \theta)
+\right\rangle_{p_\theta(\mathbf s)}
+\qquad(17)</span></span> which forms the basis of all path sampling estimates. One advantage of the path sampling estimators is that we directly estimate the log-ratio <span class="math inline">\lambda</span>, i.e. the free energy difference as opposed to the ratio of normalization constants. Indeed, to eventually compute the marginal entropy <span class="math inline">\mathrm H(\mathcal X) = -\langle\ln P(\mathbf x)\rangle</span> we require the logarithm of the marginal density thus no further error is introduced by taking the logarithm of an estimated quantity.</p>
+<p>Using the previous identities, one possible way to estimate <span class="math inline">\lambda</span> is to regard <span class="math inline">\theta</span> as a random variable with a density <span class="math inline">p(\theta)</span>, allowing us to compute the integral in eq. <a href="#eq:path_sampling_int">17</a> using the Monte Carlo estimator <span id="eq:lambda_mc"><span class="math display">
+\hat{\lambda}_\text{MC} = \frac{1}{n} \sum\limits^n_{i=1}\frac{U(\mathbf s_i, \theta_i)}{p(\theta_i)}
+\qquad(18)</span></span> with draws <span class="math inline">(\mathbf s_1, \theta_1),\ldots,(\mathbf s_n, \theta_n)</span> from the joint probability density <span class="math inline">p(\mathbf s, \theta) = p_\theta(\mathbf s)\ p(\theta)</span>. Alternatively, we can perform numerical integration using the trapezoidal rule by evaluating the potential over values <span class="math inline">\theta_1\cdots\theta_{n-1}</span> between <span class="math inline">\theta_0=0</span> and <span class="math inline">\theta_n=1</span> <span id="eq:lambda_ni"><span class="math display">
+\hat{\lambda}_\text{NI} = \sum\limits^n_{i=1}\frac{
+  \langle U(\mathbf s, \theta_{i-1}) \rangle_{p_{\theta_{i-1}}(\mathbf s) }
+  + \langle U(\mathbf s, \theta_{i}) \rangle_{p_{\theta_{i}}(\mathbf s) }
+  }{2} (\theta_i - \theta_{i-1})
+\qquad(19)</span></span> where each average over the potential is performed using a Monte Carlo simulation.</p>
+<p>To use these estimators for the computation of the marginal density <span class="math inline">\mathrm P(\mathbf x)</span> at a given <span class="math inline">\mathbf x</span> we need to construct a path between the densities <span class="math inline">q_0(\mathbf s) = \mathrm P(\mathbf s)</span> and <span class="math inline">q_1(\mathbf s) = \mathrm P(\mathbf s)\mathrm P(\mathbf x|\mathbf s)</span>. For simplicity and convenience we choose the geometric path <span class="math inline">q_\theta(\mathbf s) = \mathrm P(\mathbf s)\ [\mathrm P(\mathbf x|\mathbf s)]^\theta</span>. Taking the logarithm of this density we get <span class="math inline">\ln q_\theta(\mathbf s) = \ln P(\mathbf s) + \theta \ln \mathrm P(\mathbf x|\mathbf s)</span> which prompts us to define the “energy” of a signal trajecory with respect to <span class="math inline">\theta</span> as <span><span class="math display">
+E(\mathbf s, \theta) = -\ln q_\theta(\mathbf s) = -\ln P(\mathbf s) - \theta \ln \mathrm P(\mathbf x|\mathbf s)\,.
+\qquad(20)</span></span> For <span class="math inline">\theta = 1</span> this definition of the energy matches our previous definition by analogy with the canonical ensemble whereas for <span class="math inline">\theta = 0</span> this definition of the energy is equivalent to the energy of a signal trajectory for a system where <span class="math inline">\mathcal S</span> and <span class="math inline">\mathcal X</span> are completely independent and thus <span class="math inline">\mathrm P(\mathbf s|\mathbf x) = \mathrm P(\mathbf s)</span>. Thus, this nomenclature also motivates the name “potential” for the quantity <span><span class="math display">
+U(\mathbf s, \theta) = -\frac{\partial}{\partial\theta} \ln E_\theta(\mathbf s) = \ln \mathrm P(\mathbf x|\mathbf s)
+\qquad(21)</span></span> i.e. <span class="math inline">\theta</span> acts as a <em>“knob”</em> that allows us to gradually turn the potential on or off. The potential term itself characterizes the amount of dependence between the random variables <span class="math inline">\mathcal S</span> and <span class="math inline">\mathcal X</span>. Note that all energetic quantities depend on the specific response <span class="math inline">\mathbf x</span> (except at <span class="math inline">\theta=0</span>) even if this dependence is suppressed in the notation.</p>
+<p>To use the path sampling estimators introduced in eqns. <a href="#eq:lambda_mc">18</a>, <a href="#eq:lambda_ni">19</a> we need to generate samples from arbitrary distributions along our chosen geometric path. Since we can compute the unnormalized densities of these distributions, we can use the Metropolis-Hastings algorithm as a very general method to sample from arbitrary distributions <span class="citation" data-cites="1970:Hastings">[<a href="#ref-1970:Hastings" role="doc-biblioref">3</a>]</span>.</p>
+</section>
+<section id="markov-chain-monte-carlo" class="level2" data-number="3.2">
+<h2 data-number="6.2"><span class="header-section-number">6.2</span> Markov Chain Monte Carlo</h2>
+<p>To generate approximately independent samples from a distribution given by the unnormalized density <span class="math inline">q_\theta</span> we start from an (in principle arbitrary) initial signal <span class="math inline">\mathbf s</span>. Next, a new signal <span class="math inline">\mathbf s^\prime</span> is proposed from the proposal distribution <span class="math inline">\mathrm P(\mathbf s \rightarrow \mathbf s^\prime)</span> which is typically chosen to yield a <span class="math inline">\mathbf s^\prime</span> close to <span class="math inline">\mathbf s</span>. Then with some probability <span class="math inline">A(\mathbf s^\prime, \mathbf s)</span> we <em>accept</em> the new configuration and our first generated sample is <span class="math inline">\mathbf s_1 = \mathbf s^\prime</span>. Otherwise we <em>reject</em> the new configuration and our first sample is equal to the initial signal <span class="math inline">\mathbf s_1 = \mathbf s</span>. For the next iteration of the algorithm we then set our new initial signal to be <span class="math inline">\mathbf s \leftarrow \mathbf s_1</span> such that when we repeat this procedure many times we generate a sequence of signals <span class="math inline">\mathbf s_1, \mathbf s_2, \ldots</span> where each sample is a random value only directly dependent on the immediately preceding sample. Thus we have defined a Markov process that generates a <em>chain</em> of signals. We want to choose the acceptance probability <span class="math inline">A(\mathbf s^\prime, \mathbf s)</span> such that the stationary distribution of this Markov process is precisely <span class="math inline">q_\theta</span>. It can be shown that the <em>Metropolis choice</em> <span><span class="math display">
+A(\mathbf s, \mathbf s^\prime) = \min\left( 1, \frac{q_\theta(\mathbf s^\prime)}{q_\theta(\mathbf s)} \frac{\mathrm P(\mathbf s^\prime \rightarrow \mathbf s)}{\mathrm P(\mathbf s \rightarrow \mathbf s^\prime)} \right)
+\qquad(22)</span></span> leads to the correct stationary distribution.</p>
+<p>TODO: While this algorithm has some disadvantages (dependence of samples, yada yada) it often is the only sampling strategy that works at all in very high-dimensional spaces or complex distributions (is also well parallelizable)…</p>
+<figure>
+<img src="figures/monte_carlo_sims.svg" id="fig:monte_carlo_sims" alt="" /></img><figcaption>Figure 2: Visualization.</figcaption>
+</figure>
+<figure>
+<img src="figures/mcmc_covariance_comparison.svg" id="fig:mcmc_covariance" alt="" /></img><figcaption>Figure 3: Comparison of the covariance matrices obtained a) by computing the empirical covariance of 1000 approximately uncorrelated samples taken from the MCMC procedure (for <span class="math inline">\theta = 1</span>) and b) by analytically computing the covariance matrix of the normal distribution <span class="math inline">\mathrm P(\mathbf s|\mathbf x)</span>. The proposal distribution is a multivariate normal distribution with covariance <span class="math inline">\Sigma=\sigma^{-2} \mathbb I</span>, with a value of <span class="math inline">\sigma=0.01</span>.</figcaption>
+</figure>
+<p>For the Gaussian system we choose the proposal distribution <span class="math inline">\mathrm P(\mathbf s \rightarrow \mathbf s^\prime)</span> to be a multivariate normal distribution centered around <span class="math inline">\mathbf s</span> and with uniform covariance <span class="math inline">\Sigma=\sigma^{-2} \mathbb I</span>. In fig. <a href="#fig:mcmc_covariance">3</a> we show that using the Metropolis-Hastings algorithm we can generate samples with an appropriate distribution that matches the analytical expectation. In fig. <a href="#fig:thermodynamic_int_results">4</a> we show the averaged potentials for 216 MCMC runs for different values of <span class="math inline">\theta</span>. From these potentials we can the compute the marginal density using the estimator from eq. <a href="#eq:lambda_mc">18</a>. The results are very promising since the estimated value differs by merely 0.012 % from the analytically correct value of <span class="math inline">\mathrm P(\mathbf x)</span>.</p>
+<figure>
+<img src="figures/mcmc_theromdynamic_integration.svg" id="fig:thermodynamic_int_results" alt="" /></img><figcaption>Figure 4: Samples of the averaged potential for different values of <span class="math inline">\theta</span>. There are 216 samples for values of <span class="math inline">\theta</span> chosen uniformly distributed in the interval <span class="math inline">[0, 1]</span>. Every point is an individual MCMC simulation with 1000 approximately independent draws. The bars on the right show a histogram of the log-likelihoods. The path sampling estimate is the integral from <span class="math inline">\theta=0</span> to <span class="math inline">1</span> of the curve that the individual samples approximate. Using the estimate from eq. <a href="#eq:lambda_mc">18</a>, the estimated value differs by merely 0.012 % from the analytically correct value of <span class="math inline">\mathrm P(\mathbf x)</span>. This shows that given enough samples, path sampling is able to provide very accurate results for the marginal density.</figcaption>
+</figure>
+</section>
 </section>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="path-sampling.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="estimates-using-the-density-of-states.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
 
                         
-                            <a rel="next" href="chapter_9.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="references.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -270,13 +305,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="path-sampling.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="estimates-using-the-density-of-states.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
 
                 
-                    <a rel="next" href="chapter_9.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="references.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
