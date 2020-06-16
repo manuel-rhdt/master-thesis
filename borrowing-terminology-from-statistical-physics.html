@@ -156,22 +156,32 @@
                     </a>
                     </li><li class="expanded"><a href="borrowing-terminology-from-statistical-physics.html" class="active"><span class="header-section-number">4</span> Borrowing Terminology from Statistical Physics
                     </a>
-                    </li><li class="expanded"><a href="estimates-using-the-density-of-states.html" class=""><span class="header-section-number">5</span> Estimates Using the Density of States
+                    </li><li class="expanded"><a href="thermodynamic-integration.html" class=""><span class="header-section-number">5</span> Thermodynamic Integration
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
-                        <li class="expanded"><a href="estimates-using-the-density-of-states.html#wang-and-landau-algorithm" class=""><span class="header-section-number">5.1</span> Wang and Landau Algorithm
+                        <li class="expanded"><a href="thermodynamic-integration.html#summary-of-ti" class=""><span class="header-section-number">5.1</span> Summary of TI
+                    </a>
+                    </li><li class="expanded"><a href="thermodynamic-integration.html#markov-chain-monte-carlo" class=""><span class="header-section-number">5.2</span> Markov Chain Monte Carlo
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="path-sampling.html" class=""><span class="header-section-number">6</span> Path Sampling
+                    </li><li class="expanded"><a href="estimating-the-density-of-states.html" class=""><span class="header-section-number">6</span> Estimating the Density of States
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
-                        <li class="expanded"><a href="path-sampling.html#summary-of-path-sampling" class=""><span class="header-section-number">6.1</span> Summary of Path Sampling
+                        <li class="expanded"><a href="estimating-the-density-of-states.html#wang-and-landau-algorithm" class=""><span class="header-section-number">6.1</span> Wang and Landau Algorithm
                     </a>
-                    </li><li class="expanded"><a href="path-sampling.html#markov-chain-monte-carlo" class=""><span class="header-section-number">6.2</span> Markov Chain Monte Carlo
+                    </li><li class="expanded">
+                    <ol class="section">
+                        <li class="expanded"><a href="estimating-the-density-of-states.html#applying-wang-landau-to-the-computation-of-the-marginal-density" class=""><span class="header-section-number">6.1.1</span> Applying Wang-Landau to the Computation of the Marginal Density
                     </a>
+                    </li><li class="expanded"><a href="estimating-the-density-of-states.html#connection-to-standard-monte-carlo-sampling" class=""><span class="header-section-number">6.1.2</span> Connection to Standard Monte-Carlo Sampling
+                    </a>
+                    </li><li class="expanded"><a href="estimating-the-density-of-states.html#results-for-wang-landau" class=""><span class="header-section-number">6.1.3</span> Results for Wang Landau
+                    </a>
+                    </li>
+                    </ol>
                     </li>
                     </ol>
                     </li><li class="expanded"><a href="references.html" class="">References
@@ -240,7 +250,7 @@
 \qquad(1)</span></span> are typically considered as <span class="math inline">\mathrm P(\mathbf s)</span> being the <em>prior</em> probability of…</p>
 <p>In the framework employed by statistical physics, Bayes’ theorem corresponds to the canonical ensemble distribution of <span class="math inline">\mathbf s</span> (for <span class="math inline">\beta=1</span>) <span><span class="math display">
 \mathrm P(\mathbf s | \mathbf x) = \frac{1}{Z(\mathbf x)}\exp\left[-E(\mathbf s, \mathbf x)\right]
-\qquad(2)</span></span> where the <em>partition function</em> is defined by <span class="math inline">Z(\mathbf x) = \int \mathrm d\mathbf s\ \exp\left[-E(\mathbf s, \mathbf x)\right]</span> and <span class="math inline">E(\mathbf s, \mathbf x)</span> denotes the total energy of the system at state <span class="math inline">\mathbf s</span>. In this context <span class="math inline">\mathbf x</span> is considered a parameter vector for the specific model used to compute the energy. In classical problems of statistical physics (such as e.g. the <em>Ising model</em>) the state space spans the single particle states <span class="math inline">\mathbf{s} = (\sigma_1,\ldots,\sigma_n)\in\Omega^n</span> for all particles and the energy is given by the <em>Hamiltonian</em> <span class="math inline">\mathcal H(\sigma_1,\ldots,\sigma_n;\mathbf x)</span> where <span class="math inline">\mathbf x</span> could contain parameters describing e.g. the interaction strength between neighbouring spins. In our case however we define our energy function by comparison with eq. <a href="#eq:bayes_thm">1</a> as <span><span class="math display">E(\mathbf s, \mathbf x) = -\ln\mathrm P(\mathbf x|\mathbf s)-\ln\mathrm P(\mathbf s)\,.\qquad(3)</span></span> From this point of view the marginal density <span class="math inline">\mathrm P(\mathbf x) = Z(\mathbf x)</span> <em>is</em> the partition function of the canonical ensemble. In statistical physics the partition function is of central importance since its partial derivatives encode all thermodynamic properties of a physical system. The free energy of the canonical ensemble is defined by <span class="math inline">F(\mathbf x) = -\ln Z(\mathbf x)</span> (for <span class="math inline">\beta=1</span>) such that using this terminology we can write the marginal entropy <span class="math inline">\mathrm H(\mathcal X)</span> as an average over the <em>“free energies of response trajectories”</em> <span><span class="math display">
+\qquad(2)</span></span> where the <em>partition function</em> is defined by <span class="math inline">Z(\mathbf x) = \int \mathrm d\mathbf s\ \exp\left[-E(\mathbf s, \mathbf x)\right]</span> and <span class="math inline">E(\mathbf s, \mathbf x)</span> denotes the total energy of the system at state <span class="math inline">\mathbf s</span>. In this context <span class="math inline">\mathbf x</span> is considered a parameter vector for the specific model used to compute the energy. In classical problems of statistical physics (such as e.g. the <em>Ising model</em>) the state space spans the single particle states <span class="math inline">\mathbf{s} = (\sigma_1,\ldots,\sigma_n)\in\Omega^n</span> for all particles and the energy is given by the <em>Hamiltonian</em> <span class="math inline">\mathcal H(\sigma_1,\ldots,\sigma_n;\mathbf x)</span> where <span class="math inline">\mathbf x</span> could contain parameters describing e.g. the interaction strength between neighbouring spins. In our case however we define our energy function by comparison with eq. <a href="#eq:bayes_thm">1</a> as <span><span class="math display">E(\mathbf s, \mathbf x) = -\ln\mathrm P(\mathbf x|\mathbf s)-\ln\mathrm P(\mathbf s)\,.\qquad(3)</span></span> From this point of view the marginal density <span class="math inline">\mathrm P(\mathbf x) = Z(\mathbf x)</span> <em>is</em> the partition function of the canonical ensemble. In statistical physics the partition function is of central importance since its partial derivatives include all thermodynamic properties of a physical system. The free energy of the canonical ensemble is defined by <span class="math inline">F(\mathbf x) = -\ln Z(\mathbf x)</span> (for <span class="math inline">\beta=1</span>) such that using this terminology we can write the marginal entropy <span class="math inline">\mathrm H(\mathcal X)</span> as an average over the <em>“free energies of response trajectories”</em> <span><span class="math display">
 \mathrm H(\mathcal X) = \int\mathrm d\mathbf x\ \mathrm P(\mathbf x)\ F(\mathbf x) = \left\langle F(\mathbf x) \right\rangle_{\mathrm P(\mathbf x)}\,.
 \qquad(4)</span></span></p>
 <p>Since the computation of the partition function is central to the solution of many statistical problems there has been done considerable work on efficient estimation of the partition function, the free energy and other related quantities such as the <em>density of states</em>.</p>
@@ -256,7 +266,7 @@
                         
 
                         
-                            <a rel="next" href="estimates-using-the-density-of-states.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="thermodynamic-integration.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -274,7 +284,7 @@
                 
 
                 
-                    <a rel="next" href="estimates-using-the-density-of-states.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="thermodynamic-integration.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
