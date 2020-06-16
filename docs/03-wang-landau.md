@@ -1,17 +1,20 @@
 ---
-author:
+author-meta:
   - Manuel Reinhardt
   - Pieter Rein ten Wolde
-title: Estimation Strategies Inspired by Statistical Physics
+title-meta: Estimation Strategies Inspired by Statistical Physics
 institute: AMOLF
 bibliography: ["library.bib"]
 link-citations: true
 linkReferences: true
 autoEqnLabels: true
 cref: true
+lang: en-US
 ---
 
-# Borrowing Terminology from Statistical Physics
+# Estimation Strategies Inspired by Statistical Physics
+
+## Borrowing Terminology from Statistical Physics
 
 In the context of Bayesian Inference the terms of Bayes' formula
 $$
@@ -32,13 +35,13 @@ $$
 
 Since the computation of the partition function is central to the solution of many statistical problems there has been done considerable work on efficient estimation of the partition function, the free energy and other related quantities such as the _density of states_.
 
-# Thermodynamic Integration
+## Thermodynamic Integration
 
 One well-established technique to estimate free energy (differences) is by thermodynamic integration (TI) @1998:Gelman. It allows the accurate computation of the ratio between the normalization constants of two different probability distributions using a continuous path in _distribution space_ that connects both. Since this strategy uses random samples taken from many different distributions along this path it is especially robust when the two distributions have very little overlap. For the computation of the marginal density $\mathrm P(\mathbf x)$ we can (for a given $\mathbf x$) define a suitable path in distribution space between $\mathrm P(\mathbf s)$ and $\mathrm P(\mathbf s, \mathbf x)$. The normalization constants of these distributions are $z_0 = 1$ and $z_1 = \mathrm P(\mathbf x)$, respectively such that the ratio $r=z_1/z_0$ of these normalization constants directly corresponds to the marginal density. Using TI we estimate this ratio using approximately independent samples from a _Markov chain Monte Carlo_ (MCMC) simulation.
 
 In the following sections we will give a quick summary of TI followed by an explanation of the Markov chain Monte Carlo simulation and a discussion of the resulting accuracy of the estimates.
 
-## Summary of TI
+### Summary of TI
 
 Let $q_0$ and $q_1$ be the unnormalized distribution functions and $z_0, z_1$ the corrsponding normalization constants such that $z_i=\int\mathrm d\mathbf s\ q_i(\mathbf s)$. Next we construct a path between $q_0$ and $q_1$, parametrized by $\theta\in[0,1]$ such that $q_\theta$ smoothly connects the end points. We similarly define $z(\theta)$ as the normalization constant of $q_\theta$. A smooth path that can be constructed for any pair of distributions $(q_0, q_1)$ is the _geometric path_ given by $q_\theta=q^{1-\theta}_0\ q^\theta_1$. Note however that variance of the estimate depends on the chosen path and that the geometric path is not the optimal path in general. 
 
@@ -83,7 +86,7 @@ i.e. $\theta$ acts as a _"knob"_ that allows us to gradually turn the potential 
 
 To use the TI estimators introduced in [@eq:lambda_mc;@eq:lambda_ni] we need to generate samples from arbitrary distributions along our chosen geometric path. Since we can compute the unnormalized densities of these distributions, we can use the Metropolis-Hastings algorithm as a very general method to sample from arbitrary distributions @1970:Hastings.
 
-## Markov Chain Monte Carlo
+### Markov Chain Monte Carlo
 
 To generate approximately independent samples from a distribution given by the unnormalized density $q_\theta$ we start from an (in principle arbitrary) initial signal $\mathbf s$. Next, a new signal $\mathbf s^\prime$ is proposed from the proposal distribution $\mathrm T(\mathbf s \rightarrow \mathbf s^\prime)$ which is typically chosen to yield a $\mathbf s^\prime$ close to $\mathbf s$. Then with some probability $A(\mathbf s^\prime, \mathbf s)$ we _accept_ the new configuration and our first generated sample is $\mathbf s_1 = \mathbf s^\prime$. Otherwise we _reject_ the new configuration and our first sample is equal to the initial signal $\mathbf s_1 = \mathbf s$. For the next iteration of the algorithm we then set our new initial signal to be $\mathbf s \leftarrow \mathbf s_1$ such that when we repeat this procedure many times we generate a sequence of signals $\mathbf s_1, \mathbf s_2, \ldots$ where each sample is a random value only directly dependent on the immediately preceding sample. Thus we have defined a Markov process that generates a _chain_ of signals with the transition probability given by $\mathrm P(\mathbf s \rightarrow \mathbf s^\prime) = T(\mathbf s \rightarrow \mathbf s^\prime)\,A(\mathbf s^\prime, \mathbf s)$. We want to choose the acceptance probability $A(\mathbf s^\prime, \mathbf s)$ such that the stationary distribution of this Markov process is precisely $q_\theta$. It can be shown that the _Metropolis choice_
 $$
@@ -102,7 +105,7 @@ For the Gaussian system we choose the proposal distribution $\mathrm T(\mathbf s
 ![Samples of the averaged potential for different values of $\theta$. There are 216 samples for values of $\theta$ chosen uniformly distributed in the interval $[0, 1]$. Every point is an individual MCMC simulation with 1000 approximately independent draws. The bars on the right show a histogram of the log-likelihoods. The TI estimate is the integral from $\theta=0$ to $1$ of the curve that the individual samples approximate. Using the estimate from @eq:lambda_mc, the estimated value differs by merely 0.012 % from the analytically correct value of $\mathrm P(\mathbf x)$. This shows that given enough samples, TI is able to provide very accurate results for the marginal density.](figures/mcmc_theromdynamic_integration.svg){#fig:thermodynamic_int_results}
 
 
-# Estimating the Density of States
+## Estimating the Density of States
 
 <!-- The goal of the Wang and Landau algorithm is to compute the density of states $\rho(E)$ for a system using an adaptive Metropolis scheme where the sampling distribution is changing throughout one simulation. We want to show that this algorithm can be used to get a better estimate of the marginal probability density for random trajectories. -->
 
@@ -231,4 +234,4 @@ With that said, we do expect the Wang Landau procedure to perform especially wel
 <!-- In @fig:density-of-states we show several histograms of the density of states (however with finite bin width) for a Gillespie simulation of $M=10000$ signals. In these simulations we typically under-estimate the marginal probability density (and therefore over-estimate the marginal entropy). We propose that the bias arises because we do not have good enough sampling in the low-density regions of the density of states. From @eq:integrated_dos we see that due to the factor $e^{-E}$ especially trajectories with low energy contribute strongly to the overall estimate. This suggests that we should try to bias our sampling distribution towards trajectories with low energies. One way to do this might be the Wang and Landau algorithm. -->
 
 
-# References
+## References

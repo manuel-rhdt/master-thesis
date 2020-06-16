@@ -232,7 +232,6 @@ def invoke_pandoc() -> str:
             "--from",
             "markdown+smart+auto_identifiers",
             "--section-divs",
-            "--shift-heading-level-by=1",
             chapter,
         ]
         print(" ".join(args), file=sys.stderr)
