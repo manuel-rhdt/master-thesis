@@ -126,31 +126,33 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html" class="active"><span class="header-section-number">3</span> Information theory for trajectories
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html" class="active"><span class="header-section-number">3</span> Information and Noise in Biological Systems
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
-                        <li class="expanded"><a href="information-theory-for-trajectories.html#monte-carlo-simulation" class=""><span class="header-section-number">3.1</span> Monte-Carlo simulation
+                        <li class="expanded"><a href="information-and-noise-in-biological-systems.html#mutual-information-as-an-efficiency-measure-in-cell-signalling" class=""><span class="header-section-number">3.1</span> Mutual Information as an Efficiency Measure in Cell Signalling
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#estimating-the-likelihood" class=""><span class="header-section-number">3.2</span> Estimating the likelihood
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#monte-carlo-simulation" class=""><span class="header-section-number">3.2</span> Monte-Carlo simulation
+                    </a>
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#estimating-the-likelihood" class=""><span class="header-section-number">3.3</span> Estimating the likelihood
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
-                        <li class="expanded"><a href="information-theory-for-trajectories.html#the-probability-density-for-the-starting-point-of-a-trajectory" class=""><span class="header-section-number">3.2.1</span> The probability density for the starting point of a trajectory
+                        <li class="expanded"><a href="information-and-noise-in-biological-systems.html#the-probability-density-for-the-starting-point-of-a-trajectory" class=""><span class="header-section-number">3.3.1</span> The probability density for the starting point of a trajectory
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#the-transition-probabilities" class=""><span class="header-section-number">3.2.2</span> The transition probabilities
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#the-transition-probabilities" class=""><span class="header-section-number">3.3.2</span> The transition probabilities
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#estimating-the-marginal-probability-of-response-trajectories" class=""><span class="header-section-number">3.2.3</span> Estimating the marginal probability of response trajectories
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#estimating-the-marginal-probability-of-response-trajectories" class=""><span class="header-section-number">3.3.3</span> Estimating the marginal probability of response trajectories
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#chemical-master-equation" class=""><span class="header-section-number">3.3</span> Chemical Master Equation
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#chemical-master-equation" class=""><span class="header-section-number">3.4</span> Chemical Master Equation
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#jump-processes" class=""><span class="header-section-number">3.4</span> Jump Processes
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#jump-processes" class=""><span class="header-section-number">3.5</span> Jump Processes
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#simulating-a-biochemical-network-driven-by-an-external-signal" class=""><span class="header-section-number">3.5</span> Simulating a Biochemical Network Driven by an External Signal
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#simulating-a-biochemical-network-driven-by-an-external-signal" class=""><span class="header-section-number">3.6</span> Simulating a Biochemical Network Driven by an External Signal
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#references" class="">References
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#references" class="">References
                     </a>
                     </li>
                     </ol>
@@ -180,10 +182,12 @@
                     </a>
                     </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#connection-to-standard-monte-carlo-sampling" class=""><span class="header-section-number">4.4.2</span> Connection to Standard Monte-Carlo Sampling
                     </a>
-                    </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#results-for-wang-landau" class=""><span class="header-section-number">4.4.3</span> Results for Wang Landau
+                    </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#example-results-for-a-wang-landau-simulation" class=""><span class="header-section-number">4.4.3</span> Example Results for a Wang-Landau Simulation
                     </a>
                     </li>
                     </ol>
+                    </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#conclusion" class=""><span class="header-section-number">4.5</span> Conclusion
+                    </a>
                     </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#references" class="">References
                     </a>
                     </li>
@@ -245,8 +249,30 @@
 
                 <div id="content" class="content">
                     <main>
-                        <section id="information-theory-for-trajectories" class="level1" data-number="1">
-<h1 data-number="3"><span class="header-section-number">3</span> Information theory for trajectories</h1>
+                        <section id="information-and-noise-in-biological-systems" class="level1" data-number="1">
+<h1 data-number="3"><span class="header-section-number">3</span> Information and Noise in Biological Systems</h1>
+
+<p><em>Noise</em> is inherent across diverse biological systems and remains relevant at all biological scales. From <em>stochastic gene expression</em> and random <em>action potential spikes</em> in neuronal networks at the cellular scale to the <em>development of multicellular organisms</em> all the way to the <em>variations in population level</em> of competing species in whole ecosystems, we find examples of processes which can only be described precisely by taking into account noise as an intrinsic feature <span class="citation" data-cites="2002:Elowitz 2008:Faisal 2014:Tsimring">[<a href="#ref-2002:Elowitz" role="doc-biblioref">1</a>–<a href="#ref-2014:Tsimring" role="doc-biblioref">3</a>]</span>. In this thesis we focus on the smaller end of this scale, namely on the stochastic description of <em>biochemical networks</em>. These comprise among others <em>gene expression</em>, <em>gene regulatory networks</em>, and <em>cell signalling</em> networks, all of which exhibit noise due to small copy numbers of participating components. Additionally, since biological processes often happen out of equilibrium even macroscopic quantities can exhibit large fluctuations. The main source of noise at the cellular level may be fluctuations in <em>gene expression</em> which propagate to higher levels of biological organization <span class="citation" data-cites="2014:Tsimring">[<a href="#ref-2014:Tsimring" role="doc-biblioref">3</a>]</span>. The abundance of noise in all these systems has lead to the development of many mathematical and compuational stochastic models for biological processes. Notably, there are many parallels between biological signal processing and <em>noisy channels</em> which are used for example to describe information transmission across a telephone line. Indeed, it has shown to be very successful to employ the framework of <em>Information Theory</em>—originally developed to address problems in telecommunications—to the study of extra- and intracellular communication via biochemical networks <span class="citation" data-cites="2009:Tkačik">[<a href="#ref-2009:Tkačik" role="doc-biblioref">4</a>]</span>.</p>
+<p>A crucial aspect of <em>Information Theory</em> is that its results are broadly applicable, irrespective of the nature of the communication channel or the medium used to transmit a signal. The communication channel merely describes any kind of abstract device that processes an <em>input</em> in a probabilistic way to yield an <em>output</em>. It turns out that the study of information transmission through such a channel is closely related to the study of noise since the amount of noise introduced by a communication channel sets an upper bound on the amount of data that can be transmitted through it, i.e. the <em>channel capacity</em> <span class="citation" data-cites="2006:Cover">[<a href="#ref-2006:Cover" role="doc-biblioref">5</a>]</span>. Consequently, the output can be described as a deterministic, lossless transformation of the input <em>plus</em> some random noise from the channel which leads to a loss of information. Note that in biological systems the signal itself is typically a fluctuating quantity such that the noise in the output is a combination of the channel noise and the signal noise. Since in cell signalling both, input and output are time-varying quantities we require a description of our system that allows for deterministic <em>and</em> stochastic time evolution.</p>
+<p><em>Differential equations</em> are generally extremely useful to describe any kind of system that evolves deterministically. Therefore it is natural to try to extend the framework of <em>ordinary differential equations</em> (ODEs) to also include the ability to describe the effects of noise. Historically, this approach to modeling stochastic dynamics has first been formulated heuristically by Langevin to describe <em>Brownian motion</em> <strong>???</strong>. Later the theory of <em>stochastic differential equations</em> (SDEs) was put on solid mathematical footing by Itô and Stratonovich through the development of <em>stochastic calculus</em> based on the definition of a <em>stochastic integral</em> which has been successfully used for applications in physics, biology, economics and more <span class="citation" data-cites="2010:Kunita 1997:Bunkin">[<span class="citeproc-not-found" data-reference-id="2010:Kunita"><strong>???</strong></span>,<span class="citeproc-not-found" data-reference-id="1997:Bunkin"><strong>??</strong></span>]</span> [citation needed]. The solutions to SDEs are not ordinary functions like for ODEs but <em>stochastic processes</em> that describe the probabilities for the system to be in any state for every instant in time. Consequently, a stochastic process contains the probabilities for any possible individual sequence of states in time, i.e. the probabilities for individual <em>trajectories</em>. Since SDEs contain a complete account of noise in the system, information theoretic concepts like the <em>entropy</em> and the <em>mutual information</em>—which we are going to use to understand information transmission in cell signalling—can be applied to stochastic processes. While SDEs can be formulated to describe the evolution of biochemical networks in a discrete state space it is generally more useful to use a less general but simpler <em>chemical master equation</em> for these kinds of problems <span class="citation" data-cites="2009:Gardiner">[<a href="#ref-2009:Gardiner" role="doc-biblioref">6</a>]</span>.</p>
+<p>The chemical master equation is a description of a subset of stochastic processes by deriving the <em>time-evolution</em> of the probability distribution over the discrete state space. I.e. instead of describing the stochastic change to an individual state at a given time it focuses on the <em>deterministic</em> evolution of the whole probability distribution over all states. Conveniently, for a given set of chemical reactions that form a reaction network, we can easily find the corresponding chemical master equation that describes the stochastic dynamics of this network given some assumptions of homogeneity. The stochastic process that emerges of this formulation describes the probabilities for the individual counts of all species and how these probabilities change with time. The ease with which the chemical master equation allows the construction of a stochastic process for any kind of biochemical netork makes it very attractive to try to use <em>master equations</em> as the basis for information theoretic computations. If we can <em>solve</em> the master equation we in principle have access to all stochastic (and therefore information theoretic) properties of the corresponding biochemical network. E.g. in <span class="citation" data-cites="2010:Tostevin">[<a href="#ref-2010:Tostevin" role="doc-biblioref">7</a>]</span> it is shown how by analytically solving some very simple biochemical networks (using some approximations) it is possible to compute the <em>mutual information</em> between time-varying signals and corresponding responses of these networks.</p>
+<p>In most cases however, chemical master equations cannot be solved analytically and thus require averaging over an ensemble of <em>stochastic trajectories</em>. For instance, in Shannon’s information theory the amount of communicated information is not a function of individual signal-response pairs but an averaged quantity that depends on the probability of seeing <em>any</em> random signal-response-pair. Hence the time-efficient generation of stochastic realizations for a given master equation is a central requirement for the exact computation of information processing in chemical networks. A very well known algorithm for the <em>exact</em> generation of trajectories from a given initial condition is the <em>stochastic simulation algorithm</em> (SSA) also known by the name of it’s inventor as the <em>Gillespie algorithm</em> <span class="citation" data-cites="1976:Gillespie">[<a href="#ref-1976:Gillespie" role="doc-biblioref">8</a>]</span>. The most widely used variant is the <em>direct Gillespie method</em> which works by alternatingly a) computing the time during which no reactions happen and b) choosing which of the available reactions to perform next. As a result we generate a list of times where some reaction happens and a corresponding list of reactions that specifies the exact trajectory that was generated. This algorithm works quite well in practice and is also used for the work presented in this thesis. It is still worth mentioning that for systems that evolve at many different time scales simultaneously, the direct Gillespie method can be computationally inefficient since by its design it always operates at the smallest time scale. Therefore there have been developed further trajectory-generation algorithms that can generate <em>approximately</em> correct trajectories by accumulating various reactions into a single time step such as the <span class="math inline">\tau</span>-leap method <span class="citation" data-cites="2001:Gillespie">[<a href="#ref-2001:Gillespie" role="doc-biblioref">9</a>]</span>.</p>
+<section id="mutual-information-as-an-efficiency-measure-in-cell-signalling" class="level2" data-number="1.1">
+<h2 data-number="3.1"><span class="header-section-number">3.1</span> Mutual Information as an Efficiency Measure in Cell Signalling</h2>
+<ul>
+<li><p>Introduce signals and responses</p></li>
+<li><p>For any given signal there are many stochastically possible responses. Conversely, for any given response there is a range of signals that could have produced it.</p></li>
+<li><p>We introduce the notation <span class="math inline">X</span> for responses and <span class="math inline">S</span> for signals</p></li>
+<li><p>The average uncertainty of responses for a given signal is decribed by the Kullback-Leibler divergence (relative information) <span class="math inline">K(X|S)</span></p></li>
+<li><p>It is necessary to look at time-dependencies of both signals and responses for various reasons</p>
+<ol type="1">
+<li>Cells can store information in the time dependency of the responses (e.g. spike intervals) (This is studied extensively in <span class="citation" data-cites="2019:Cepeda-Humerez">[<a href="#ref-2019:Cepeda-Humerez" role="doc-biblioref">10</a>]</span> for the case were the signal can be regarded as slowly changing)</li>
+<li>Crucial information about the signal is not (only) encoded in its momentaneous value but in how it changes in time</li>
+</ol></li>
+<li><p>A general algorithm for the computation of the mutual information between time-varying signals and responses is novel</p></li>
+<li><p>It is tempting to think that optimization of information processing drives the evolution of cellular signaling networks</p></li>
+<li><p>Often information transmission is bound by the noise. Therefore to increase information it is necessary to decrease noise (e.g. by using higher copy numbers). However this usually comes at a metabolic cost such that a balance between energy and noise must be found.</p></li>
+</ul>
 <p>A trajectory <span class="math inline">X</span> with <span class="math inline">N</span> steps is defined by a set of pairs <span class="math inline">X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}</span> where <span class="math inline">\mathbf{x}_i</span> defines the trajectory value at time <span class="math inline">t_i</span>. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories.</p>
 <p>As a next step we can make sense of the entropy of a trajectory. Let <span class="math inline">\mathcal{X}_N</span> be a random variable over trajectories of length <span class="math inline">N</span>. We call</p>
 <p><span id="eq:entropy_integral"><span class="math display">
@@ -274,16 +300,17 @@
 \mathrm{I}(\mathcal{X}; \mathcal{S}) = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\mathrm P(X)} \right\rangle_{\mathcal{X},\mathcal{S}} = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\left\langle\mathrm P(X | S) \right\rangle_\mathcal{S}} \right\rangle_{\mathcal{X},\mathcal{S}} \,.
 \qquad(6)</span></span></p>
 <p>These averages are defined as integrals over the very high-dimensional space of trajectories and thus very hard to evaluate analytically or numerically in the general case. Our goal is use <em>Monte-Carlo sampling</em> in the trajectory space to evaluate the above averages. To do this we have to sample trajectories from their probably distribution and we need to evaluate the likelihood for a response given a signal.</p>
-<section id="monte-carlo-simulation" class="level2" data-number="1.1">
-<h2 data-number="3.1"><span class="header-section-number">3.1</span> Monte-Carlo simulation</h2>
+</section>
+<section id="monte-carlo-simulation" class="level2" data-number="1.2">
+<h2 data-number="3.2"><span class="header-section-number">3.2</span> Monte-Carlo simulation</h2>
 <p>While so-called Monte-Carlo methods comprise a wide variety of approaches to stochastically evaluate integrals or sums the common idea is easily stated. We have a state space <span class="math inline">U</span> and a probability distribution <span class="math inline">p_U</span> over that state space. The problem is to evaluate</p>
 <p><span><span class="math display">
 \langle f(u) \rangle \equiv \int\limits_{u \in U} \mathrm du\; f(u) p_U(u)
 \qquad(7)</span></span></p>
 <p>where <span class="math inline">f: U\rightarrow\mathbb R</span> is some smooth function. If <span class="math inline">U</span> is high-dimensional it is very time-consuming to estimate it by direct numerical integration.</p>
 </section>
-<section id="estimating-the-likelihood" class="level2" data-number="1.2">
-<h2 data-number="3.2"><span class="header-section-number">3.2</span> Estimating the likelihood</h2>
+<section id="estimating-the-likelihood" class="level2" data-number="1.3">
+<h2 data-number="3.3"><span class="header-section-number">3.3</span> Estimating the likelihood</h2>
 <p>The Probability density of a markovian trajectory can be expressed as</p>
 <p><span><span class="math display">
 \mathrm P(X) = \mathrm P(x_0,t_0;x_1,t_1;\ldots;x_{N-1},t_{N-1}) = \mathrm P(x_0,t_0 ) \prod\limits^{N-1}_{n=1} \mathrm P(x_n,t_n|x_{n-1},t_{n-1}) \,.
@@ -303,8 +330,8 @@
 <p><span><span class="math display">
 \ell(X|S) = \ln\left[ \mathrm P(x_0,t_0 | S) \prod\limits^{N-1}_{n=1} \mathrm P(x_n,t_n|x_{n-1},t_{n-1}, S) \right] = \ln \mathrm P(x_0,t_0 | S) +\sum\limits^{N-1}_{n=1} \ln \mathrm P(x_n,t_n|x_{n-1},t_{n-1}, S)\,.
 \qquad(10)</span></span></p>
-<section id="the-probability-density-for-the-starting-point-of-a-trajectory" class="level3" data-number="1.2.1">
-<h3 data-number="3.2.1"><span class="header-section-number">3.2.1</span> The probability density for the starting point of a trajectory</h3>
+<section id="the-probability-density-for-the-starting-point-of-a-trajectory" class="level3" data-number="1.3.1">
+<h3 data-number="3.3.1"><span class="header-section-number">3.3.1</span> The probability density for the starting point of a trajectory</h3>
 <p>We first look at the term <span class="math inline">P_0 = \mathrm P(x_0,t_0 | S)</span>. Since <span class="math inline">S</span> is a trajectory in time we can directly conclude from causality that</p>
 <p><span><span class="math display">
 \mathrm P(x_0, t_0 | S) = \mathrm P(x_0, t_0 | S_{t \leq t_0})
@@ -319,12 +346,12 @@
 \mathrm I(\mathcal{X}_{t=t_0}, \mathcal{S}_{t=t_0}) = \int ds_0\int dx_0\; \mathrm{P}(x_0, s_0)\; \ln \frac{\mathrm{P} (x_0, s_0)}{\mathrm{P} (x_0) \mathrm{P} (s_0)}
 \qquad(13)</span></span></p>
 </section>
-<section id="the-transition-probabilities" class="level3" data-number="1.2.2">
-<h3 data-number="3.2.2"><span class="header-section-number">3.2.2</span> The transition probabilities</h3>
+<section id="the-transition-probabilities" class="level3" data-number="1.3.2">
+<h3 data-number="3.3.2"><span class="header-section-number">3.3.2</span> The transition probabilities</h3>
 <p><strong>TODO:</strong> describe how the transition rates follow from the master equation (probably follow the style of Cepeda-Humerez, et. al.)</p>
 </section>
-<section id="estimating-the-marginal-probability-of-response-trajectories" class="level3" data-number="1.2.3">
-<h3 data-number="3.2.3"><span class="header-section-number">3.2.3</span> Estimating the marginal probability of response trajectories</h3>
+<section id="estimating-the-marginal-probability-of-response-trajectories" class="level3" data-number="1.3.3">
+<h3 data-number="3.3.3"><span class="header-section-number">3.3.3</span> Estimating the marginal probability of response trajectories</h3>
 <p>To calculate the mutual information between trajectories we need to have a good estimate for <span class="math inline">\ln\left\langle \mathrm P(X | S) \right\rangle_\mathcal{S}</span>. We calculate this average by sampling of trajectories <span class="math inline">(S^{(i)})_{i=1\ldots N_S}</span> from the probability distribution of <span class="math inline">\mathcal{S}</span>:</p>
 <p><span><span class="math display">
 \ln\left\langle\mathrm P(X | S) \right\rangle_\mathcal{S} \approx \ln \frac{\sum^{N_S}_{i=1} \mathrm P(X|S^{(i)})}{N_S} = \ln \sum^{N_S}_{i=1} \mathrm P(X|S^{(i)}) - \ln N_S
@@ -343,8 +370,8 @@
 <p>Another way to phrase this insight is that to get a good approximation for the logarithmic average likelihood, our set of signals that we use for monte-carlo sampling should contain many signals that produce a high likelihood. <strong>Therefore it probably is necessary to come up with a scheme to specifically sample signal trajectories for which the likelihood of a particular trajectory is high</strong>. On the other hand the results do not seem to get significantly better when averaging over more trajectories.</p>
 </section>
 </section>
-<section id="chemical-master-equation" class="level2" data-number="1.3">
-<h2 data-number="3.3"><span class="header-section-number">3.3</span> Chemical Master Equation</h2>
+<section id="chemical-master-equation" class="level2" data-number="1.4">
+<h2 data-number="3.4"><span class="header-section-number">3.4</span> Chemical Master Equation</h2>
 <p>As a model for the biochemical processing that takes place inside a cell we suppose that all interactions can be described by a chemical networks composed of different molecular species and reactions between them. Such networks can be described by a <em>chemical master equation</em> which makes it possible to compute all the probabilities associated with the time-evolution of such a system.</p>
 <p>For illustrative purposes, let’s consider a highly simplified model of gene expression consisting of two components and four reactions</p>
 <p><span><span class="math display"> \begin{gathered}
@@ -363,7 +390,7 @@ p^{(\mu)}_{[t, t+\mathrm\delta t]}(x) = x\mu\delta t + \mathcal{O}(\delta t^2)
 \qquad(18)</span></span></p>
 <p>where <span class="math inline">s</span> and <span class="math inline">x</span> denote the particle numbers of the respective species at time <span class="math inline">t</span>. Consequently, the probability for <em>any</em> of the reactions to occur at least once in the time interval <span class="math inline">[t, t+\mathrm\delta t]</span> is</p>
 <p><span id="eq:exit_probability"><span class="math display">p_{[t, t+\mathrm\delta t]}(s, x) = (\kappa + s\lambda + s\rho + x\mu)\ \mathrm \delta t + \mathcal{O}(\delta t^2)\qquad(19)</span></span></p>
-<p>Using these expressions we can write down the so-called <em>chemical master equation</em> for this network. Let <span class="math inline">\mathrm P_{s,x}(t)</span> be the probability that the system is in state <span class="math inline">(s, x)</span> at time <span class="math inline">t</span>. Assuming that at most one reaction happens in the small time interval <span class="math inline">[t, t+\delta t]</span> we can use the transition probabilities from eqns. 18, 19 to write</p>
+<p>Using these expressions we can write down the so-called <em>chemical master equation</em> for this network. Let <span class="math inline">\mathrm P_{s,x}(t)</span> be the probability that the system is in state <span class="math inline">(s, x)</span> at time <span class="math inline">t</span>. Assuming that at most one reaction happens in the small time interval <span class="math inline">[t, t+\delta t]</span> we can use the transition probabilities from eqns. <a href="#eq:transition_probabilities">18</a>, <a href="#eq:exit_probability">19</a> to write</p>
 <p><span><span class="math display">
 \begin{aligned}
 \mathrm P_{s,x}(t + \delta t) = \phantom{+}p^{(\kappa)}_{[t, t+\mathrm\delta t]}\ \mathrm P_{s-1,x}(t)\\ +
@@ -384,27 +411,54 @@ s\rho\ \mathrm P_{s,x-1}(t) +
 (\kappa + s\lambda + s\rho + x\mu)\ \mathrm P_{s,x}(t)
 \end{aligned}
 \qquad(21)</span></span></p>
-<p>In an analogous way a chemical master equation can be derived for any biochemical network <span class="citation" data-cites="2009:Gardiner">[1]</span> and thus forms the basis for our further computations. Eq. 21 describes a special kind of <em>stochastic process</em>, a so-called <em>jump process</em>.</p>
+<p>In an analogous way a chemical master equation can be derived for any biochemical network <span class="citation" data-cites="2009:Gardiner">[<a href="#ref-2009:Gardiner" role="doc-biblioref">6</a>]</span> and thus forms the basis for our further computations. Eq. <a href="#eq:chemical_master_equation">21</a> describes a special kind of <em>stochastic process</em>, a so-called <em>jump process</em>.</p>
 <p>In our example we might interpret <span class="math inline">S</span> as some signal whose quantity varies stochastically. For every signal molecule there is a constant probability to be sensed by the cell which triggers the creation of an <span class="math inline">X</span>. Additionally, <span class="math inline">X</span> molecules decays by themselves over time. We call the trajectory of <span class="math inline">S</span> the “signal” and the trajectory of <span class="math inline">X</span> the “response”. This nomenclature will we used throughout the thesis.</p>
 </section>
-<section id="jump-processes" class="level2" data-number="1.4">
-<h2 data-number="3.4"><span class="header-section-number">3.4</span> Jump Processes</h2>
-<p>Since particle counts can’t ever become negative, eq. 21 describes a Markov process in continuous time with the state space <span class="math inline">\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}</span>. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called <em>jump processes</em> since they generate discontinuous sample paths <span class="citation" data-cites="2017:Weber">[2]</span>.</p>
-<p>A jump process <span class="math inline">\mathcal{X}</span> with state space <span class="math inline">\mathcal{U}</span> and an initial state <span class="math inline">\mathbf{x}_0\in\mathcal{U}</span> at time <span class="math inline">t_0</span> generates trajectories that can be described by a sequence of pairs <span class="math inline">(\mathbf{x}_i, t_i)_{i=1,2,\ldots}</span> where at every <em>transition time</em> <span class="math inline">t_i</span> there occurs a jump in state space <span class="math inline">\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}</span>. The trajectories generated by a jump process are infinitely long and we denote the set of all possible trajectories by <span class="math inline">\mathcal K(\mathcal X)</span>. For a given duration <span class="math inline">\tau0</span> we denote the set of all unique trajectory segments of duration <span class="math inline">\tau</span> by <span class="math inline">\mathcal K_\tau[\mathcal X]</span>. The master equation allows to express the probability distribution in trajectory space…</p>
+<section id="jump-processes" class="level2" data-number="1.5">
+<h2 data-number="3.5"><span class="header-section-number">3.5</span> Jump Processes</h2>
+<p>Since particle counts can’t ever become negative, eq. <a href="#eq:chemical_master_equation">21</a> describes a Markov process in continuous time with the state space <span class="math inline">\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}</span>. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called <em>jump processes</em> since they generate discontinuous sample paths <span class="citation" data-cites="2017:Weber">[<a href="#ref-2017:Weber" role="doc-biblioref">11</a>]</span>.</p>
+<p>A jump process <span class="math inline">\mathcal{X}</span> with state space <span class="math inline">\mathcal{U}</span> and an initial state <span class="math inline">\mathbf{x}_0\in\mathcal{U}</span> at time <span class="math inline">t_0</span> generates trajectories that can be described by a sequence of pairs <span class="math inline">(\mathbf{x}_i, t_i)_{i=1,2,\ldots}</span> where at every <em>transition time</em> <span class="math inline">t_i</span> there occurs a jump in state space <span class="math inline">\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}</span>. The trajectories generated by a jump process are infinitely long and we denote the set of all possible trajectories by <span class="math inline">\mathcal K(\mathcal X)</span>. For a given duration <span class="math inline">\tau0</span> we denote the set of all unique trajectory segments of duration <span class="math inline">\tau</span> by <span class="math inline">\mathcal K_\tau[\mathcal X]</span>. Using the master equation for this process we can express the probability density for any trajectory segment in <span class="math inline">\mathcal K_\tau[\mathcal X]</span>.</p>
+<p>The master equation for the process allows to express the probability distribution in trajectory space…</p>
 </section>
-<section id="simulating-a-biochemical-network-driven-by-an-external-signal" class="level2" data-number="1.5">
-<h2 data-number="3.5"><span class="header-section-number">3.5</span> Simulating a Biochemical Network Driven by an External Signal</h2>
+<section id="simulating-a-biochemical-network-driven-by-an-external-signal" class="level2" data-number="1.6">
+<h2 data-number="3.6"><span class="header-section-number">3.6</span> Simulating a Biochemical Network Driven by an External Signal</h2>
 <p>When we want to compute information transmission in a biological context it is often</p>
-
 </section>
 <section id="references" class="level2 unnumbered" data-number="">
 <h2 class="unnumbered" data-number="2">References</h2>
 <div id="refs" class="references" role="doc-bibliography">
+<div id="ref-2002:Elowitz">
+<p>[1] M.B. Elowitz, A.J. Levine, E.D. Siggia, P.S. Swain, Stochastic Gene Expression in a Single Cell, Science. 297 (2002) 1183–1186. <a href="https://doi.org/10.1126/science.1070919">https://doi.org/10.1126/science.1070919</a>.</p>
+</div>
+<div id="ref-2008:Faisal">
+<p>[2] A.A. Faisal, L.P.J. Selen, D.M. Wolpert, Noise in the nervous system, Nature Reviews Neuroscience. 9 (2008) 292–303. <a href="https://doi.org/10.1038/nrn2258">https://doi.org/10.1038/nrn2258</a>.</p>
+</div>
+<div id="ref-2014:Tsimring">
+<p>[3] L.S. Tsimring, Noise in biology, Reports on Progress in Physics. 77 (2014) 026601. <a href="https://doi.org/10.1088/0034-4885/77/2/026601">https://doi.org/10.1088/0034-4885/77/2/026601</a>.</p>
+</div>
+<div id="ref-2009:Tkačik">
+<p>[4] G. Tkačik, A.M. Walczak, W. Bialek, Optimizing information flow in small genetic networks, Physical Review E. 80 (2009) 031920. <a href="https://doi.org/10.1103/physreve.80.031920">https://doi.org/10.1103/physreve.80.031920</a>.</p>
+</div>
+<div id="ref-2006:Cover">
+<p>[5] T.M. Cover, J.A. Thomas, Elements of Information Theory, 2nd ed., John Wiley  Sons, 2006.</p>
+</div>
 <div id="ref-2009:Gardiner">
-<p>[1] C. Gardiner, Stochastic Methods, 4th ed., Springer-Verlag, Berlin Heidelberg, 2009.</p>
+<p>[6] C. Gardiner, Stochastic Methods, 4th ed., Springer-Verlag, Berlin Heidelberg, 2009.</p>
+</div>
+<div id="ref-2010:Tostevin">
+<p>[7] F. Tostevin, P.R. ten Wolde, Mutual information in time-varying biochemical systems, Physical Review E. 81 (2010) 061917. <a href="https://doi.org/10.1103/physreve.81.061917">https://doi.org/10.1103/physreve.81.061917</a>.</p>
+</div>
+<div id="ref-1976:Gillespie">
+<p>[8] D.T. Gillespie, A general method for numerically simulating the stochastic time evolution of coupled chemical reactions, Journal of Computational Physics. 22 (1976) 403–434. <a href="https://doi.org/10.1016/0021-9991(76)90041-3">https://doi.org/10.1016/0021-9991(76)90041-3</a>.</p>
+</div>
+<div id="ref-2001:Gillespie">
+<p>[9] D.T. Gillespie, Approximate accelerated stochastic simulation of chemically reacting systems, The Journal of Chemical Physics. 115 (2001) 1716–1733. <a href="https://doi.org/10.1063/1.1378322">https://doi.org/10.1063/1.1378322</a>.</p>
+</div>
+<div id="ref-2019:Cepeda-Humerez">
+<p>[10] S.A. Cepeda-Humerez, J. Ruess, G. Tkačik, Estimating information in time-varying signals., PLoS Computational Biology. 15 (2019) e1007290. <a href="https://doi.org/10.1371/journal.pcbi.1007290">https://doi.org/10.1371/journal.pcbi.1007290</a>.</p>
 </div>
 <div id="ref-2017:Weber">
-<p>[2] M.F. Weber, E. Frey, Master equations and the theory of stochastic path integrals, Reports on Progress in Physics. 80 (2017) 046601. <a href="https://doi.org/10.1088/1361-6633/aa5ae2">https://doi.org/10.1088/1361-6633/aa5ae2</a>.</p>
+<p>[11] M.F. Weber, E. Frey, Master equations and the theory of stochastic path integrals, Reports on Progress in Physics. 80 (2017) 046601. <a href="https://doi.org/10.1088/1361-6633/aa5ae2">https://doi.org/10.1088/1361-6633/aa5ae2</a>.</p>
 </div>
 </div>
 </section>

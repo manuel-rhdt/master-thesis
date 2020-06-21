@@ -126,31 +126,33 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html" class=""><span class="header-section-number">3</span> Information theory for trajectories
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html" class=""><span class="header-section-number">3</span> Information and Noise in Biological Systems
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
-                        <li class="expanded"><a href="information-theory-for-trajectories.html#monte-carlo-simulation" class=""><span class="header-section-number">3.1</span> Monte-Carlo simulation
+                        <li class="expanded"><a href="information-and-noise-in-biological-systems.html#mutual-information-as-an-efficiency-measure-in-cell-signalling" class=""><span class="header-section-number">3.1</span> Mutual Information as an Efficiency Measure in Cell Signalling
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#estimating-the-likelihood" class=""><span class="header-section-number">3.2</span> Estimating the likelihood
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#monte-carlo-simulation" class=""><span class="header-section-number">3.2</span> Monte-Carlo simulation
+                    </a>
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#estimating-the-likelihood" class=""><span class="header-section-number">3.3</span> Estimating the likelihood
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
-                        <li class="expanded"><a href="information-theory-for-trajectories.html#the-probability-density-for-the-starting-point-of-a-trajectory" class=""><span class="header-section-number">3.2.1</span> The probability density for the starting point of a trajectory
+                        <li class="expanded"><a href="information-and-noise-in-biological-systems.html#the-probability-density-for-the-starting-point-of-a-trajectory" class=""><span class="header-section-number">3.3.1</span> The probability density for the starting point of a trajectory
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#the-transition-probabilities" class=""><span class="header-section-number">3.2.2</span> The transition probabilities
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#the-transition-probabilities" class=""><span class="header-section-number">3.3.2</span> The transition probabilities
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#estimating-the-marginal-probability-of-response-trajectories" class=""><span class="header-section-number">3.2.3</span> Estimating the marginal probability of response trajectories
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#estimating-the-marginal-probability-of-response-trajectories" class=""><span class="header-section-number">3.3.3</span> Estimating the marginal probability of response trajectories
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#chemical-master-equation" class=""><span class="header-section-number">3.3</span> Chemical Master Equation
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#chemical-master-equation" class=""><span class="header-section-number">3.4</span> Chemical Master Equation
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#jump-processes" class=""><span class="header-section-number">3.4</span> Jump Processes
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#jump-processes" class=""><span class="header-section-number">3.5</span> Jump Processes
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#simulating-a-biochemical-network-driven-by-an-external-signal" class=""><span class="header-section-number">3.5</span> Simulating a Biochemical Network Driven by an External Signal
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#simulating-a-biochemical-network-driven-by-an-external-signal" class=""><span class="header-section-number">3.6</span> Simulating a Biochemical Network Driven by an External Signal
                     </a>
-                    </li><li class="expanded"><a href="information-theory-for-trajectories.html#references" class="">References
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#references" class="">References
                     </a>
                     </li>
                     </ol>
@@ -180,10 +182,12 @@
                     </a>
                     </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#connection-to-standard-monte-carlo-sampling" class=""><span class="header-section-number">4.4.2</span> Connection to Standard Monte-Carlo Sampling
                     </a>
-                    </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#results-for-wang-landau" class=""><span class="header-section-number">4.4.3</span> Results for Wang Landau
+                    </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#example-results-for-a-wang-landau-simulation" class=""><span class="header-section-number">4.4.3</span> Example Results for a Wang-Landau Simulation
                     </a>
                     </li>
                     </ol>
+                    </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#conclusion" class=""><span class="header-section-number">4.5</span> Conclusion
+                    </a>
                     </li><li class="expanded"><a href="estimation-strategies-inspired-by-statistical-physics.html#references" class="">References
                     </a>
                     </li>
@@ -366,11 +370,10 @@ p(E_i\rightarrow E_j) = \min\left( 1, \frac{g(E_i)}{g(E_j)} \right)\,.
 </ol>
 <p>The proposal distribution <span class="math inline">T</span> can in principle be arbitrary. The definition of the acceptance probability in eq. <a href="#eq:modified_acceptance_probability">22</a> illustrates that—once the simulation is converged—<span class="math inline">\rho</span> describes how we have to modify the state space density <span class="math inline">\mathrm P(\mathbf s)</span> such that we sample uniformly over all potentials.</p>
 <figure>
-<img src="figures/normalized_densities.svg" id="fig:normalized_densities" alt="" /></img><figcaption>Figure 4: Exemplifying the benefit of the Wang-Landau algorithm for the multivariate normal system at different dimensionalities: The blue lines show the modified density of states from eq. <a href="#eq:modified_dos">20</a>, computed using a conventional MC simulation. The orange line represents the Boltzmann factor <span class="math inline">e^{-U}</span> and the green line shows the integrand of eq. <a href="#eq:modified_int">21</a> which is the product of the other two quantities. For visualization purposes, all functions where rescaled such that their integrals over the displayed interval equal 1. We see that especially at higher dimensionality there is very little overlap between the green and the blue line which leads to high inaccuracy in the computation of the marginal density. For all simulations we chose the covariance matrix using <span class="math inline">\Delta t = 64</span>.</figcaption>
+<img src="figures/normalized_densities.svg" id="fig:normalized_densities" alt="" /></img><figcaption>Figure 4: Illustrating the benefit of using the Wang-Landau algorithm for the multivariate normal system at different dimensionalities: The blue lines show the modified density of states from eq. <a href="#eq:modified_dos">20</a>, computed using a conventional MC simulation. The orange line represents the Boltzmann factor <span class="math inline">e^{-U}</span> and the green line shows the integrand of eq. <a href="#eq:modified_int">21</a> which is the product of the other two quantities. For visualization purposes, all functions where rescaled such that their integrals over the displayed interval equal 1. We see that especially at higher dimensionality there is very little overlap between the green and the blue line which leads to high inaccuracy in the computation of the marginal density. For all simulations we chose the covariance matrix using <span class="math inline">\Delta t = 64</span>.</figcaption>
 </figure>
 <p>Fig. <a href="#fig:normalized_densities">4</a> makes it clear why we expect Wang-Landau sampling to lead to a better estimate of the marginal density than the brute-force Monte-Carlo computation, especially in high-dimensional state spaces. For <span class="math inline">d=50</span> and <span class="math inline">d=200</span> most of the weight of the integral is in regions where <span class="math inline">\rho(E)\approx 0</span>. In these low density regions we usually get a very inaccurate estimation of the (modified) DOS by normal MC simulations since we only very occasionally sample a relevant state. The Wang-Landau algorithm ensures that for every energy there is a consistent sampling density and we get a good estimate of the DOS even in low-density regimes.</p>
 <p>From fig. <a href="#fig:normalized_densities">4</a> we can also estimate for which range of potentials we must compute the DOS. Since the Boltzmann weight <span class="math inline">e^{-U}</span> strongly favours low-potential configurations it is important to compute the DOS for very low potentials even if it nearly vanishes there (i.e. in regions where the blue line vanishes but the green line has relevant weight).</p>
-
 </section>
 <section id="connection-to-standard-monte-carlo-sampling" class="level3" data-number="1.4.2">
 <h3 data-number="4.4.2"><span class="header-section-number">4.4.2</span> Connection to Standard Monte-Carlo Sampling</h3>
@@ -381,17 +384,19 @@ p(E_i\rightarrow E_j) = \min\left( 1, \frac{g(E_i)}{g(E_j)} \right)\,.
 \qquad(24)</span></span></p>
 <p>For the purpose of comparing estimates we can therefore associate the standard MC approach with computing the empirical histogram of potential values when sampling signals according to their marginal distribution. In the next section we will compare this empirical histogram to the DOS as computed using the Wang-Landau algorithm.</p>
 </section>
-<section id="results-for-wang-landau" class="level3" data-number="1.4.3">
-<h3 data-number="4.4.3"><span class="header-section-number">4.4.3</span> Results for Wang Landau</h3>
+<section id="example-results-for-a-wang-landau-simulation" class="level3" data-number="1.4.3">
+<h3 data-number="4.4.3"><span class="header-section-number">4.4.3</span> Example Results for a Wang-Landau Simulation</h3>
 <figure>
-<img src="figures/wl_dos.svg" id="fig:wl_dos" alt="" /></img><figcaption>Figure 5: Plots of estimates of the modified DOS from eq. <a href="#eq:modified_dos">20</a> compared on both linear and log scales. The blue line shows the Wang Landau estimate while the orange line is a histogram estimate using unbiased sampling according to <span class="math inline">\mathrm P(\mathbf s)</span>. We see that especially in the low-potential regime the Wang Landau estimate is much more accurate.</figcaption>
+<img src="figures/wl_dos.svg" id="fig:wl_dos" alt="" /></img><figcaption>Figure 5: Plots of estimates of the modified DOS from eq. <a href="#eq:modified_dos">20</a> compared on both linear and log scales. The blue line shows the Wang-Landau estimate while the orange line is a histogram estimate using unbiased sampling according to <span class="math inline">\mathrm P(\mathbf s)</span>. We see that especially in the low-potential regime the Wang-Landau estimate is much more accurate.</figcaption>
 </figure>
-<p>In fig. <a href="#fig:wl_dos">5</a> we display the estimated DOS using the Wang Landau algorithm compared with a histogram estimate of the DOS using unbiased sampling. We see that in the highly relevant regime of low potential the Wang Landau procedure allows us to get an accurate estimate of the DOS even though its density is as low as <span class="math inline">e^{-30}</span>. Using eq. <a href="#eq:modified_int">21</a> we compute the marginal density to be <span class="math inline">-688.52</span> whereas the “correct” value computed analytically is <span class="math inline">-683.02</span>. We thus find a relative error of <span class="math inline">0.8\%</span> in this estimate.</p>
-<p>While we can achieve a good estimate for the marginal density <span class="math inline">\mathrm P(\mathbf x)</span> using the estimated DOS from the Wang-Landau algorithm there remain some practical difficulties. For maximum efficiency and accuracy the different parameters affecting the procedure such as the required histogram flatness, the updating scheme of the <span class="math inline">f</span> parameter, and the choice of potential bins have to be tuned for a given problem. After some tuning of these parameters for the Gaussian system for a fixed set of covariance matrices we still find the estimation to be at least one order of magnitude slower in CPU time compared to thermodynamic integration. Therefore, at least for the Gaussian system thermodynamic integration seems to be better suited to compute the marginal density.</p>
-<p>With that said, we do expect the Wang Landau procedure to perform especially well in cases were there are many local minima of the potential. Here using TI we might get <em>“stuck”</em> in a specific minimum and thus not sample all relevant states. Therefore we suggest that while TI should be the method of choice for the computation of the marginal density for high dimensional systems, in specific cases it may make sense to try other approaches that are well-established in statistical physics, such as Wang Landau.</p>
-
-
+<p>In fig. <a href="#fig:wl_dos">5</a> we display the estimated DOS using the Wang-Landau algorithm compared with a histogram estimate of the DOS using unbiased sampling. We see that in the highly relevant regime of low potential the Wang-Landau procedure allows us to get an accurate estimate of the DOS even though its density is as low as <span class="math inline">e^{-45}\approx 10^{-20}</span>. Using eq. <a href="#eq:modified_int">21</a> we compute the marginal density to be <span class="math inline">-664.01</span> whereas the “correct” value computed analytically is <span class="math inline">-664.24</span>. We thus find a relative error of <span class="math inline">0.03\%</span> in this estimate.</p>
+<p>While we can achieve a very precise estimate for the marginal density <span class="math inline">\mathrm P(\mathbf x)</span> using the estimated DOS from the Wang-Landau algorithm there remain some practical difficulties. For maximum efficiency and accuracy the different parameters affecting the procedure such as the required histogram flatness, the updating scheme of the <span class="math inline">f</span> parameter, and the choice of potential bins have to be tuned for a given problem. After some tuning of these parameters for the Gaussian system for a fixed set of covariance matrices we still find the estimation to be at least one order of magnitude slower in CPU time compared to thermodynamic integration. Therefore, at least for the Gaussian system thermodynamic integration seems to be better suited to compute the marginal density.</p>
+<p>With that said, we do expect the Wang-Landau procedure to perform especially well in cases were there are many local minima of the potential. Here using TI we might get <em>“stuck”</em> in a specific minimum and thus not sample all relevant states. Therefore we suggest that while TI should be the method of choice for the computation of the marginal density for high dimensional systems, in specific cases it may make sense to try other approaches that are well-established in statistical physics, such as Wang-Landau.</p>
 </section>
+</section>
+<section id="conclusion" class="level2" data-number="1.5">
+<h2 data-number="4.5"><span class="header-section-number">4.5</span> Conclusion</h2>
+<p>Even if we can compute the mutual information efficiently using TI without estimating the DOS for individual responses it is worth noting that this framework shows very clearly why the brute-force Monte-Carlo estimates of the marginal probability density will fail for high-dimensional systems. Figs. <a href="#fig:normalized_densities">4</a>, <a href="#fig:wl_dos">5</a> illustrate why more advanced simulation methods are unavoidable for these problems.</p>
 </section>
 <section id="references" class="level2 unnumbered" data-number="">
 <h2 class="unnumbered" data-number="3">References</h2>
@@ -413,7 +418,7 @@ p(E_i\rightarrow E_j) = \min\left( 1, \frac{g(E_i)}{g(E_j)} \right)\,.
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
-                            <a rel="prev" href="information-theory-for-trajectories.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="information-and-noise-in-biological-systems.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
                         
@@ -431,7 +436,7 @@ p(E_i\rightarrow E_j) = \min\left( 1, \frac{g(E_i)}{g(E_j)} \right)\,.
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
-                    <a rel="prev" href="information-theory-for-trajectories.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="information-and-noise-in-biological-systems.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
                 
