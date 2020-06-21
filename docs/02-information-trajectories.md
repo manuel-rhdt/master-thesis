@@ -1,8 +1,64 @@
 ---
+bibliography: ["library.bib"]
 autoEqnLabels: true
+link-citations: true
+linkReferences: true
+cref: true
 ---
 
-# Information theory for trajectories
+# Information and Noise in Biological Systems
+
+<!-- * noise is inherent in all biological processes, we focus on small ones
+    * noise appears on every level of biological systems
+    * biological processes often happen out of equilibrium where even macroscopic quantities can exhibit large fluctuations
+* _the fundamental source of stochasticity in biology_ is noisy gene expression @2014:Tsimring
+    * The central dogma of molecular biology
+* there is a strong correspondence between noise and information transmission
+    * Shannon's information theory is a _framework_ that allows us to describe noisy transmissions for a very general definition of channel and signal
+    * since information theory is so general it is a good candidate for a universal metric to characterize fidelity of biological communication in the presence of noise @2014:Levchenko
+    * The study of information transmission is therefore closely related to the study of noise
+    * we can split quantities into a pure noise part and a purely deterministic part (Langevin) -> then all uncertainty is contained in the noise part
+    * the more noise a readout system (channel) introduces the less information it can transmit about the original signal
+    * crucially, in biological systems also the signal is noisy, ergo the noise of the response is the combined effect (not necessarily additively though!)
+* mathematically, if we want to describe noise we have to switch from regular ODEs to stochastic differential equations
+* we are interested in biochemical signal processing (why?)
+    * these are described by the _chemical master equation_ which is an alternative way to write certain stochastic differential equations
+    * often there are only small numbers of certain molecules available. This introduces an additional source of noise, the _discretization noise_ (75% of all proteins in _E. Coli._ have a copy number of less than 500 @2014:Tsimring).
+    * While often the noise introduced by the intrinsic fluctuations of the signal processing network is often dominant we cannot discard the stochasticity of the signal
+
+* In most cases, chemical master equations cannot be solved analytically and thus require averaging over an ensemble of _stochastic trajectories_
+    * In Shannon's information theory the amount of communicated information is not a function of individual signal-response pairs but an averaged quantity that depends on the probability of seeing any random pair
+    * these can be generated exactly for example by the direct Gillespie algorithm @1976:Gillespie
+    * efficient approximation using for example the $\tau$-leap method @2001:Gillespie -->
+
+_Noise_ is inherent across diverse biological systems and remains relevant at all biological scales. From _stochastic gene expression_ and random _action potential spikes_ in neuronal networks at the cellular scale to the _development of multicellular organisms_ all the way to the _variations in population level_ of competing species in whole ecosystems, we find examples of processes which can only be described precisely by taking into account noise as an intrinsic feature [@2002:Elowitz;@2008:Faisal;1990:PARSONS;2011:Hallatschek;@2014:Tsimring]. In this thesis we focus on the smaller end of this scale, namely on the stochastic description of _biochemical networks_. These comprise among others _gene expression_, _gene regulatory networks_, and _cell signalling_ networks, all of which exhibit noise due to small copy numbers of participating components. Additionally, since biological processes often happen out of equilibrium even macroscopic quantities can exhibit large fluctuations. The main source of noise at the cellular level may be fluctuations in _gene expression_ which propagate to higher levels of biological organization @2014:Tsimring. The abundance of noise in all these systems has lead to the development of many mathematical and compuational stochastic models for biological processes. Notably, there are many parallels between biological signal processing and _noisy channels_ which are used for example to describe information transmission across a telephone line. Indeed, it has shown to be very successful to employ the framework of _Information Theory_---originally developed to address problems in telecommunications---to the study of extra- and intracellular communication via biochemical networks @2009:Tkačik.
+
+A crucial aspect of _Information Theory_ is that its results are broadly applicable, irrespective of the nature of the communication channel or the medium used to transmit a signal. The communication channel merely describes any kind of abstract device that processes an _input_ in a probabilistic way to yield an _output_. It turns out that the study of information transmission through such a channel is closely related to the study of noise since the amount of noise introduced by a communication channel sets an upper bound on the amount of data that can be transmitted through it, i.e. the _channel capacity_ @2006:Cover. Consequently, the output can be described as a deterministic, lossless transformation of the input _plus_ some random noise from the channel which leads to a loss of information. Note that in biological systems the signal itself is typically a fluctuating quantity such that the noise in the output is a combination of the channel noise and the signal noise. Since in cell signalling both, input and output are time-varying quantities we require a description of our system that allows for deterministic _and_ stochastic time evolution.
+
+_Differential equations_ are generally extremely useful to describe any kind of system that evolves deterministically. Therefore it is natural to try to extend the framework of _ordinary differential equations_ (ODEs) to also include the ability to describe the effects of noise. Historically, this approach to modeling stochastic dynamics has first been formulated heuristically by Langevin to describe _Brownian motion_ @1908:Langevin. Later the theory of _stochastic differential equations_ (SDEs) was put on solid mathematical footing by Itô and Stratonovich through the development of _stochastic calculus_ based on the definition of a _stochastic integral_ which has been successfully used for applications in physics, biology, economics and more [@2010:Kunita;@1997:Bunkin] [citation needed]. The solutions to SDEs are not ordinary functions like for ODEs but _stochastic processes_ that describe the probabilities for the system to be in any state for every instant in time. Consequently, a stochastic process contains the probabilities for any possible individual sequence of states in time, i.e. the probabilities for individual _trajectories_. Since SDEs contain a complete account of noise in the system, information theoretic concepts like the _entropy_ and the _mutual information_---which we are going to use to understand information transmission in cell signalling---can be applied to stochastic processes. While SDEs can be formulated to describe the evolution of biochemical networks in a discrete state space it is generally more useful to use a less general but simpler _chemical master equation_ for these kinds of problems @2009:Gardiner. 
+
+The chemical master equation is a description of a subset of stochastic processes by deriving the _time-evolution_ of the probability distribution over the discrete state space. I.e. instead of describing the stochastic change to an individual state at a given time it focuses on the _deterministic_ evolution of the whole probability distribution over all states. Conveniently, for a given set of chemical reactions that form a reaction network, we can easily find the corresponding chemical master equation that describes the stochastic dynamics of this network given some assumptions of homogeneity. The stochastic process that emerges of this formulation describes the probabilities for the individual counts of all species and how these probabilities change with time. The ease with which the chemical master equation allows the construction of a stochastic process for any kind of biochemical netork makes it very attractive to try to use _master equations_ as the basis for information theoretic computations. If we can _solve_ the master equation we in principle have access to all stochastic (and therefore information theoretic) properties of the corresponding biochemical network. E.g. in @2010:Tostevin it is shown how by analytically solving some very simple biochemical networks (using some approximations) it is possible to compute the _mutual information_ between time-varying signals and corresponding responses of these networks.
+
+In most cases however, chemical master equations cannot be solved analytically and thus require averaging over an ensemble of _stochastic trajectories_. For instance, in Shannon's information theory the amount of communicated information is not a function of individual signal-response pairs but an averaged quantity that depends on the probability of seeing _any_ random signal-response-pair. Hence the time-efficient generation of stochastic realizations for a given master equation is a central requirement for the exact computation of information processing in chemical networks. A very well known algorithm for the _exact_ generation of trajectories from a given initial condition is the _stochastic simulation algorithm_ (SSA) also known by the name of it's inventor as the _Gillespie algorithm_ @1976:Gillespie. The most widely used variant is the _direct Gillespie method_ which works by alternatingly a) computing the time during which no reactions happen and b) choosing which of the available reactions to perform next. As a result we generate a list of times where some reaction happens and a corresponding list of reactions that specifies the exact trajectory that was generated. This algorithm works quite well in practice and is also used for the work presented in this thesis. It is still worth mentioning that for systems that evolve at many different time scales simultaneously, the direct Gillespie method can be computationally inefficient since by its design it always operates at the smallest time scale. Therefore there have been developed further trajectory-generation algorithms that can generate _approximately_ correct trajectories by accumulating various reactions into a single time step such as the $\tau$-leap method @2001:Gillespie.
+
+## Mutual Information as an Efficiency Measure in Cell Signalling
+
+* Introduce signals and responses
+
+* For any given signal there are many stochastically possible responses. Conversely, for any given response there is a range of signals that could have produced it. 
+* We introduce the notation $X$ for responses and $S$ for signals
+* The average uncertainty of responses for a given signal is decribed by the Kullback-Leibler divergence (relative information) $K(X|S)$
+
+* It is necessary to look at time-dependencies of both signals and responses for various reasons
+    1. Cells can store information in the time dependency of the responses (e.g. spike intervals) (This is studied extensively in @2019:Cepeda-Humerez for the case were the signal can be regarded as slowly changing)
+    2. Crucial information about the signal is not (only) encoded in its momentaneous value but in how it changes in time
+* A general algorithm for the computation of the mutual information between time-varying signals and responses is novel
+
+* It is tempting to think that optimization of information processing drives the evolution of cellular signaling networks
+
+* Often information transmission is bound by the noise. Therefore to increase information it is necessary to decrease noise (e.g. by using higher copy numbers). However this usually comes at a metabolic cost such that a balance between energy and noise must be found.
+
+
 
 A trajectory $X$ with $N$ steps is defined by a set of pairs $X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}$ where $\mathbf{x}_i$ defines the trajectory value at time $t_i$. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories.
 
@@ -199,14 +255,15 @@ In our example we might interpret $S$ as some signal whose quantity varies stoch
 
 Since particle counts can't ever become negative, @eq:chemical_master_equation describes a Markov process in continuous time with the state space $\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}$. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called _jump processes_ since they generate discontinuous sample paths [@2017:Weber].
 
-A jump process $\mathcal{X}$ with state space $\mathcal{U}$ and an initial state $\mathbf{x}_0\in\mathcal{U}$ at time $t_0$ generates trajectories that can be described by a sequence of pairs $(\mathbf{x}_i, t_i)_{i=1,2,\ldots}$ where at every _transition time_ $t_i$ there occurs a jump in state space $\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}$. The trajectories generated by a jump process are infinitely long and we denote the set of all possible trajectories by $\mathcal K(\mathcal X)$. For a given duration $\tau>0$ we denote the set of all unique trajectory segments of duration $\tau$ by $\mathcal K_\tau[\mathcal X]$. The master equation allows to express the probability distribution in trajectory space...
+A jump process $\mathcal{X}$ with state space $\mathcal{U}$ and an initial state $\mathbf{x}_0\in\mathcal{U}$ at time $t_0$ generates trajectories that can be described by a sequence of pairs $(\mathbf{x}_i, t_i)_{i=1,2,\ldots}$ where at every _transition time_ $t_i$ there occurs a jump in state space $\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}$. The trajectories generated by a jump process are infinitely long and we denote the set of all possible trajectories by $\mathcal K(\mathcal X)$. For a given duration $\tau>0$ we denote the set of all unique trajectory segments of duration $\tau$ by $\mathcal K_\tau[\mathcal X]$. Using the master equation for this process we can express the probability density for any trajectory segment in $\mathcal K_\tau[\mathcal X]$.
+
+ The master equation for the process allows to express the probability distribution in trajectory space...
 
 
 ## Simulating a Biochemical Network Driven by an External Signal
 
 When we want to compute information transmission in a biological context it is often
 
-<!-- A trajectory $X$ with $N$ steps is defined by a set of pairs $X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}$ where $\mathbf{x}_i$ defines the trajectory value at time $t_i$. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories. -->
 
 ## References
 
