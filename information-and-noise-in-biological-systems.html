@@ -98,7 +98,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded"><a href="index.html" class=""><span class="header-section-number">1</span> Preface
+                <ol class="chapter"><li class="expanded"><a href="index.html" class=""><span class="header-section-number">1</span> Introduction
                     </a>
                     </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html" class="active"><span class="header-section-number">2</span> Information and Noise in Biological Systems
                     </a>
@@ -110,7 +110,7 @@
                     <ol class="section">
                         <li class="expanded"><a href="information-and-noise-in-biological-systems.html#mutual-information-as-an-efficiency-measure-in-cell-signalling" class=""><span class="header-section-number">2.1.1</span> Mutual Information as an Efficiency Measure in Cell Signalling
                     </a>
-                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#mutual-information-between-stochastic-trajectories" class=""><span class="header-section-number">2.1.2</span> Mutual Information between Stochastic Trajectories
+                    </li><li class="expanded"><a href="information-and-noise-in-biological-systems.html#information-transmission-for-time-varying-signals" class=""><span class="header-section-number">2.1.2</span> Information Transmission for Time-Varying Signals
                     </a>
                     </li>
                     </ol>
@@ -315,78 +315,40 @@
 <img src="figures/information_cartoon.svg" id="fig:information_cartoon" alt="" /></img><figcaption>Figure 1: Abstracting cell signalling as an information channel. The channel’s input is an environmental signal that the cell needs to respond to. The signal processing happens through a biochemical network which “computes” a response which is the output of the information channel. The mutual information between signals and responses quantifies the cell’s ability to discern between different signals and choose appropriate responses.</figcaption>
 </figure>
 <p>In a general sense, cells sense chemical <em>signals</em> from their environment e.g. through receptors on their membrane. These signals provide the cell with important information e.g. about current environmental conditions, their position inside a structure or the location of food. To translate the signal into a useful response (such as expressing a certain gene or changing movement direction) cells have evolved biochemical signalling networks that recognize and process the signals. We use a general description of the cell that is depicted in fig. <a href="#fig:information_cartoon">1</a> where the signal acts as the input of the information channel. The processing of the signal that yields a response is assumed to be a known biochemical network and the response is one species of the biochemical network that acts as the “result” of the computation and represents the reaction of the cell to the signal.</p>
-<p>For any given signal there are many stochastically possible responses. Conversely, for any given response there is a range of signals that could have produced it. Both of these statements of uncertainty can be quantified using a single quantity: the <em>mutual information</em>. In information theoretic terms we quantify the <em>uncertainty</em> of a random variable <span class="math inline">\mathcal S</span> by the <em>entropy</em> <span><span class="math display">
+<p>For any given signal there are many stochastically possible responses. Conversely, for any given response there is a range of signals that could have produced it. Both of these statements of uncertainty can be quantified using a single quantity: the <em>mutual information</em>. In information theoretic terms we quantify the <em>uncertainty</em> of a random variable <span class="math inline">\mathcal S</span> by the <em>entropy</em> <span id="eq:signal_entropy"><span class="math display">
 \mathrm H(\mathcal S)=-\int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s)\,\ln\mathrm P(\mathbf s)
-\qquad(1)</span></span> where <span class="math inline">\sigma(\mathcal S)</span> is the set of possible realizations of <span class="math inline">\mathcal S</span> and we use <span class="math inline">\mathrm P(\mathbf s)</span> to denote the probility (density) of <span class="math inline">\mathbf s</span> with respect to the distribution of <span class="math inline">\mathcal S</span>. If <span class="math inline">\mathcal S</span> describes the signal then a large entropy signifies that there is a large range of possible signals that could be expected by the cell. Now given the response <span class="math inline">\mathbf x</span> to a signal <span class="math inline">\mathbf s</span>, we expect <span class="math inline">\mathbf x</span> to contain information about <span class="math inline">\mathbf s</span> such that the uncertainty about the signal is reduced. The conditional entropy <span class="math inline">\mathrm H(\mathcal S|\mathcal X)</span> captures the <em>average</em> remaining uncertainty of a signal after observing the response, hence it reads <span><span class="math display">
+\qquad(1)</span></span> where <span class="math inline">\sigma(\mathcal S)</span> is the set of possible realizations of <span class="math inline">\mathcal S</span> and we use <span class="math inline">\mathrm P(\mathbf s)</span> to denote the probility (density) of <span class="math inline">\mathbf s</span> with respect to the distribution of <span class="math inline">\mathcal S</span>. If <span class="math inline">\mathcal S</span> describes the signal then a large entropy signifies that there is a large range of possible signals that could be expected by the cell. Now given the response <span class="math inline">\mathbf x</span> to a signal <span class="math inline">\mathbf s</span>, we expect <span class="math inline">\mathbf x</span> to contain information about <span class="math inline">\mathbf s</span> such that the uncertainty about the signal is reduced. The conditional entropy <span class="math inline">\mathrm H(\mathcal S|\mathcal X)</span> captures the <em>average</em> remaining uncertainty of a signal after observing the response, hence it reads <span id="eq:conditional_entropy"><span class="math display">
 \mathrm H(\mathcal S|\mathcal X)=-
 \int\limits_{\sigma(\mathcal X)} 
 \mathrm d\mathbf x\ \mathrm P(\mathbf x)
 \int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s|\mathbf x)\ln\mathrm P(\mathbf s|\mathbf x) \,.
-\qquad(2)</span></span> Consequently, the <em>average</em> amount of information gained on the signal by observing the response is precisely the mutual information <span><span class="math display">
+\qquad(2)</span></span> <span class="math inline">\mathrm P(\mathbf s|\mathbf x)</span> is the conditional distribution of the signals for a given response <span class="math inline">\mathbf x</span> which encodes the transmission characteristics of the communication channel. Combining eqns. <a href="#eq:signal_entropy">1</a>, <a href="#eq:conditional_entropy">2</a> we can express the <em>average</em> amount of information gained on the signal by observing the response <span id="eq:mi_form1"><span class="math display">
 \mathrm I(\mathcal S,\mathcal X) = \mathrm H(\mathcal S) - \mathrm H(\mathcal S|\mathcal X) = 
 \int\limits_{\sigma(\mathcal X)} 
 \mathrm d\mathbf x\ \mathrm P(\mathbf x)
 \int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s|\mathbf x)
 \ln \frac{\mathrm P(\mathbf s|\mathbf x)}{\mathrm P(\mathbf s)}
- \,.
-\qquad(3)</span></span> Notably the mutual information (MI) is symmetric under exchange of <span class="math inline">\mathcal S</span> and <span class="math inline">\mathcal X</span> such that <span class="math inline">\mathrm I(\mathcal S,\mathcal X) = \mathrm I(\mathcal X,\mathcal S)</span> which we can use to alternatively express the MI as <span><span class="math display">
+\qquad(3)</span></span> which is precisely the <em>mutual information between <span class="math inline">\mathcal S</span> and <span class="math inline">\mathcal X</span></em>. Eq. <a href="#eq:mi_form1">3</a> shows that the mutual information (MI) is not only dependend on the characteristics of the communication channel but also on the statistics of the input signal. Notably the <span class="math inline">\mathrm I(\mathcal S,\mathcal X)</span> is symmetric under exchange of <span class="math inline">\mathcal S</span> and <span class="math inline">\mathcal X</span> such that we can express it as <span><span class="math display">
 \mathrm I(\mathcal S,\mathcal X) = \mathrm H(\mathcal X) - \mathrm H(\mathcal X|\mathcal S) = 
 \int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s)
 \int\limits_{\sigma(\mathcal X)} 
 \mathrm d\mathbf x\ \mathrm P(\mathbf x|\mathbf s)
-\ln \frac{\mathrm P(\mathbf x|\mathbf s)}{\mathrm P(\mathbf x)}
-\qquad(4)</span></span> which will be a more useful form for the computational estimation of the MI.</p>
+\ln \frac{\mathrm P(\mathbf x|\mathbf s)}{\mathrm P(\mathbf x)}\,,
+\qquad(4)</span></span> resulting in a more useful formula for the Monte-Carlo estimation of the MI.</p>
 <p>The mutual information has been used previously to understand TODO elaborate</p>
-<p>Often, biochemical networks not only respond to instantaneous signal levels but also to changes in the signal over time.</p>
-<p>Also biochemical networks may store information about the signal in the time-dependency of the response. For the case where the signal can be regarded as slowly changing with respect to the response there has been proposed a Monte-Carlo technique for the estimation of the MI that takes this into account <span class="citation" data-cites="2019:Cepeda-Humerez">[<a href="#ref-2019:Cepeda-Humerez" role="doc-biblioref">17</a>]</span>. We build on this technique by extending it to allow for time-varying signals as well.</p>
+</section>
+<section id="information-transmission-for-time-varying-signals" class="level3" data-number="1.1.2">
+<h3 data-number="2.1.2"><span class="header-section-number">2.1.2</span> Information Transmission for Time-Varying Signals</h3>
+<p>Biochemical networks may store information about the signal in the time-dependency of the response, for example in cellular Ca<sup>2+</sup> signaling information seems to be encoded in the timing and duration of Calcium bursts <span class="citation" data-cites="2010:Tostevin 2008:Boulware 2020:Richards">[<span class="citeproc-not-found" data-reference-id="2008:Boulware"><strong>???</strong></span>,<a href="#ref-2010:Tostevin" role="doc-biblioref">14</a>,<a href="#ref-2020:Richards" role="doc-biblioref">17</a>]</span>. For the case where the signal can be regarded as slowly changing with respect to the response Cepeda-Humerez, et. al. propose a Monte-Carlo technique for the estimation of the MI that includes information that is stored in the full temporal dynamics of the response <span class="citation" data-cites="2019:Cepeda-Humerez">[<a href="#ref-2019:Cepeda-Humerez" role="doc-biblioref">18</a>]</span>. As described in the article, that method is limited to situations where there can only be finitely many discrete signals.</p>
+<p>Often however, biochemical networks not only respond to instantaneous signal levels but also to changes in the signal over time. [reference needed]. Therefore, we build on the technique in <span class="citation" data-cites="2019:Cepeda-Humerez">[<a href="#ref-2019:Cepeda-Humerez" role="doc-biblioref">18</a>]</span> by extending it to allow for time-varying signals as well. In this way we aim to find a novel way to compute the MI for time-varying signals <em>and</em> responses for general biochemical networks.</p>
 <p>The study of time-varying quantities motivates the use of the <em>information rate</em> which is the asymptotic rate at which the MI between signal and response increases <span class="citation" data-cites="2010:Tostevin">[<a href="#ref-2010:Tostevin" role="doc-biblioref">14</a>]</span> <span><span class="math display">
 \mathrm I_R = \lim\limits_{T\rightarrow\infty} \frac{\mathrm I(\mathcal S_T,\mathcal X_T)}{T}
-\qquad(5)</span></span> where <span class="math inline">\mathcal S_T</span> and <span class="math inline">\mathcal X_T</span> are random variables over <em>trajectories</em> of length <span class="math inline">T</span>.</p>
-<p>Indeed we aim to find a novel way to compute the MI for time-varying signals that works for general biochemical networks.</p>
-<ul>
-<li><p>It is necessary to look at time-dependencies of both signals and responses for various reasons</p>
-<ol type="1">
-<li>Cells can store information in the time dependency of the responses (e.g. spike intervals) (This is studied extensively in <span class="citation" data-cites="2019:Cepeda-Humerez">[<a href="#ref-2019:Cepeda-Humerez" role="doc-biblioref">17</a>]</span> for the case were the signal can be regarded as slowly changing)</li>
-<li>Crucial information about the signal is not (only) encoded in its momentaneous value but in how it changes in time</li>
-</ol></li>
-<li><p>A general algorithm for the computation of the mutual information between time-varying signals and responses is novel</p></li>
-<li><p>It is tempting to think that optimization of information processing drives the evolution of cellular signaling networks</p></li>
-<li><p>Often information transmission is bound by the noise. Therefore to increase information it is necessary to decrease noise (e.g. by using higher copy numbers). However this usually comes at a metabolic cost such that a balance between energy and noise must be found.</p></li>
-</ul>
-</section>
-<section id="mutual-information-between-stochastic-trajectories" class="level3" data-number="1.1.2">
-<h3 data-number="2.1.2"><span class="header-section-number">2.1.2</span> Mutual Information between Stochastic Trajectories</h3>
-<p>A trajectory <span class="math inline">X</span> with <span class="math inline">N</span> steps is defined by a set of pairs <span class="math inline">X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}</span> where <span class="math inline">\mathbf{x}_i</span> defines the trajectory value at time <span class="math inline">t_i</span>. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories.</p>
-<p>As a next step we can make sense of the entropy of a trajectory. Let <span class="math inline">\mathcal{X}_N</span> be a random variable over trajectories of length <span class="math inline">N</span>. We call</p>
-<p><span id="eq:entropy_integral"><span class="math display">
-\mathrm H(\mathcal{X}_N) = - \int\limits_{X\in \sigma(\mathcal{X}_N)} dX\; \mathrm{P}(\mathcal{X}_N = X)\; \ln \mathrm{P} (\mathcal{X}_N = X)
-\qquad(6)</span></span></p>
-<p>the entropy of <span class="math inline">\mathcal{X}_N</span> where <span class="math inline">\mathrm{P}(\mathcal{X}_N = X)</span> is the probability density function of a trajectory <span class="math inline">X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}</span>. We can also define the conditional entropy for trajectories</p>
-<p><span><span class="math display">
-\mathrm H(\mathcal{X}_N | \mathcal{S}_M) = -\int\limits_{S\in \sigma(\mathcal{S}_N)} dS\; \mathrm{P} (\mathcal{S}_N = S) \int\limits_{X\in \sigma(\mathcal{X}_N)} dX\; \mathrm{P}(\mathcal{X}_N = X | \mathcal{S}_N = S)\; \ln \mathrm{P} (\mathcal{X}_N = X | \mathcal{S}_N = S) \,.
-\qquad(7)</span></span></p>
-<p>With these two quantities we can express the <em>mutual information</em> between trajectories</p>
-<p><span><span class="math display">
-\mathrm{I}(\mathcal{X}_N; \mathcal{S}_M) = \mathrm H(\mathcal{X}_N) - \mathrm H(\mathcal{X}_N | \mathcal{S}_M) \,.
-\qquad(8)</span></span></p>
-<p>The mutual information between two random variables quantifies by how much our certainty of the value of one variable increases if we know the other one.</p>
-<p>To shorten the notation we write <span class="math inline">\mathrm{P} (\mathcal{X}_N = X)</span> as <span class="math inline">\mathrm P_{\mathcal{X}_N}(X)</span> and if the random variable is clear from the context we even drop the index and only write <span class="math inline">\mathrm P(X)</span>. With the short notation we can rewrite the mutual information</p>
-<p><span><span class="math display">
-\mathrm{I}(\mathcal{X}_N; \mathcal{S}_M) = \int\limits_{S\in \sigma(\mathcal{S}_N)} dS \int\limits_{X\in \sigma(\mathcal{X}_N)} dX\; \mathrm{P}( X , S)\; \ln \frac{\mathrm{P} ( X |  S)}{\mathrm P(X)} \,.
-\qquad(9)</span></span></p>
-<p>To evaluate <span class="math inline">\mathrm P(X)</span> we have to expand it as follows</p>
-<p><span><span class="math display">
-\mathrm P(X) = \int\limits_{S\in \sigma(\mathcal{S}_N)} dS\; \mathrm P(X, S) = \int\limits_{S\in \sigma(\mathcal{S}_N)} dS\; \mathrm P(X|S) \ \mathrm P (S) \equiv \left\langle P(X | S) \right\rangle_{\mathcal{S}_N} \,.
-\qquad(10)</span></span></p>
-<p>These relations let us state the mutual information as nested averages over the likelihood <span class="math inline">P(X|S)</span>:</p>
-<p><span><span class="math display">
-\mathrm{I}(\mathcal{X}; \mathcal{S}) = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\mathrm P(X)} \right\rangle_{\mathcal{X},\mathcal{S}} = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\left\langle\mathrm P(X | S) \right\rangle_\mathcal{S}} \right\rangle_{\mathcal{X},\mathcal{S}} \,.
-\qquad(11)</span></span></p>
-<p>These averages are defined as integrals over the very high-dimensional space of trajectories and thus very hard to evaluate analytically or numerically in the general case. Our goal is use <em>Monte-Carlo sampling</em> in the trajectory space to evaluate the above averages. To do this we have to sample trajectories from their probably distribution and we need to evaluate the likelihood for a response given a signal.</p>
+\qquad(5)</span></span> where <span class="math inline">\mathcal S_T</span> and <span class="math inline">\mathcal X_T</span> are random variables over <em>trajectories</em> of length <span class="math inline">T</span>. Since it describes the information gained by the cell in a unit time interval it may be an important quantity for the cell to optimize for.</p>
+
 </section>
 </section>
 <section id="stochastic-modeling-of-biochemical-networks" class="level2" data-number="1.2">
@@ -399,7 +361,7 @@
 \emptyset \xrightarrow{\kappa} S \xrightarrow{\lambda} \emptyset\\
 S \xrightarrow{\rho} S + X\\
 X \xrightarrow{\mu}\emptyset
-\end{gathered} \qquad(12)</span></span></p>
+\end{gathered} \qquad(6)</span></span></p>
 <p>The constants <span class="math inline">\kappa, \lambda, \rho, \mu</span> determine the rates at which the individual reactions occur. For example, assuming a well stirred system in thermal equilibrium, it can be shown that the probabilities for the individual reactions happening at least once in the time interval <span class="math inline">[t, t+\mathrm\delta t]</span> are</p>
 <p><span id="eq:transition_probabilities"><span class="math display">
 \begin{aligned}
@@ -408,10 +370,10 @@ p^{(\lambda)}_{[t, t+\mathrm\delta t]}(s) = s\lambda\delta t + \mathcal{O}(\delt
 p^{(\rho)}_{[t, t+\mathrm\delta t]}(s) = s\rho\delta t + \mathcal{O}(\delta t^2)\\
 p^{(\mu)}_{[t, t+\mathrm\delta t]}(x) = x\mu\delta t + \mathcal{O}(\delta t^2)
 \end{aligned}
-\qquad(13)</span></span></p>
+\qquad(7)</span></span></p>
 <p>where <span class="math inline">s</span> and <span class="math inline">x</span> denote the particle numbers of the respective species at time <span class="math inline">t</span>. Consequently, the probability for <em>any</em> of the reactions to occur at least once in the time interval <span class="math inline">[t, t+\mathrm\delta t]</span> is</p>
-<p><span id="eq:exit_probability"><span class="math display">p_{[t, t+\mathrm\delta t]}(s, x) = (\kappa + s\lambda + s\rho + x\mu)\ \mathrm \delta t + \mathcal{O}(\delta t^2)\qquad(14)</span></span></p>
-<p>Using these expressions we can write down the so-called <em>chemical master equation</em> for this network. Let <span class="math inline">\mathrm P_{s,x}(t)</span> be the probability that the system is in state <span class="math inline">(s, x)</span> at time <span class="math inline">t</span>. Assuming that at most one reaction happens in the small time interval <span class="math inline">[t, t+\delta t]</span> we can use the transition probabilities from eqns. <a href="#eq:transition_probabilities">13</a>, <a href="#eq:exit_probability">14</a> to write</p>
+<p><span id="eq:exit_probability"><span class="math display">p_{[t, t+\mathrm\delta t]}(s, x) = (\kappa + s\lambda + s\rho + x\mu)\ \mathrm \delta t + \mathcal{O}(\delta t^2)\qquad(8)</span></span></p>
+<p>Using these expressions we can write down the so-called <em>chemical master equation</em> for this network. Let <span class="math inline">\mathrm P_{s,x}(t)</span> be the probability that the system is in state <span class="math inline">(s, x)</span> at time <span class="math inline">t</span>. Assuming that at most one reaction happens in the small time interval <span class="math inline">[t, t+\delta t]</span> we can use the transition probabilities from eqns. <a href="#eq:transition_probabilities">7</a>, <a href="#eq:exit_probability">8</a> to write</p>
 <p><span><span class="math display">
 \begin{aligned}
 \mathrm P_{s,x}(t + \delta t) = \phantom{+}p^{(\kappa)}_{[t, t+\mathrm\delta t]}\ \mathrm P_{s-1,x}(t)\\ +
@@ -420,7 +382,7 @@ p^{(\rho)}_{[t, t+\mathrm\delta t]}(s)\ \mathrm P_{s,x-1}(t)\\ +
 p^{(\mu)}_{[t, t+\mathrm\delta t]}(x + 1)\ \mathrm P_{s, x + 1}(t)\\ + 
 \left[1 - p_{[t, t+\mathrm\delta t]}(s, x)\right]\ \mathrm P_{s,x}(t)
 \end{aligned}
-\qquad(15)</span></span></p>
+\qquad(9)</span></span></p>
 <p>and by taking the limit <span class="math inline">\delta t\rightarrow 0</span> we arrive at the chemical master equation</p>
 <p><span id="eq:chemical_master_equation"><span class="math display">
 \begin{aligned}
@@ -431,13 +393,13 @@ s\rho\ \mathrm P_{s,x-1}(t) +
 (x+1)\mu\ \mathrm P_{s, x + 1}(t)\\ \phantom{=} - 
 (\kappa + s\lambda + s\rho + x\mu)\ \mathrm P_{s,x}(t)
 \end{aligned}
-\qquad(16)</span></span></p>
-<p>In an analogous way a chemical master equation can be derived for any biochemical network <span class="citation" data-cites="2009:Gardiner">[<a href="#ref-2009:Gardiner" role="doc-biblioref">13</a>]</span> and thus forms the basis for our further computations. Eq. <a href="#eq:chemical_master_equation">16</a> describes a special kind of <em>stochastic process</em>, a so-called <em>jump process</em>.</p>
+\qquad(10)</span></span></p>
+<p>In an analogous way a chemical master equation can be derived for any biochemical network <span class="citation" data-cites="2009:Gardiner">[<a href="#ref-2009:Gardiner" role="doc-biblioref">13</a>]</span> and thus forms the basis for our further computations. Eq. <a href="#eq:chemical_master_equation">10</a> describes a special kind of <em>stochastic process</em>, a so-called <em>jump process</em>.</p>
 <p>In our example we might interpret <span class="math inline">S</span> as some signal whose quantity varies stochastically. For every signal molecule there is a constant probability to be sensed by the cell which triggers the creation of an <span class="math inline">X</span>. Additionally, <span class="math inline">X</span> molecules decays by themselves over time. We call the trajectory of <span class="math inline">S</span> the “signal” and the trajectory of <span class="math inline">X</span> the “response”. This nomenclature will we used throughout the thesis.</p>
 </section>
 <section id="jump-processes" class="level3" data-number="1.2.2">
 <h3 data-number="2.2.2"><span class="header-section-number">2.2.2</span> Jump Processes</h3>
-<p>Since particle counts can’t ever become negative, eq. <a href="#eq:chemical_master_equation">16</a> describes a Markov process in continuous time with the state space <span class="math inline">\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}</span>. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called <em>jump processes</em> since they generate discontinuous sample paths <span class="citation" data-cites="2017:Weber">[<a href="#ref-2017:Weber" role="doc-biblioref">18</a>]</span>.</p>
+<p>Since particle counts can’t ever become negative, eq. <a href="#eq:chemical_master_equation">10</a> describes a Markov process in continuous time with the state space <span class="math inline">\{(s, x) | s\in\mathbb{N}_0, x\in\mathbb{N}_0\}</span>. In general, every continuous-time Markov process with a discrete state space obeys a master equation. Such processes are also commonly called <em>jump processes</em> since they generate discontinuous sample paths <span class="citation" data-cites="2017:Weber">[<a href="#ref-2017:Weber" role="doc-biblioref">19</a>]</span>.</p>
 <p>A jump process <span class="math inline">\mathcal{X}</span> with state space <span class="math inline">\mathcal{U}</span> and an initial state <span class="math inline">\mathbf{x}_0\in\mathcal{U}</span> at time <span class="math inline">t_0</span> generates trajectories that can be described by a sequence of pairs <span class="math inline">(\mathbf{x}_i, t_i)_{i=1,2,\ldots}</span> where at every <em>transition time</em> <span class="math inline">t_i</span> there occurs a jump in state space <span class="math inline">\mathbf{x}_{i-1}\rightarrow \mathbf{x}_{i}</span>. The trajectories generated by a jump process are infinitely long and we denote the set of all possible trajectories by <span class="math inline">\mathcal K(\mathcal X)</span>. For a given duration <span class="math inline">\tau0</span> we denote the set of all unique trajectory segments of duration <span class="math inline">\tau</span> by <span class="math inline">\mathcal K_\tau[\mathcal X]</span>. Using the master equation for this process we can express the probability density for any trajectory segment in <span class="math inline">\mathcal K_\tau[\mathcal X]</span>.</p>
 <p>The master equation for the process allows to express the probability distribution in trajectory space…</p>
 </section>
@@ -456,14 +418,14 @@ s\rho\ \mathrm P_{s,x-1}(t) +
 <p>While so-called Monte-Carlo methods comprise a wide variety of approaches to stochastically evaluate integrals or sums the common idea is easily stated. We have a state space <span class="math inline">U</span> and a probability distribution <span class="math inline">p_U</span> over that state space. The problem is to evaluate</p>
 <p><span><span class="math display">
 \langle f(u) \rangle \equiv \int\limits_{u \in U} \mathrm du\; f(u) p_U(u)
-\qquad(17)</span></span></p>
+\qquad(11)</span></span></p>
 <p>where <span class="math inline">f: U\rightarrow\mathbb R</span> is some smooth function. If <span class="math inline">U</span> is high-dimensional it is very time-consuming to estimate it by direct numerical integration.</p>
 <section id="computing-the-likelihood" class="level3" data-number="1.4.1">
 <h3 data-number="2.4.1"><span class="header-section-number">2.4.1</span> Computing the likelihood</h3>
 <p>The Probability density of a markovian trajectory can be expressed as</p>
 <p><span><span class="math display">
 \mathrm P(X) = \mathrm P(x_0,t_0;x_1,t_1;\ldots;x_{N-1},t_{N-1}) = \mathrm P(x_0,t_0 ) \prod\limits^{N-1}_{n=1} \mathrm P(x_n,t_n|x_{n-1},t_{n-1}) \,.
-\qquad(18)</span></span></p>
+\qquad(12)</span></span></p>
 <p>Therefore the problem of calculating the likelihood for a particular trajectory amounts to solving two independent problems:</p>
 <ol type="1">
 <li>estimating the probability density of the starting point <span class="math inline">\mathrm P (x_0, t_0)</span> of a response</li>
@@ -473,45 +435,45 @@ s\rho\ \mathrm P_{s,x-1}(t) +
 <p>To calculate the mutual information between <span class="math inline">\mathcal{S}</span> and <span class="math inline">\mathcal X</span> we have to consider the entire reaction network containing the components both in <span class="math inline">S</span> and in <span class="math inline">X</span>. The precise reaction dynamics of the response part of the chemical network crucially depend on the observed signal trajectory. Therefore the chemical master equation for the whole reaction network allows us to compute the likelihood of a response trajectory for a particular signal trajectory:</p>
 <p><span><span class="math display">
 \mathrm P(\mathcal X = X|\mathcal S = S) = \mathrm P(x_0,t_0;x_1,t_1;\ldots;x_{N-1},t_{N-1} | S) = \mathrm P(x_0,t_0 | S) \prod\limits^{N-1}_{n=1} \mathrm P(x_n,t_n|x_{n-1},t_{n-1}, S) \,.
-\qquad(19)</span></span></p>
+\qquad(13)</span></span></p>
 <p>For increasingly long trajectories this quantity will in many physically relevant cases either grow or decay exponentially (<em>TODO: explain why</em>). Thus sufficiently long trajectories, the numerical values of the likelihood will not be directly representable by conventional floating-point numbers.</p>
 <p>This problem can be avoided if we compute the <em>log-likelihood</em> <span class="math inline">\ell(X|S) \equiv \ln\mathrm P(X|S)</span> instead. We can easily rephrase the equation for the likelihood:</p>
 <p><span><span class="math display">
 \ell(X|S) = \ln\left[ \mathrm P(x_0,t_0 | S) \prod\limits^{N-1}_{n=1} \mathrm P(x_n,t_n|x_{n-1},t_{n-1}, S) \right] = \ln \mathrm P(x_0,t_0 | S) +\sum\limits^{N-1}_{n=1} \ln \mathrm P(x_n,t_n|x_{n-1},t_{n-1}, S)\,.
-\qquad(20)</span></span></p>
+\qquad(14)</span></span></p>
 </section>
 <section id="the-probability-density-for-the-starting-point-of-a-trajectory" class="level3" data-number="1.4.2">
 <h3 data-number="2.4.2"><span class="header-section-number">2.4.2</span> The probability density for the starting point of a trajectory</h3>
 <p>We first look at the term <span class="math inline">P_0 = \mathrm P(x_0,t_0 | S)</span>. Since <span class="math inline">S</span> is a trajectory in time we can directly conclude from causality that</p>
 <p><span><span class="math display">
 \mathrm P(x_0, t_0 | S) = \mathrm P(x_0, t_0 | S_{t \leq t_0})
-\qquad(21)</span></span></p>
+\qquad(15)</span></span></p>
 <p>where <span class="math inline">S_{t \leq t_0}</span> is the temporal piece of the signal up to <span class="math inline">t_0</span>. We further suppose that the signal itself is markovian and therefore has no memory of its past. With this simplification we get</p>
 <p><span><span class="math display">
 \mathrm P(x_0, t_0 | S) = \mathrm P(x_0, t_0 | S_{t = t_0}) = \frac{\mathrm P((x_0, t_0), (s_0, t_0))}{\mathrm P(s_0, t_0)} \,.
-\qquad(22)</span></span></p>
+\qquad(16)</span></span></p>
 <p>We estimate <span class="math inline">P_0</span> using gaussian kernel density estimation to approximate both, the joint distribution of <span class="math inline">X_0, S_0</span> and the marginal distribution of <span class="math inline">S_0</span>.</p>
 <p>Knowing the probabilities of the initial condition of both response and signal we can directly estimate the mutual information of <span class="math inline">\mathcal{X}_{t=t_0}</span> and <span class="math inline">\mathcal{S}_{t=t_0}</span>:</p>
 <p><span><span class="math display">
 \mathrm I(\mathcal{X}_{t=t_0}, \mathcal{S}_{t=t_0}) = \int ds_0\int dx_0\; \mathrm{P}(x_0, s_0)\; \ln \frac{\mathrm{P} (x_0, s_0)}{\mathrm{P} (x_0) \mathrm{P} (s_0)}
-\qquad(23)</span></span></p>
+\qquad(17)</span></span></p>
 </section>
 <section id="estimating-the-marginal-probability-of-response-trajectories" class="level3" data-number="1.4.3">
 <h3 data-number="2.4.3"><span class="header-section-number">2.4.3</span> Estimating the marginal probability of response trajectories</h3>
 <p>To calculate the mutual information between trajectories we need to have a good estimate for <span class="math inline">\ln\left\langle \mathrm P(X | S) \right\rangle_\mathcal{S}</span>. We calculate this average by sampling of trajectories <span class="math inline">(S^{(i)})_{i=1\ldots N_S}</span> from the probability distribution of <span class="math inline">\mathcal{S}</span>:</p>
 <p><span><span class="math display">
 \ln\left\langle\mathrm P(X | S) \right\rangle_\mathcal{S} \approx \ln \frac{\sum^{N_S}_{i=1} \mathrm P(X|S^{(i)})}{N_S} = \ln \sum^{N_S}_{i=1} \mathrm P(X|S^{(i)}) - \ln N_S
-\qquad(24)</span></span></p>
+\qquad(18)</span></span></p>
 <p>Thus we find that it is enough to be able to compute the likelihood between trajectories to estimate the marginal distribution of trajectories.</p>
 <p>In practice (due to limited precision of floating-point arithmetic) it is only possible to evaluate the log-likelihood <span class="math inline">\ell(X|S) \equiv \ln\mathrm P(X|S)</span>. This means that the calculation of the averaged likelihood involves the quantity</p>
 <p><span><span class="math display">
 \ln \sum^{N_S}_{i=1} \mathrm P(X|S^{(i)}) = \ln \sum\limits^{N_S}_{i=1} \exp \ell(X|S^{(i)}) \equiv \mathrm{LSE}\left( \ell(X|S^{(1)}),\ldots, \ell(X|S^{(N_S)})\right)
-\qquad(25)</span></span></p>
+\qquad(19)</span></span></p>
 <p>where <span class="math inline">\mathrm{LSE} : \mathbb{R}^n \rightarrow \mathbb{R}</span> is called log-sum-exp . An interesting property of <span class="math inline">\mathrm{LSE}</span> is that it’s a smooth approximation to the <span class="math inline">\max</span> function. This means that for finite sample sizes the monte-carlo estimate of the averaged likelihood will always be too small!</p>
 <p>We approximate the mutual information between trajectories as</p>
 <p><span><span class="math display">
 \mathrm{I}(\mathcal{X}; \mathcal{S}) = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\left\langle\mathrm P(X | S) \right\rangle_\mathcal{S}} \right\rangle_{\mathcal{X},\mathcal{S}} = \left\langle \ell ( X |  S) - \mathrm{LSE}\left( \ell(X|S^{(1)}),\ldots, \ell(X|S^{(N_S)})\right) + \ln N_S\right\rangle_{\mathcal{X},\mathcal{S}}
-\qquad(26)</span></span></p>
+\qquad(20)</span></span></p>
 <p>which means that for finite amount of signal samples we will <em>systematically over-estimate</em> the mutual information. <strong>TODO: Is that really true? What about <span class="math inline">\ln N_S</span>?</strong> Even worse: the longer the trajectories the bigger the error becomes since the dimensionality of the space of possible signals is growing.</p>
 <p>Another way to phrase this insight is that to get a good approximation for the logarithmic average likelihood, our set of signals that we use for monte-carlo sampling should contain many signals that produce a high likelihood. <strong>Therefore it probably is necessary to come up with a scheme to specifically sample signal trajectories for which the likelihood of a particular trajectory is high</strong>. On the other hand the results do not seem to get significantly better when averaging over more trajectories.</p>
 </section>
@@ -567,11 +529,14 @@ s\rho\ \mathrm P_{s,x-1}(t) +
 <div id="ref-2001:Gillespie">
 <p>[16] D.T. Gillespie, Approximate accelerated stochastic simulation of chemically reacting systems, The Journal of Chemical Physics. 115 (2001) 1716–1733. <a href="https://doi.org/10.1063/1.1378322">https://doi.org/10.1063/1.1378322</a>.</p>
 </div>
+<div id="ref-2020:Richards">
+<p>[17] D.M. Richards, J.J. Walker, J. Tabak, Ion channel noise shapes the electrical activity of endocrine cells, PLOS Computational Biology. 16 (2020) e1007769. <a href="https://doi.org/10.1371/journal.pcbi.1007769">https://doi.org/10.1371/journal.pcbi.1007769</a>.</p>
+</div>
 <div id="ref-2019:Cepeda-Humerez">
-<p>[17] S.A. Cepeda-Humerez, J. Ruess, G. Tkačik, Estimating information in time-varying signals., PLoS Computational Biology. 15 (2019) e1007290. <a href="https://doi.org/10.1371/journal.pcbi.1007290">https://doi.org/10.1371/journal.pcbi.1007290</a>.</p>
+<p>[18] S.A. Cepeda-Humerez, J. Ruess, G. Tkačik, Estimating information in time-varying signals., PLoS Computational Biology. 15 (2019) e1007290. <a href="https://doi.org/10.1371/journal.pcbi.1007290">https://doi.org/10.1371/journal.pcbi.1007290</a>.</p>
 </div>
 <div id="ref-2017:Weber">
-<p>[18] M.F. Weber, E. Frey, Master equations and the theory of stochastic path integrals, Reports on Progress in Physics. 80 (2017) 046601. <a href="https://doi.org/10.1088/1361-6633/aa5ae2">https://doi.org/10.1088/1361-6633/aa5ae2</a>.</p>
+<p>[19] M.F. Weber, E. Frey, Master equations and the theory of stochastic path integrals, Reports on Progress in Physics. 80 (2017) 046601. <a href="https://doi.org/10.1088/1361-6633/aa5ae2">https://doi.org/10.1088/1361-6633/aa5ae2</a>.</p>
 </div>
 </div>
 </section>
