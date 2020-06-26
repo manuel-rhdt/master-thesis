@@ -31,7 +31,7 @@ In a general sense, cells sense chemical _signals_ from their environment e.g. t
 For any given signal there are many stochastically possible responses. Conversely, for any given response there is a range of signals that could have produced it. Both of these statements of uncertainty can be quantified using a single quantity: the _mutual information_. In information theoretic terms we quantify the _uncertainty_ of a random variable $\mathcal S$ by the _entropy_ $$
 \mathrm H(\mathcal S)=-\int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s)\,\ln\mathrm P(\mathbf s)
-$$
+$$ {#eq:signal_entropy}
 where $\sigma(\mathcal S)$ is the set of possible realizations of $\mathcal S$ and we use $\mathrm P(\mathbf s)$ to denote the probility (density) of $\mathbf s$ with respect to the distribution of $\mathcal S$.  If $\mathcal S$ describes the signal then a large entropy signifies that there is a large range of possible signals that could be expected by the cell. Now given the response $\mathbf x$ to a signal $\mathbf s$, we expect $\mathbf x$ to contain information about $\mathbf s$ such that the uncertainty about the signal is reduced. The conditional entropy $\mathrm H(\mathcal S|\mathcal X)$ captures the _average_ remaining uncertainty of a signal after observing the response, hence it reads
 $$
 \mathrm H(\mathcal S|\mathcal X)=-
@@ -39,8 +39,8 @@ $$
 \mathrm d\mathbf x\ \mathrm P(\mathbf x)
 \int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s|\mathbf x)\ln\mathrm P(\mathbf s|\mathbf x) \,.
-$$
-Consequently, the _average_ amount of information gained on the signal by observing the response is precisely the mutual information
+$$ {#eq:conditional_entropy}
+$\mathrm P(\mathbf s|\mathbf x)$ is the conditional distribution of the signals for a given response $\mathbf x$ which encodes the transmission characteristics of the communication channel. Combining [@eq:signal_entropy;@eq:conditional_entropy] we can express the _average_ amount of information gained on the signal by observing the response
 $$
 \mathrm I(\mathcal S,\mathcal X) = \mathrm H(\mathcal S) - \mathrm H(\mathcal S|\mathcal X) = 
 \int\limits_{\sigma(\mathcal X)} 
@@ -48,43 +48,35 @@ $$
 \int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s|\mathbf x)
 \ln \frac{\mathrm P(\mathbf s|\mathbf x)}{\mathrm P(\mathbf s)}
- \,.
-$$
-Notably the mutual information (MI) is symmetric under exchange of $\mathcal S$ and $\mathcal X$ such that $\mathrm I(\mathcal S,\mathcal X) = \mathrm I(\mathcal X,\mathcal S)$ which we can use to alternatively express the MI as
+$$ {#eq:mi_form1}
+which is precisely the _mutual information between $\mathcal S$ and $\mathcal X$_.
+@Eq:mi_form1 shows that the mutual information (MI) is not only dependend on the characteristics of the communication channel but also on the statistics of the input signal. Notably the $\mathrm I(\mathcal S,\mathcal X)$ is symmetric under exchange of $\mathcal S$ and $\mathcal X$ such that we can express it as
 $$
 \mathrm I(\mathcal S,\mathcal X) = \mathrm H(\mathcal X) - \mathrm H(\mathcal X|\mathcal S) = 
 \int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s)
 \int\limits_{\sigma(\mathcal X)} 
 \mathrm d\mathbf x\ \mathrm P(\mathbf x|\mathbf s)
-\ln \frac{\mathrm P(\mathbf x|\mathbf s)}{\mathrm P(\mathbf x)}
+\ln \frac{\mathrm P(\mathbf x|\mathbf s)}{\mathrm P(\mathbf x)}\,,
 $$
-which will be a more useful form for the computational estimation of the MI.
+resulting in a more useful formula for the Monte-Carlo estimation of the MI.
 
 The mutual information has been used previously to understand TODO elaborate
 
-Often, biochemical networks not only respond to instantaneous signal levels but also to changes in the signal over time. 
+### Information Transmission for Time-Varying Signals
 
-Also biochemical networks may store information about the signal in the time-dependency of the response. For the case where the signal can be regarded as slowly changing with respect to the response there has been proposed a Monte-Carlo technique for the estimation of the MI that takes this into account @2019:Cepeda-Humerez. We build on this technique by extending it to allow for time-varying signals as well. 
+Biochemical networks may store information about the signal in the time-dependency of the response, for example in cellular Ca^2+^ signaling information seems to be encoded in the timing and duration of Calcium bursts [@2010:Tostevin;@2008:Boulware;@2020:Richards]. For the case where the signal can be regarded as slowly changing with respect to the response Cepeda-Humerez, et. al. propose a Monte-Carlo technique for the estimation of the MI that includes information that is stored in the full temporal dynamics of the response @2019:Cepeda-Humerez. As described in the article, that method is limited to situations where there can only be finitely many discrete signals.
+
+Often however, biochemical networks not only respond to instantaneous signal levels but also to changes in the signal over time. [reference needed]. Therefore, we build on the technique in @2019:Cepeda-Humerez by extending it to allow for time-varying signals as well. In this way we aim to find a novel way to compute the MI for time-varying signals _and_ responses for general biochemical networks.
 
 The study of time-varying quantities motivates the use of the _information rate_ which is the asymptotic rate at which the MI between signal and response increases @2010:Tostevin
 $$
 \mathrm I_R = \lim\limits_{T\rightarrow\infty} \frac{\mathrm I(\mathcal S_T,\mathcal X_T)}{T}
 $$
-where $\mathcal S_T$ and $\mathcal X_T$ are random variables over _trajectories_ of length $T$.
+where $\mathcal S_T$ and $\mathcal X_T$ are random variables over _trajectories_ of length $T$. Since it describes the information gained by the cell in a unit time interval it may be an important quantity for the cell to optimize for.
 
-Indeed we aim to find a novel way to compute the MI for time-varying signals that works for general biochemical networks.
 
-* It is necessary to look at time-dependencies of both signals and responses for various reasons
-    1. Cells can store information in the time dependency of the responses (e.g. spike intervals) (This is studied extensively in @2019:Cepeda-Humerez for the case were the signal can be regarded as slowly changing)
-    2. Crucial information about the signal is not (only) encoded in its momentaneous value but in how it changes in time
-* A general algorithm for the computation of the mutual information between time-varying signals and responses is novel
-
-* It is tempting to think that optimization of information processing drives the evolution of cellular signaling networks
-
-* Often information transmission is bound by the noise. Therefore to increase information it is necessary to decrease noise (e.g. by using higher copy numbers). However this usually comes at a metabolic cost such that a balance between energy and noise must be found.
-
-### Mutual Information between Stochastic Trajectories
+<!-- ### Mutual Information between Stochastic Trajectories
 
 A trajectory $X$ with $N$ steps is defined by a set of pairs $X=\{(t_i, \mathbf{x}_i)\; |\; i=0\ldots N-1 \}$ where $\mathbf{x}_i$ defines the trajectory value at time $t_i$. We can also have random variables over trajectories and therefore probability distributions over the space of all trajectories.
 
@@ -126,7 +118,7 @@ $$
 \mathrm{I}(\mathcal{X}; \mathcal{S}) = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\mathrm P(X)} \right\rangle_{\mathcal{X},\mathcal{S}} = \left\langle \ln \frac{\mathrm{P} ( X |  S)}{\left\langle\mathrm P(X | S) \right\rangle_\mathcal{S}} \right\rangle_{\mathcal{X},\mathcal{S}} \,.
 $$
 
-These averages are defined as integrals over the very high-dimensional space of trajectories and thus very hard to evaluate analytically or numerically in the general case. Our goal is use *Monte-Carlo sampling* in the trajectory space to evaluate the above averages. To do this we have to sample trajectories from their probably distribution and we need to evaluate the likelihood for a response given a signal.
+These averages are defined as integrals over the very high-dimensional space of trajectories and thus very hard to evaluate analytically or numerically in the general case. Our goal is use *Monte-Carlo sampling* in the trajectory space to evaluate the above averages. To do this we have to sample trajectories from their probably distribution and we need to evaluate the likelihood for a response given a signal. -->
 
 ## Stochastic Modeling of Biochemical Networks
 

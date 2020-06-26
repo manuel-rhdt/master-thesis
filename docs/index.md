@@ -1,3 +1,5 @@
-# Preface {#index}
+# Introduction {#index}
 
-This is a very early draft of my master's thesis.
+**Note:** _This is only a draft of my master's thesis._
+
+When we consider the point of view of a signal-processing device (e.g. a cell) we might be interested in cases where both the quantity $\mathcal S$ and the data $\mathcal X$ change over time. We then consider the values of the random variables $\mathcal S, \mathcal X$ to be trajectories or sequences of states over time. Trajectories are usually represented as high-dimensional vectors (e.g. as a sequence of states and transition times). Our motivation is to compute the mutual information between such trajectories. To do this we intend to generate trajectories using a fully stochastic model of a biochemical network based on its master equation to compute the likelihoods of individual trajectories. In these notes however we only consider a very simple multi-dimensional Gaussian system because it allows us to test and understand the pitfalls of information estimation for high-dimensional systems with relatively low amounts of computing power. Additionally for a multivariate Gaussian system there exists a simple analytical expressions for the mutual information that we use to verify our estimates.
