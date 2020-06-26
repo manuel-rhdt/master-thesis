@@ -24,7 +24,7 @@ In most cases however, chemical master equations cannot be solved analytically a
 
 ### Mutual Information as an Efficiency Measure in Cell Signalling
 
-![Abstracting cell signalling as an information channel.](figures/information_cartoon.svg){#fig:information_cartoon}
+![Abstracting cell signalling as an information channel. The channel's input is an environmental signal that the cell needs to respond to. The signal processing happens through a biochemical network which "computes" a response which is the output of the information channel. The mutual information between signals and responses quantifies the cell's ability to discern between different signals and choose appropriate responses.](figures/information_cartoon.svg){#fig:information_cartoon}
 
 In a general sense, cells sense chemical _signals_ from their environment e.g. through receptors on their membrane. These signals provide the cell with important information e.g. about current environmental conditions, their position inside a structure or the location of food. To translate the signal into a useful response (such as expressing a certain gene or changing movement direction) cells have evolved biochemical signalling networks that recognize and process the signals. We use a general description of the cell that is depicted in @fig:information_cartoon where the signal acts as the input of the information channel. The processing of the signal that yields a response is assumed to be a known biochemical network and the response is one species of the biochemical network that acts as the "result" of the computation and represents the reaction of the cell to the signal.
 
@@ -32,11 +32,48 @@ For any given signal there are many stochastically possible responses. Conversel
 \mathrm H(\mathcal S)=-\int\limits_{\sigma(\mathcal S)} 
 \mathrm d\mathbf s\ \mathrm P(\mathbf s)\,\ln\mathrm P(\mathbf s)
 $$
-where $\sigma(\mathcal S)$ is the set of possible realizations of $\mathcal S$.  If $\mathcal S$ describes the signal then a large entropy signifies that there is a large range of possible signals that could be expected by the cell. 
+where $\sigma(\mathcal S)$ is the set of possible realizations of $\mathcal S$ and we use $\mathrm P(\mathbf s)$ to denote the probility (density) of $\mathbf s$ with respect to the distribution of $\mathcal S$.  If $\mathcal S$ describes the signal then a large entropy signifies that there is a large range of possible signals that could be expected by the cell. Now given the response $\mathbf x$ to a signal $\mathbf s$, we expect $\mathbf x$ to contain information about $\mathbf s$ such that the uncertainty about the signal is reduced. The conditional entropy $\mathrm H(\mathcal S|\mathcal X)$ captures the _average_ remaining uncertainty of a signal after observing the response, hence it reads
+$$
+\mathrm H(\mathcal S|\mathcal X)=-
+\int\limits_{\sigma(\mathcal X)} 
+\mathrm d\mathbf x\ \mathrm P(\mathbf x)
+\int\limits_{\sigma(\mathcal S)} 
+\mathrm d\mathbf s\ \mathrm P(\mathbf s|\mathbf x)\ln\mathrm P(\mathbf s|\mathbf x) \,.
+$$
+Consequently, the _average_ amount of information gained on the signal by observing the response is precisely the mutual information
+$$
+\mathrm I(\mathcal S,\mathcal X) = \mathrm H(\mathcal S) - \mathrm H(\mathcal S|\mathcal X) = 
+\int\limits_{\sigma(\mathcal X)} 
+\mathrm d\mathbf x\ \mathrm P(\mathbf x)
+\int\limits_{\sigma(\mathcal S)} 
+\mathrm d\mathbf s\ \mathrm P(\mathbf s|\mathbf x)
+\ln \frac{\mathrm P(\mathbf s|\mathbf x)}{\mathrm P(\mathbf s)}
+ \,.
+$$
+Notably the mutual information (MI) is symmetric under exchange of $\mathcal S$ and $\mathcal X$ such that $\mathrm I(\mathcal S,\mathcal X) = \mathrm I(\mathcal X,\mathcal S)$ which we can use to alternatively express the MI as
+$$
+\mathrm I(\mathcal S,\mathcal X) = \mathrm H(\mathcal X) - \mathrm H(\mathcal X|\mathcal S) = 
+\int\limits_{\sigma(\mathcal S)} 
+\mathrm d\mathbf s\ \mathrm P(\mathbf s)
+\int\limits_{\sigma(\mathcal X)} 
+\mathrm d\mathbf x\ \mathrm P(\mathbf x|\mathbf s)
+\ln \frac{\mathrm P(\mathbf x|\mathbf s)}{\mathrm P(\mathbf x)}
+$$
+which will be a more useful form for the computational estimation of the MI.
 
+The mutual information has been used previously to understand TODO elaborate
 
-* We introduce the notation $X$ for responses and $S$ for signals
-* The average uncertainty of responses for a given signal is decribed by the Kullback-Leibler divergence (relative information) $K(X|S)$
+Often, biochemical networks not only respond to instantaneous signal levels but also to changes in the signal over time. 
+
+Also biochemical networks may store information about the signal in the time-dependency of the response. For the case where the signal can be regarded as slowly changing with respect to the response there has been proposed a Monte-Carlo technique for the estimation of the MI that takes this into account @2019:Cepeda-Humerez. We build on this technique by extending it to allow for time-varying signals as well. 
+
+The study of time-varying quantities motivates the use of the _information rate_ which is the asymptotic rate at which the MI between signal and response increases @2010:Tostevin
+$$
+\mathrm I_R = \lim\limits_{T\rightarrow\infty} \frac{\mathrm I(\mathcal S_T,\mathcal X_T)}{T}
+$$
+where $\mathcal S_T$ and $\mathcal X_T$ are random variables over _trajectories_ of length $T$.
+
+Indeed we aim to find a novel way to compute the MI for time-varying signals that works for general biochemical networks.
 
 * It is necessary to look at time-dependencies of both signals and responses for various reasons
     1. Cells can store information in the time dependency of the responses (e.g. spike intervals) (This is studied extensively in @2019:Cepeda-Humerez for the case were the signal can be regarded as slowly changing)
@@ -46,8 +83,6 @@ where $\sigma(\mathcal S)$ is the set of possible realizations of $\mathcal S$. 
 * It is tempting to think that optimization of information processing drives the evolution of cellular signaling networks
 
 * Often information transmission is bound by the noise. Therefore to increase information it is necessary to decrease noise (e.g. by using higher copy numbers). However this usually comes at a metabolic cost such that a balance between energy and noise must be found.
-
-### Information Rate
 
 ### Mutual Information between Stochastic Trajectories
 
