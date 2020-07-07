@@ -132,7 +132,7 @@ where $\int_\Omega\mathrm d\mathbf{n}$ denotes an integral over phase space. @Eq
 $$
 g(E) = \int\limits_\Omega \mathrm d\mathbf n\ \delta(\mathcal H(\mathbf n) - E)
 $$ {#eq:dirac_dos}
-which matches the intuition of plotting an energy histogram for uniformly chosen states. I.e. for discrete energies $E_1<\cdots<E_n$ (the histogram bins) and random states $\mathbf n_1,\ldots,\mathbf n_N$ we can approximate the DOS as
+which matches the intuition of plotting an energy histogram for uniformly chosen states. I.e. for discrete energies $E_1 < \cdots < E_n$ (the histogram bins) and random states $\mathbf n_1,\ldots,\mathbf n_N$ we can approximate the DOS as
 $$
 g_\text{discrete}(E_i) = \frac1N \sum\limits^N_{j=1} \delta_{\mathcal H(\mathbf n_j), E_i}
 $$ {#eq:dos_histogram}
