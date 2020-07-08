@@ -42,29 +42,6 @@ We want to estimate the mutual information by separately computing the marginal 
 
 As it turns out the main difficulty of our estimation procedure is to get an unbiased estimate of $\mathrm H(\mathcal X)$ whereas it is much more straightforward to get a good estimate for $\mathrm H(\mathcal X | \mathcal S)$. Therefore in these notes we focus on the computation of the marginal entropy and consider the conditional entropy at the end.
 
-## Monte-Carlo Estimate for the Marginal Entropy
-
-We compute the marginal entropy $\mathrm H(\mathcal X)$ using Monte-Carlo sampling to evaluate the necessary integrals. First we generate a number of samples $(\mathbf x_i)_{i=1,\ldots,N_x}$ that are distributed according to the distribution of $\mathcal X$. We use these to estimate the entropy
-$$
-\mathrm H(\mathcal X) = -\int\mathrm d\mathbf x\ \mathrm P(\mathbf x)\ln \mathrm P(\mathbf x) \approx \frac{\sum\limits_{i=1}^{N_x} \ln\mathrm P(\mathbf x_i)}{N_x} \,.
-$$ {#eq:mc_entropy}
-
-It is important to realize that we do not actually need to know the distribution of $\mathcal X$ to do create appropriate Monte-Carlo samples. Since a stochastic model for trajectories provides us with the distributions $\mathrm P(\mathbf s)$ and $\mathrm P(\mathbf x|\mathbf s)$ we can generate samples from $\mathrm P(\mathbf x)$ by first generating a sample $\mathbf s_j$ from $\mathrm P(\mathbf s)$ and then use $P(\mathbf x|\mathbf s_j)$ to generate a sample $\mathbf x_i$.
-
-Nonetheless we see from @eq:mc_entropy that we _do_ have to evaluate $\mathrm P(\mathbf x_i)$ for every generated sample. However, when we want to extend the method to stochastic trajectories then the distribution of the responses $\mathrm P(\mathbf x)$ is not known a priori anymore. Therefore we choose to evaluate $\mathrm P(\mathbf x_i)$ by doing a Monte-Carlo integration using signal samples $(\mathbf s_j)_{j=1,\ldots,N_s}$ that are distributed according to $\mathrm P(\mathcal S)$:
-$$
-\mathrm P(\mathbf x_i) = \int\mathrm d\mathbf s\ \mathrm P(\mathbf s)\ \mathrm P(\mathbf x_i|\mathbf s) \approx \frac{\sum\limits_{j=1}^{N_s} \mathrm P(\mathbf x_i | \mathbf s_j)}{N_s} \,.
-$$ {#eq:mc_marginal}
-While for a low-dimensional signal space it is feasible to instead compute the marginalization integral using direct evaluation [@2019:Cepeda-Humerez] we choose to use MC evaluation to also be able to handle high-dimensional signal spaces. This is crucial since eventually we are interested in computing the mutual information between trajectories where the dimensionality of the distributions increases with trajectory length.
-
-We can summarize the estimation procedure for the marginal entropy using the equation
-$$
-\mathrm H(\mathcal X) = -\left\langle \ln \left\langle \mathrm P(\mathbf x | \mathbf s) \right\rangle_{\mathrm P(\mathbf s)} \right\rangle_{\mathrm P(\mathbf x)}
-$$ {#eq:mc_entropy_notation}
-where we use the notation $\langle f(x)\rangle_{g(x)}$ for the expected value of $f(x)$ when $x$ is distributed according to the probability density given by $g(x)$. Thus when thinking in mathematical terms we have the shorthand $\langle f(x)\rangle_{g(x)} \equiv\int \mathrm dx\ g(x) f(x)$. We can also easily translate this notation into a Monte-Carlo estimate, i.e. $\langle f(x)\rangle_{g(x)} = \lim\limits_{N\rightarrow\infty}\frac{\sum_{i=1}^N f(x_i)}{N}$ where $x_1, x_2,\ldots$ are independent samples of the probability distribution given by $g(x)$.
-
-The estimates for the entropies given by @eq:mc_entropy and @eq:mc_marginal together allow us to compute the mutual information of $\mathcal X$ and $\mathcal S$ _in principle_. In the following we discuss for which conditions and sample sizes you can expect a good entropy estimate from this method.
-
 ### Choice of Covariance Matrices
 
 We want to carefully choose the covariance matrices such that we can expect any sampling issues that arise in the Gaussian framework to also be present when dealing with stochastic trajectories. Therefore we chose to model a very simple gene expression model described by the reaction equations
@@ -143,14 +120,6 @@ In @fig:rel_err_opt we show that using optimized sampling we can strongly reduce
 
 ## Estimating the Conditional Entropy
 
-We can also estimate the _conditional entropy_ and thus the mutual information within the Gaussian Framework. We express the conditional entropy using the notation introduced above
-$$
-\mathrm H(\mathcal X|\mathcal S) = -\int \mathrm d\mathbf s\mathrm d\mathbf x\ \mathrm P(\mathbf s)\mathrm P(\mathbf x | \mathbf s) \ln\mathrm P(\mathbf x|\mathbf s) = -\left\langle\langle\ln\mathrm P(\mathbf x | \mathbf s)\rangle_{\mathrm P(\mathbf x | \mathbf s)} \right\rangle_{\mathrm P(\mathbf s)}
-$$
-to show that we require nested Monte Carlo integrations to evaluate the integral. We first generate signal samples $\mathbf s_1, \ldots, \mathbf s_{N_s}$ from the density $\mathrm P(\mathbf s)$. Let $\mathbf x_i^1,\ldots,\mathbf x_i^{N_x}$ be response samples generated from $\mathrm P(\mathbf x | \mathbf s_i)$. The Monte Carlo estimate for the conditional entropy then reads
-$$
-\mathrm H(\mathcal X|\mathcal S) \approx - \frac1{N_s N_x} \sum\limits_{i=1}^{N_s} \sum\limits_{j=1}^{N_x} \ln\mathrm P(\mathbf x_i^j | \mathbf s_i)\,.
-$$ {#eq:conditional_entropy}
 
 ![Comparison of the relative error of conditional entropy estimates versus marginal error estimates. The relative errors are shown on a logarithmic scale as a function of the sparsity. We can see that the relative error for the estimate of the conditional entropy is a few orders of magnitude smaller than the estimates of the marginal entropy. All estimates were performed with $N_x=25600$ and $N_s=1000$.](conditional.svg){#fig:conditional}
 

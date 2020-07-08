@@ -6,18 +6,23 @@ linkReferences: true
 cref: true
 ---
 
-# Monte-Carlo Estimates of the Mutual Information
+# Monte-Carlo Estimate of the Mutual Information
 
-Equipped with analytical formulae for the computation of trajectory probabilities and with methods for efficient stochastic simulation, we can start to develop estimates for the mutual information. The basis for our method is @eq:mi_form2; specifically we separate the mutual information into two parts that are computed independently, the _marginal entropy_ $\mathrm H(\mathcal X)$ and the _conditional entropy_ $\mathrm H(\mathcal X|\mathcal S)$. Since signals and responses are time-varying, both entropies involve integrals over spaces of trajectories which are high-dimensional. At high dimensionality direct numerical integration is not viable and instead, we use Monte-Carlo approaches based on random sampling of trajectories as explained in the previous section. We can Monte-Carlo estimates for both entropies, however the marginal entropy requires the evaluation of one additional integral for the computation of the marginal probability density $\mathrm P(\mathbf x)$.
+Equipped with analytical formulae for the computation of trajectory probabilities and with methods for efficient stochastic simulation, we can start to develop estimates for the mutual information. The basis for our method is @eq:mi_form2; specifically we separate the mutual information into two parts that are computed independently, the _marginal entropy_ $\mathrm H(\mathcal X)$ and the _conditional entropy_ $\mathrm H(\mathcal X|\mathcal S)$. Since signals and responses are time-varying, both entropies involve integrals over spaces of trajectories which are high-dimensional. At high dimensionality, direct numerical integration is not viable and instead, we use Monte-Carlo approaches based on random sampling of trajectories. We can perform Monte-Carlo estimates for both entropies, however the marginal entropy turns out to be computationally much more difficult to estimate.
 
-<!-- While so-called Monte-Carlo methods comprise a wide variety of approaches to stochastically evaluate integrals or sums the common idea is easily stated. We have a state space $U$ and a probability distribution $p_U$ over that state space. The problem is to evaluate
+While Monte-Carlo methods comprise a wide variety of approaches to stochastically evaluate integrals or sums the common idea is easily stated. We have a state space $U$ and a probability distribution $p_U$ on that state space. The problem is to evaluate integrals of the form
 $$
-\langle f(u) \rangle \equiv \int\limits_{u \in U} \mathrm du\; f(u) p_U(u)
+F = \langle f(u) \rangle = \int\limits_{U} \mathrm du\ p_U(u)\; f(u)
 $$
-where $f: U\rightarrow\mathbb R$ is some smooth function. If $U$ is high-dimensional it is very time-consuming to estimate it by direct numerical integration.  -->
+where $f: U\rightarrow\mathbb R$ is some function of interest. If $U$ is high-dimensional it is very time-consuming to estimate it by direct numerical integration. Instead, we generate random samples $u_1,u_2,\ldots$ from the probability distribution $p_U$ such that by the _law of large numbers_
+$$
+F = \lim_{N\rightarrow\infty} \frac{\sum^N_{i=1} f(u_i)}{N}
+$$
+i.e. the sample average of random samples converges towards their mean.
 
+In this chapter we will show how to use Monte-Carlo integration to compute the mutual information between trajectories and why the brute-force evaluation fails.
 
-### Monte-Carlo Estimate for the Marginal Entropy
+## Monte-Carlo Estimate for the Marginal Entropy
 
 We compute the marginal entropy $\mathrm H(\mathcal X)$ using Monte-Carlo (MC) sampling to evaluate the necessary integrals. First we generate a number of samples $(\mathbf x_i)_{i=1,\ldots,N_x}$ that are distributed according to the distribution of $\mathcal X$. We use these to estimate the entropy
 $$
@@ -38,7 +43,7 @@ $$
 $$ {#eq:mc_entropy_notation}
 where we use the notation $\langle f(x)\rangle_{g(x)}$ for the expected value of $f(x)$ when $x$ is distributed according to the probability density given by $g(x)$. Thus when thinking in mathematical terms we have the shorthand $\langle f(x)\rangle_{g(x)} \equiv\int \mathrm dx\ g(x) f(x)$. We can also easily translate this notation into a Monte-Carlo estimate, i.e. $\langle f(x)\rangle_{g(x)} = \lim\limits_{N\rightarrow\infty}\frac{\sum_{i=1}^N f(x_i)}{N}$ where $x_1, x_2,\ldots$ are independent samples of the probability distribution given by $g(x)$.
 
-### Estimating the Conditional Entropy
+## Estimating the Conditional Entropy
 
 We can also estimate the _conditional entropy_ using MC averages over trajectories. We express the conditional entropy using the notation introduced above
 $$
@@ -51,6 +56,8 @@ $$ {#eq:conditional_entropy_estimate}
 
 
 ## Monte-Carlo in Trajectory space
+
+
 
 - Idea: Use SSA to generate response trajectories for given signals
 - The signals themselves are taken to be realizations of a given stochastic process

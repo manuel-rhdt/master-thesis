@@ -24,6 +24,8 @@ The paragraphs above provide an introductory overview of techniques and issues r
 
 ## Information Theory in the context of cellular signaling networks
 
+In this section we motivate the use of a quantities known as the _mutual information_ and the _information rate_ as relevant properties to understand optimality criteria for biochemical signaling networks.
+
 ### Mutual Information as an Efficiency Measure in Cell signaling
 
 ![Abstracting cell signaling as an information channel. The channel's input is an environmental signal that the cell needs to respond to. The signal processing happens through a biochemical network which "computes" a response which is the output of the information channel. The mutual information between signals and responses quantifies the cell's ability to discern between different signals and choose appropriate responses.](figures/information_cartoon.svg){#fig:information_cartoon}
@@ -66,7 +68,7 @@ resulting in a more useful formula for the Monte-Carlo estimation of the MI. The
 
 ### Information Transmission for Time-Varying Signals
 
-Biochemical networks may store information about the signal in the time-dependency of the response, for example in cellular Ca^2+^ signaling information seems to be encoded in the timing and duration of Calcium bursts [@2010:Tostevin;@2008:Boulware;@2020:Richards]. For the case where the signal can be regarded as slowly changing with respect to the response, Cepeda-Humerez, et. al. propose a Monte-Carlo technique for the estimation of the MI that includes information that is stored in the full temporal dynamics of the response @2019:Cepeda-Humerez. As described in the article, that method is limited to situations where there can only be finitely many discrete signals.
+Biochemical networks may store information about the signal in the time-dependency of the response, for example in cellular Ca^2+^ signaling information seems to be encoded in the timing and duration of Calcium bursts [@2010:Tostevin;@2008:Boulware;@2020:Richards]. For the case where the signal can be regarded as slowly changing with respect to the response, Cepeda-Humerez, et. al. propose a Monte-Carlo technique for the estimation of the MI that includes information that is stored in the full temporal dynamics of the response @2019:Cepeda-Humerez. As described in their work, that method is limited to situations that are well-described by a finite number of discrete signals.
 
 Often however, biochemical networks not only respond to instantaneous signal levels but also to changes in the signal over time. [reference needed]. Therefore, we build on the technique in @2019:Cepeda-Humerez by extending it to allow for time-varying, stochastic signals as well. In this way we aim to find a novel way to compute the MI for time-varying signals _and_ responses for general biochemical networks.
 
@@ -76,7 +78,7 @@ $$
 $$
 where $\mathcal S_T$ and $\mathcal X_T$ are random variables over _trajectories_ of length $T$. Since it describes the information gained by the cell in a unit time interval it may be an important quantity for the cell to optimize for.
 
-Hence we find that the fundamental building block for the computation of the information rate at the cellular level is to estimate the mutual information between trajectories of finite length. In the rest of this thesis, we describe methods to compute the mutual information between trajectories $\mathcal S_T,\mathcal X_T$ based on a stochastic model of the biochemical signaling network.
+Hence we find that the fundamental building block for the computation of the information rate at the cellular level is to estimate the mutual information between trajectories of finite length. In the remainder of this thesis, we describe methods to compute the mutual information between trajectories $\mathcal S_T,\mathcal X_T$ based on a stochastic model of the biochemical signaling network.
 
 <!-- ### Mutual Information between Stochastic Trajectories
 
@@ -124,9 +126,13 @@ These averages are defined as integrals over the very high-dimensional space of 
 
 ## Stochastic Modeling of Biochemical Networks
 
+- There exist model-free methods to quantify the entropies associated with signals and responses
+- These can only yield an upper bound for the entropy
+- In practice, biochemical networks may operate far from that bound(?)
+
 ### Markov Processes
 
-
+- memoryless
 
 ### Chemical Master Equation
 
@@ -139,7 +145,6 @@ S \xrightarrow{\rho} S + X\\
 X \xrightarrow{\mu}\emptyset\,.
 \end{gathered} $$ {#eq:reaction_network1}
 Here $S$ and $X$ are arbitrary chemical species whose particle counts we want to describe stochastically. The constants $\kappa, \lambda, \rho, \mu$ determine the rates at which the individual reactions occur. Hence, for every signal particle there is a constant rate $\rho$ to be sensed by the cell which triggers the creation of an $X$. Additionally, $X$ particles decays by themselves over time with a per-particle rate of $\mu$. Assuming a well stirred system in thermal equilibrium, it can be shown that the probabilities for the individual reactions happening at least once in the time interval $[t, t+\mathrm\delta t]$ are
-
 $$
 \begin{aligned}
 p^{(\kappa)}_{[t, t+\mathrm\delta t]} &= \kappa\delta t + \mathcal{O}(\delta t^2)\\
@@ -148,13 +153,10 @@ p^{(\rho)}_{[t, t+\mathrm\delta t]}(s) &= s\rho\delta t + \mathcal{O}(\delta t^2
 p^{(\mu)}_{[t, t+\mathrm\delta t]}(x) &= x\mu\delta t + \mathcal{O}(\delta t^2)
 \end{aligned}
 $$ {#eq:transition_probabilities}
-
 where $s$ and $x$ denote the particle numbers of the respective species at time $t$. Consequently, the probability for _any_ of the reactions to occur at least once in the time interval $[t, t+\mathrm\delta t]$ is
-
 $$p_{[t, t+\mathrm\delta t]}(s, x) = (\kappa + s\lambda + s\rho + x\mu)\ \mathrm \delta t + \mathcal{O}(\delta t^2)$$ {#eq:exit_probability}
 
 Using these expressions we can write down the so-called _chemical master equation_ for this network. Let $\mathrm P_{s,x}(t)$ be the probability that the system is in state $(s, x)$ at time $t$. Assuming that at most one reaction happens in the small time interval $[t, t+\delta t]$ we can use the transition probabilities from [@eq:transition_probabilities;@eq:exit_probability] to write
-
 $$
 \begin{aligned}
 \mathrm P_{s,x}(t + \delta t) =& \phantom{+}p^{(\kappa)}_{[t, t+\mathrm\delta t]}\ \mathrm P_{s-1,x}(t)\\ &+
@@ -164,9 +166,7 @@ p^{(\mu)}_{[t, t+\mathrm\delta t]}(x + 1)\ \mathrm P_{s, x + 1}(t)\\ &+
 \left[1 - p_{[t, t+\mathrm\delta t]}(s, x)\right]\ \mathrm P_{s,x}(t)
 \end{aligned}
 $$
-
 and by taking the limit $\delta t\rightarrow 0$ we arrive at the chemical master equation
-
 $$
 \begin{aligned}
 \frac{\partial \mathrm P_{s,x}(t)}{\partial t} &= \lim\limits_{\delta t\rightarrow 0} \frac{\mathrm P_{s,x}(t + \delta t) -  \mathrm P_{s,x}(t)}{\delta t}\\
@@ -194,6 +194,8 @@ where $w_t(\mathbf x^\prime, \mathbf x)$ specifies the rate for the transition $
 
 ### Probability Densities of Trajectories
 
+From [@eq:mi_form1;@eq:mi_form2] we can see immediately that the computation of the mutual information between two random variables relies on the calculation of (conditional) probability densities for these variables. Our interest in this thesis lies in the computation of the mutual information for time-varying signals and responses. Hence we need to evaluate the mutual information between random variables whose individual samples are _entire trajectories_. To do this we require the notion of probability for a given trajectory, based on a given biochemical model for a cell. In the following derivation we show how the master equation as formulated in @eq:general_master_eq makes it possible to compute the trajectory probability exactly for the corresponding reaction network. In the next chapter we will then discuss how to use these results in practice to compute the conditional probability of a response $\mathrm P(\mathbf x|\mathbf s)$ for a biochemical network and a known signal.
+
 By the probability of a trajectory with $N$ jumps we denote joint probability density $\mathrm P(\mathbf x_0, t_0;\ldots;\mathbf x_N,t_N)$. We include the initial state $\mathbf x_0, t_0$ in the probability since the initial condition itself is usually given by a probability distribution. Using conditional probabilities we can write
 $$
 \begin{aligned}
@@ -211,7 +213,7 @@ $$
 $$ {#eq:trajectory_probability_product}
 Hence the expression for the probability of a trajectory contains two distinct kinds of probability distributions, a) the probability of the initial condition $\mathrm P(\mathbf x_0,t_0)$ and b) the transition probabilities for every step in the trajectory given by $\mathrm P(\mathbf x_i,t_i|\mathbf x_{i-1},t_{i-1})$. The initial condition $\mathrm P(\mathbf x_0,t_0)$ depends on the specific problem and will often be taken to be the steady-state distribution. For the transition probabilities however, we can find a simple expression in terms of the master equation.
 
-The transition probability $\mathrm P(\mathbf x_i,t_i|\mathbf x_{i-1},t_{i-1})$ describes the probability for a small segment of the trajectory from $t_{i-1}$ to $t_i$ where first, the system is at state $\mathbf x_{i-1}$ for a duration $t_i - t_{i-1}$ and then makes a jump $\mathbf x_{i-1}\rightarrow \mathbf x_{i}$. We are now going to derive how to express the probabilities of the constant part as well as the probability of the jump using only terms from the master equation. At the start of the segment, the probability for there to be no jump until at least $t > t_{i-1}$ is called the _survival probability_ $S_{t_{i-1}}(\mathbf x_{i-1}, t)$. By noticing that the change in the survival probability is given by the _loss_ term of the master equation
+The transition probability $\mathrm P(\mathbf x_i,t_i|\mathbf x_{i-1},t_{i-1})$ describes the probability for a small segment of the trajectory from $t_{i-1}$ to $t_i$ where first, the system is at state $\mathbf x_{i-1}$ for a duration $t_i - t_{i-1}$ and then makes a jump $\mathbf x_{i-1}\rightarrow \mathbf x_{i}$. We are now going to derive how to express the probabilities of the constant part as well as the probability of the jump using only terms from the master equation given in @eq:general_master_eq. At the start of the segment, the probability for there to be no jump until at least $t > t_{i-1}$ is called the _survival probability_ $S(\mathbf x_{i-1}, t_{i-1}, t)$. By noticing that the change in the survival probability is given by the _loss_ term of the master equation
 $$
 S(\mathbf x_{i-1}, t_{i-1}, t+\delta t) = S(\mathbf x_{i-1}, t_{i-1}, t) \left[ 1-\delta t
 \sum\limits_{\mathbf x^\prime\in\mathcal U} w_{t_{i-1}}(\mathbf x^\prime, \mathbf x_{i-1}) + \mathcal O(\delta t^2) \right]
@@ -240,9 +242,11 @@ The jump $\mathbf x_{i-1}\rightarrow \mathbf x_{i}$ at time $t_i$ itself happens
 $$\mathrm P(\mathbf x_{i-1}\rightarrow \mathbf x_{i}, t_i) = \frac{w_t(\mathbf x_{i}, \mathbf x_{i-1})}{\sum\limits_{\mathbf x^\prime\in\mathcal U} w_{t}(\mathbf x^\prime, \mathbf x_{i-1})}\,.$$ {#eq:jump_probability}
 Combining the jump probability with the survival probability we can thus express the transition probability density by the multiplication
 $$
-\mathrm P(\mathbf x_i,t_i|\mathbf x_{i-1},t_{i-1}) = - \left. \frac{\partial S(\mathbf x_{i-1}, t_{i-1}, t)}{\partial t} \right|_{t=t_i} \mathrm P(\mathbf x_{i-1}\rightarrow \mathbf x_{i}, t_i)
+\mathrm P(\mathbf x_i,t_i|\mathbf x_{i-1},t_{i-1}) = 
+\mathrm P(\tau_{i-1} = t_i-t_{i-1})\;
+\mathrm P(\mathbf x_{i-1}\rightarrow \mathbf x_{i}, t_i)
 $$
-and by inserting the results from [@eq:survival_probability;@eq:jump_probability] we arrive at the expression
+and by inserting the results from [@eq:survival_probability;@eq:survival_probability_density;@eq:jump_probability] we arrive at the expression
 $$
 \mathrm P(\mathbf x_i,t_i|\mathbf x_{i-1},t_{i-1}) = w_t(\mathbf x_{i}, \mathbf x_{i-1})
 \exp\left( -\int\limits^{t_i}_{t_{i-1}}\mathrm dt^\prime 
@@ -251,11 +255,11 @@ $$
 \,.
 $$ {#eq:transition_probability}
 
-Therefore @eq:transition_probability plugged into @eq:trajectory_probability_product allows the exact computation of probability densities for arbitrary stochastic trajectories. The results were derived in enough generality such that time-dependent transition rates are explicitly allowed. We will see that the analytical expression for the probability of a stochastic trajectory is central for the estimation of the mutual information throughout this thesis.  [@Eq:trajectory_probability_product;@eq:transition_probability] will be used to compute the conditional probability $\mathrm P(\mathbf x|\mathbf s)$ for stochastically generated signal and response trajectories $\mathbf s$ and $\mathbf x$. Furthermore, the survival probability and the jump probability introduced in this section form the basis of the _Stochastic Simulation Algorithm_ that is introduced in the following section.
+Therefore @eq:transition_probability plugged into @eq:trajectory_probability_product allows the exact computation of probability densities for arbitrary stochastic trajectories. The results were derived in enough generality such that time-dependent transition rates are explicitly allowed. We will see that the analytical expression for the probability of a stochastic trajectory is central for the estimation of the mutual information throughout this thesis.  [@Eq:trajectory_probability_product;@eq:transition_probability] will be used to compute the conditional probability $\mathrm P(\mathbf x|\mathbf s)$ for stochastically generated signal and response trajectories $\mathbf s$ and $\mathbf x$. Furthermore, the survival probability and the jump probability introduced in this section form the basis of the _Stochastic Simulation Algorithm_ that is introduced in the following subsection.
 
-## Generating Stochastic Trajectories for Jump Processes
+### Generating Stochastic Trajectories for Jump Processes
 
-### Direct Gillespie Algorithm
+One main ingredient for a computational recipe to calculate the mutual information is the formula for the probability of a trajectory, as derived in the previous section. Of equal importance is the correct generation of stochastic realizations for the biochemical model we intend to study. So far we showed how to model any biochemical network as a _jump process_ through the formulation of the chemical master equation. In the previous section we were able to derive an equation for the probability of a trajectory using only terms from the master equation. Similarly, we can formulate the _stochastic simulation algorithm_ which efficiently generates trajectories for any jump process with a known master equation. In the following we explain the variant named _direct Gillespie alogithm_ after its inventor @1976:Gillespie.
 
 The direct Gillespie algorithm is an efficient and exact procedure to generate stochastic trajectories for jump processes. Starting from an initial state $\mathbf x_0$ at time $t_0$ it generates a trajectory $\mathbf x = (\mathbf x_0, t_0;\ldots;\mathbf x_N, t_N)$ that is a realization of the corresponding stochastic process. Since the trajectories of a jump process are constant segments, separated by discontinuous jumps, at every point in time the system either remains unchanged or it performs an instantaneous jump. Therefore the algorithm works in two phases that are repeated over and over until a trajectory of the desired length is generated.
 
@@ -296,12 +300,26 @@ and note that it is the same network that was already used in @eq:reaction_netwo
 The average number of signal particles $s(t)$ is described by the deterministic rate equation
 $$
 \partial_t s(t) = \kappa - \lambda\ s(t)\,.
-$$
+$$ {#eq:det_s}
 This ODE has a fixed point that represents the steady-state average of the signal $\bar s = \kappa / \lambda$. In a similar way we can deterministically describe the average number of response particles $x(t)$ using the ODE
 $$
 \partial_t x(t) = \rho\ s(t) - \mu\ x(t)\,.
+$$ {#eq:det_x}
+Analogous to the signal we have a steady state average for the response $\bar x = \rho\bar s / \mu$. In this case, the deterministic equations are not only useful to derive steady-state averages but can also be used to understand _correlations_ between the components of the system. 
+
+Since the deterministic [@eq:det_s;@eq:det_x] are both _first-order_ ODEs we say that the biochemical system has _linear equations of motions_ such that for some matrix $A(t)$ and vector $\xi(t)$ we can write
 $$
-Analogous to the signal we have a steady state average for the response $\bar x = \rho\bar s / \mu$. The deterministic equations are not only useful to derive steady-state averages but can also be used to understand _correlations_ between  the components of the system.
+\frac{\partial \mathbf z(t)}{\partial t} = A(t)\ \mathbf z(t) + \xi(t)
+$$
+with $\mathbf z(t) = (s(t),x(t))^T$. We say that the corresponding Markov process describes a _linear system_. In the following we make use of the fact that for linear systems we can apply the _regression  theorem_ @2009:Gardiner $$\partial_tC_{ij}(t) = -\sum_k A_{ik}(t)C_{kj}(t)$$ where $C_{ij}$ are the correlation functions $C_{ij}(t-t^\prime) = \langle z_i(t) z_j(t^\prime) \rangle$. Specifically, for our biochemical network it can be used to show that the correlation functions for the stationary state obey the following set of coupled differential equations:
+$$
+\begin{aligned}
+\partial_t C_{ss}(t) &= -\lambda\ C_{ss}(t) \\
+\partial_t C_{sx}(t) &= \rho\ C_{ss}(t)-\mu\ C_{sx}(t) \\
+\partial_t C_{xs}(t) &= -\lambda\ C_{ss}(t) \\
+\partial_t C_{xx}(t) &= \rho\ C_{ss}(t)-\mu C_{sx}
+\end{aligned}
+$$
 
 - steady state averages
 - correlation functions
