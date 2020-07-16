@@ -44,28 +44,10 @@ As it turns out the main difficulty of our estimation procedure is to get an unb
 
 ### Choice of Covariance Matrices
 
-We want to carefully choose the covariance matrices such that we can expect any sampling issues that arise in the Gaussian framework to also be present when dealing with stochastic trajectories. Therefore we chose to model a very simple gene expression model described by the reaction equations
-$$
-\begin{gathered}
-\emptyset \xrightarrow{\kappa} S \xrightarrow{\lambda} \emptyset\\
-S \xrightarrow{\rho} S + X\\
-X \xrightarrow{\mu}\emptyset
-\end{gathered}
-$$
-where $X$ are particles representing the cell response and $S$ are particles that will be interpreted as the signal. We describe the signal and response trajectories as a vector of values at discrete sample times, e.g. $\mathbf s = \left(s(t_1),\ldots,s(t_d)\right)^T$. For this model we can analytically compute the correlation functions. For simplicity we assume that the system is in steady state such that the correlation functions do only depend on time differences, i.e. $C_{\alpha\beta}(t, t^\prime) = C_{\alpha\beta}(t^\prime-t)$. The correlation functions then give us the elements of the covariance matrices
-$$
-C_{\alpha\beta}^{ij} = C_{\alpha\beta}(t_j - t_i) = \langle\alpha(t_i)\beta(t_j)\rangle\,.
-$$
-
 ![Matrix plots of the full correlation matrix $Z$ from @eq:corr_z for different values of dimensionality $d$ and $\Delta t$. Brighter colors indicate higher matrix element values. We can clearly observe the block structure of $Z$ in every matrix plot. For every matrix plot, the element with coordinates $(i,j)$ in the top left quadrant shows the correlations $\langle s(i\Delta t) s(j \Delta t)\rangle$. In the top right quadrant we see the correlations $\langle s(i\Delta t) x(j \Delta t)\rangle$ and in the lower quadrants we see $\langle x(i\Delta t) s(j \Delta t)\rangle$ and $\langle x(i\Delta t) x(j \Delta t)\rangle$ on the left and right side respectively. The product $T = d\Delta t$ is the duration of the signal and response trajectories. The quantity $d\Delta t$ also serves as a rough measure of the sparsity of the correlation matrices (i.e. the fraction of matrix elements lower than some cutoff). Along diagonals from bottom left to top right, the product $T = d \Delta t$ is constant. Indeed, we see that along these diagonals the sparsity is roughly constant. Yet, as we move along such a diagonal of equal sparsity $d\Delta t$ but increasing dimensionality $d$ we see correlation matrices that display the same features in a gradually more refined and smooth way.](matrix_plots.png){#fig:corr}
 
 Using this system we have two parameters left to tune. We can freely choose the number $d$ and offsets $\Delta t$ of our time samples. The duration of the trajectories $\mathbf s$ and $\mathbf x$ is given by the product $T=d\Delta t$. In @fig:corr we show matrix plots of the joint covariance matrix $Z$ for different values of $d$ and $\Delta t$. We can also observe that $d$ determines the dimensionality of the problem while the product $d \Delta t$ serves as a measure for the sparsity of the correlation matrices. Note that the choice of $\Delta t$ affects how well the discretized trajectories approximate physical continuous-time trajectories. However here we are not interested in comparing our results to physical systems (as is done by Tostevin, et. al. [@2010:Tostevin]) and therefore we can simply regard $\Delta t$ as a parameter describing the sparsity of the covariance matrices.
 
-| $\kappa$ | $\lambda$ | $\rho$ | $\mu$ |
-|:--------:|:---------:|:------:|:-----:|
-|   0.25   | 0.005     | 0.01   | 0.01  |
-
-Table: Values of the reaction constants used for all computations. {#tbl:k}
 
 ### Direct Importance Sampling
 

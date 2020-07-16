@@ -6,6 +6,20 @@ linkReferences: true
 cref: true
 ---
 
+# Acknowledgements {.unnumbered}
+
+I would like to thank...
+
+# Introduction
+
+Information processing...
+
+## Goal of the Thesis
+
+## Related Work
+
+## Structure
+
 # Information and Noise in Biological Systems
 
 _Noise_ is inherent across diverse biological systems and remains relevant at all biological scales. From _stochastic gene expression_ and random _action potential spikes_ in neuronal networks at the cellular scale to the _development of multicellular organisms_ all the way to the _variations in population level_ of competing species in whole ecosystems, we find examples of processes which can only be described precisely by taking into account noise as an intrinsic feature [@2002:Elowitz;@2008:Faisal;@1990:Parsons;@2011:Hallatschek;@2014:Tsimring]. In this thesis we focus on the smaller end of this scale, namely on the stochastic description of _biochemical networks_. These comprise among others _gene expression_, _gene regulatory networks_, and _cell signaling_ networks, all of which exhibit noise due to small copy numbers of participating components. Additionally, since biological processes often happen out of equilibrium even macroscopic quantities can exhibit large fluctuations. The main source of noise at the cellular level may be fluctuations in _gene expression_ which propagate to higher levels of biological organization @2014:Tsimring. The abundance of noise in all these systems invites the questions of how cells can reliably make correct decisions, even in complex and changing environments and how cells are able to _encode_ the information about their environment using biochemical networks.
@@ -75,8 +89,8 @@ Often however, biochemical networks not only respond to instantaneous signal lev
 The study of time-varying quantities motivates the use of the _information rate_ which is the asymptotic rate at which the MI between signal and response increases @2010:Tostevin
 $$
 \mathrm I_R = \lim\limits_{T\rightarrow\infty} \frac{\mathrm I(\mathcal S_T,\mathcal X_T)}{T}
-$$
-where $\mathcal S_T$ and $\mathcal X_T$ are random variables over _trajectories_ of length $T$. Since it describes the information gained by the cell in a unit time interval it may be an important quantity for the cell to optimize for.
+$$ {#eq:information_rate}
+where $\mathcal S_T$ and $\mathcal X_T$ are random variables over _trajectories_ of length $T$. By _trajectories_ we denote an entire time-trace of the signal or response, instead of singular values at specific times. Since @eq:information_rate describes the information gained by the cell in a unit time interval it may be an important quantity for the cell to optimize for.
 
 Hence we find that the fundamental building block for the computation of the information rate at the cellular level is to estimate the mutual information between trajectories of finite length. In the remainder of this thesis, we describe methods to compute the mutual information between trajectories $\mathcal S_T,\mathcal X_T$ based on a stochastic model of the biochemical signaling network.
 
@@ -305,25 +319,68 @@ This ODE has a fixed point that represents the steady-state average of the signa
 $$
 \partial_t x(t) = \rho\ s(t) - \mu\ x(t)\,.
 $$ {#eq:det_x}
-Analogous to the signal we have a steady state average for the response $\bar x = \rho\bar s / \mu$. In this case, the deterministic equations are not only useful to derive steady-state averages but can also be used to understand _correlations_ between the components of the system. 
+Analogous to the signal we have a steady state average for the response $\bar x = \rho\bar s / \mu$. In this case, the deterministic equations are not only useful to derive steady-state averages but can also be used to understand _correlations_ between the components of the system. If $S_t$ is the stochastic count of signal particles at time $t$ we call $C_{ss}(t, t^\prime) = \langle S_t S_{t^\prime}\rangle$ the _autocorrelation function_ of $\mathcal S$. Similarly we can also define correlation functions between the signal and the response, such as $C_{sx}(t, t^\prime) = \langle S_t X_{t^\prime}\rangle$, where by $X_t$ we denote the stochastic number of X molecules at time $t$. Thus, in total we have four different correlation functions $C_{ss}, C_{sx}, C_{xs},$ and $C_{xx}$. If we assume the system is in steady state, the correlation functions do only depend on the time-difference $t^\prime - t$ such that we can write $C_{\alpha\beta}(t, t^\prime) = C_{\alpha\beta}(t^\prime - t)$ @2009:Gardiner. For simple biochemical networks like @eq:simple_reaction_network it is relatively straightforward to analytically derive the correlation functions for the steady state.
 
 Since the deterministic [@eq:det_s;@eq:det_x] are both _first-order_ ODEs we say that the biochemical system has _linear equations of motions_ such that for some matrix $A(t)$ and vector $\xi(t)$ we can write
 $$
 \frac{\partial \mathbf z(t)}{\partial t} = A(t)\ \mathbf z(t) + \xi(t)
 $$
-with $\mathbf z(t) = (s(t),x(t))^T$. We say that the corresponding Markov process describes a _linear system_. In the following we make use of the fact that for linear systems we can apply the _regression  theorem_ @2009:Gardiner $$\partial_tC_{ij}(t) = -\sum_k A_{ik}(t)C_{kj}(t)$$ where $C_{ij}$ are the correlation functions $C_{ij}(t-t^\prime) = \langle z_i(t) z_j(t^\prime) \rangle$. Specifically, for our biochemical network it can be used to show that the correlation functions for the stationary state obey the following set of coupled differential equations:
+with $\mathbf z(t) = (s(t),x(t))^T$. We say that the corresponding Markov process describes a _linear system_. In the following we make use of the fact that for linear systems we can apply the _regression  theorem_ @2009:Gardiner $$\partial_tC_{ij}(t) = -\sum_k A_{ik}(t)C_{kj}(t)$$ where $C_{ij}$ are the correlation functions. Specifically, for our biochemical network we find the following set of coupled differential equations for the correlation functions
 $$
 \begin{aligned}
 \partial_t C_{ss}(t) &= -\lambda\ C_{ss}(t) \\
 \partial_t C_{sx}(t) &= \rho\ C_{ss}(t)-\mu\ C_{sx}(t) \\
-\partial_t C_{xs}(t) &= -\lambda\ C_{ss}(t) \\
-\partial_t C_{xx}(t) &= \rho\ C_{ss}(t)-\mu C_{sx}
+\partial_t C_{xs}(t) &= -\lambda\ C_{xs}(t) \\
+\partial_t C_{xx}(t) &= \rho\ C_{xs}(t)-\mu\ C_{xx}(t)
 \end{aligned}
 $$
+with the solutions for $t\geq0$ (assuming steady-state initial conditions)
+$$
+\begin{aligned}
+C_{ss}(t) &= \frac\kappa\lambda e^{-\lambda t} \\
+C_{sx}(t) &= \frac{\rho\kappa}{\lambda(\lambda - \mu)} 
+\left[ \left( 1 + \frac{\lambda - \mu}{\lambda + \mu} \right) e^{-\mu t} - e^{-\lambda t} \right] \\
+C_{xs}(t) &= \frac{\rho\kappa}{\lambda(\lambda + \mu)} e^{-\lambda t}  \\
+C_{xx}(t) &= \frac{\rho^2 \kappa}{\lambda(\lambda^2 - \mu^2)} \left( e^{-\mu t} - e^{-\lambda t} \right) + \left( 1 + \frac{\rho}{\lambda + \mu} \right) \frac{\rho \kappa}{\lambda \mu} e^{-\mu t}\,.
+\end{aligned}
+$$ {#eq:correlation_functions}
+Since by definition $C_{\alpha\beta}(-t) = C_{\beta\alpha}(t)$, from @eq:correlation_functions we know the complete correlation functions for the system in steady state.
 
-- steady state averages
-- correlation functions
-- parameter values
+The steady-state averages and the correlation functions represent the first and second moments of the trajectories of $\mathcal S$ and $\mathcal X$. By discarding all higher-order moments and discretizing time we build an approximate stochastic model for the chemical reaction network that allows further analytic results. Since we will approximate the trajectories using samples form multivariate normal distributions, this method is often called the _Gaussian approximation_. For a given discretization $t_1<t_2<\cdots<t_d$ we describe the signal and response trajectories as a vector of values at discrete sample times, e.g. $\mathbf s = \left(s(t_1),\ldots,s(t_d)\right)^T$. In the following we define a multivariate probability density $\mathrm P(\mathbf{s}, \mathbf{x})$ for the signal and response trajectories such that the resulting approximate system has identical correlation functions to the full biochemical network.
+
+Hence we consider the case where the joint probability distribution $\mathrm P(\mathbf{s}, \mathbf{x})$ is given by a multivariate normal distribution
+$$
+\mathrm P(\mathbf{s}, \mathbf{x}) = \frac{1}{\sqrt{\left( 2\pi  \right)^{2d} \det Z}} \;\exp\left[-\frac12\ (\mathbf s^T\; \mathbf x^T)\ Z^{-1}\ \binom{\mathbf s}{\mathbf x}\right]
+$$ {#eq:joint_multivariate}
+where $\mathbf s, \mathbf x \in \mathbb R^d$ are the signal and response vectors respectively and the symmetric positive-definite covariance matrix $Z\in\mathbb R^{2d\times 2d}$ has the block form
+$$
+Z =  \begin{pmatrix}
+C_{ss} & C_{xs} \\
+C_{sx} & C_{xx}
+\end{pmatrix}
+$$ {#eq:corr_z}
+with matrices $C_{\alpha\beta}\in\mathbb R^{d\times d}$. The correlation functions in @eq:correlation_functions then give us the elements of the matrix blocks
+$$
+C_{\alpha\beta}^{ij} = C_{\alpha\beta}(t_j - t_i)\,.
+$$
+For the joint distribution in @eq:joint_multivariate there exists a simple analytical expression to compute the mutual information between $\mathcal S$ and $\mathcal X$ [@2010:Tostevin;@1948:Shannon]
+$$
+\mathrm I(\mathcal S, \mathcal X) = \frac 12 \ln\left( \frac{\det C_{ss} \det C_{xx}}{\det Z} \right)
+$$ {#eq:analytical_mi}
+which will be our benchmark to compare the proposed Monte-Carlo estimation procedure against. In a similar way we can also acquire analytical equations for both the marginal entropy $\mathrm H(\mathcal X)$ and the conditional entropy $\mathrm H(\mathcal X | \mathcal S)$.
+
+While we can use @eq:analytical_mi to directly evaluate the mutual information for trajectories using discretized time, Tostevin, et. al. @2010:Tostevin derive—specifically for this reaction network—a formula to analytically compute the mutual information rate (in nats per unit time) in the limit of infinitely fine discretization
+$$
+I_R = \frac{\lambda}{2}\left( \sqrt{1 + \frac{\rho}{\lambda}} -1 \right)\,.
+$$ {#eq:analytical_rate}
+
+In this subsection we analyzed a simple, yet non-trivial example of a biochemical network for which we intend to compute the mutual information using Monte-Carlo techniques. Since we were able to derive the correlation functions for this network, we can make use of the Gaussian approximation to estimate the mutual information using @eq:analytical_mi. That approximation will turn out to be very useful to understand the accuracy of Monte-Carlo estimates. To make the different results in this thesis comparable we used consistent parameter values for the reaction constants that are shown in @tbl:k.
+
+| $\kappa$ | $\lambda$ | $\rho$ | $\mu$ | $\bar s$ | $\bar x$ | $\tau_s$ | $\tau_x$ | $I_R$ |
+|:--------:|:---------:|:------:|:-----:|:--------:|:--------:|:--------:|:--------:|:-----:|
+|   0.25   | 0.005     | 0.01   | 0.01  | 50       | 50       | 200      | 180      | 0.00183 |
+
+Table: Values of the reaction constants along with the steady-state averages, correlation times and approximate information rate from @eq:analytical_rate. The values for the reaction constants were used for all computations unless stated otherwise. {#tbl:k}
 
 ## References
 
