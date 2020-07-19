@@ -224,8 +224,16 @@
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
-                        <li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#related-work" class=""><span class="header-section-number">4.1</span> Related Work
+                        <li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#previous-work-on-the-computation-of-normalization-constants" class=""><span class="header-section-number">4.1</span> Previous Work on the Computation of Normalization Constants
                     </a>
+                    </li><li class="expanded">
+                    <ol class="section">
+                        <li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#importance-sampling" class=""><span class="header-section-number">4.1.1</span> Importance Sampling
+                    </a>
+                    </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#estimating-the-marginal-density-from-posterior-samples" class=""><span class="header-section-number">4.1.2</span> Estimating the Marginal Density from Posterior Samples
+                    </a>
+                    </li>
+                    </ol>
                     </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#borrowing-terminology-from-statistical-physics" class=""><span class="header-section-number">4.2</span> Borrowing Terminology from Statistical Physics
                     </a>
                     </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#thermodynamic-integration" class=""><span class="header-section-number">4.3</span> Thermodynamic Integration
@@ -262,12 +270,18 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#conclusion" class=""><span class="header-section-number">4.6</span> Conclusion
+                    </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#generating-proposal-trajectories-from-stochastic-dynamics" class=""><span class="header-section-number">4.6</span> Generating Proposal Trajectories from Stochastic Dynamics
                     </a>
-                    </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#references" class="">References
+                    </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#conclusion" class=""><span class="header-section-number">4.7</span> Conclusion
+                    </a>
+                    </li><li class="expanded"><a href="estimating-marginal-probabilities-for-trajectories.html#references" class=""><span class="header-section-number">4.8</span> References
                     </a>
                     </li>
                     </ol>
+                    </li><li class="expanded"><a href="summary.html" class=""><span class="header-section-number">5</span> Summary
+                    </a>
+                    </li><li class="expanded"><a href="references-1.html" class="">References
+                    </a>
                     </li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
@@ -343,7 +357,7 @@ F = \lim_{N\rightarrow\infty} \frac{\sum^N_{i=1} f(u_i)}{N}
 <p>Nonetheless we see from eq. <a href="#eq:mc_entropy">4</a> that we <em>do</em> have to evaluate <span class="math inline">\mathrm P(\mathbf x_i)</span> for every generated sample. To solve this problem we choose to evaluate <span class="math inline">\mathrm P(\mathbf x_i)</span> by doing another nested Monte-Carlo integration using signal samples <span class="math inline">(\mathbf s_j)_{j=1,\ldots,N_s}</span> from <span class="math inline">\mathcal S</span> to write <span id="eq:mc_marginal"><span class="math display">
 \mathrm P(\mathbf x_i) = \int\mathrm d\mathbf s\ \mathrm P(\mathbf s)\ \mathrm P(\mathbf x_i|\mathbf s) \approx \frac{\sum\limits_{j=1}^{N_s} \mathrm P(\mathbf x_i | \mathbf s_j)}{N_s} \,.
 \qquad(5)</span></span> Hence, for every response sample <span class="math inline">\mathbf x_i</span> we have to perform a sample average over the conditional probabilities <span class="math inline">\mathrm P(\mathbf x_i|\mathbf s_j)</span>. Again, anticipating results from the following section, we make use of the fact that a stochastic model for a biochemical network allows us to efficiently compute <span class="math inline">\mathrm P(\mathbf x_i|\mathbf s_j)</span>. Therefore it seems viable to use eq. <a href="#eq:mc_marginal">5</a> to compute the marginal probability for a given response.</p>
-<p>While for a low-dimensional signal space it is feasible to instead compute the marginalization integral eq. <a href="#eq:mc_marginal">5</a> using direct evaluation <span class="citation" data-cites="2019:Cepeda-Humerez">[<a href="#ref-2019:Cepeda-Humerez" role="doc-biblioref">1</a>]</span> we choose to use a nested MC simulation to also be able to handle high-dimensional signal spaces. This is crucial since time-varying signals are described by high-dimensional trajectories.</p>
+<p>While for a low-dimensional signal space it is feasible to instead compute the marginalization integral eq. <a href="#eq:mc_marginal">5</a> using direct evaluation <span class="citation" data-cites="2019.Cepeda-Humerez">[<a href="#ref-2019.Cepeda-Humerez" role="doc-biblioref">1</a>]</span> we choose to use a nested MC simulation to also be able to handle high-dimensional signal spaces. This is crucial since time-varying signals are described by high-dimensional trajectories.</p>
 <p>We can summarize the estimation procedure for the marginal entropy using the equation <span id="eq:mc_entropy_notation"><span class="math display">
 \mathrm H(\mathcal X) = -\left\langle \ln \left\langle \mathrm P(\mathbf x | \mathbf s) \right\rangle_{\mathrm P(\mathbf s)} \right\rangle_{\mathrm P(\mathbf x)}
 \qquad(6)</span></span> where we use the notation <span class="math inline">\langle f(x)\rangle_{g(x)}</span> for the expected value of <span class="math inline">f(x)</span> when <span class="math inline">x</span> is distributed according to the probability density given by <span class="math inline">g(x)</span>. Thus when thinking in mathematical terms we have the shorthand <span class="math inline">\langle f(x)\rangle_{g(x)} \equiv\int \mathrm dx\ g(x) f(x)</span>. We can also easily translate this notation into a Monte-Carlo estimate, i.e. <span class="math inline">\langle f(x)\rangle_{g(x)} = \lim\limits_{N\rightarrow\infty}\frac{\sum_{i=1}^N f(x_i)}{N}</span> where <span class="math inline">x_1, x_2,\ldots</span> are independent samples of the probability distribution given by <span class="math inline">g(x)</span>.</p>
@@ -369,7 +383,7 @@ F = \lim_{N\rightarrow\infty} \frac{\sum^N_{i=1} f(u_i)}{N}
 <section id="general-stochastic-dynamics-of-signals" class="level3" data-number="1.3.1">
 <h3 data-number="3.3.1"><span class="header-section-number">3.3.1</span> General Stochastic Dynamics of Signals</h3>
 <p>In the previous section we found that both, the Monte-Carlo computation of the marginal entropy and of the conditional entropy require the generation of stochastic samples of the signal. This is not surprising since the stochastic dynamics of the signal reflect the amount of information that it contains. For example, if the signal is governed by mostly noise, then even the most efficient biochemical network could not extract a lot of meaningful information out of it. Therefore, to compute the mutual information between the signal and the responses, apart from modeling the biochemical network that processes the signal we also have to model the signal-generating process.</p>
-<p>Generally, any kind of noisy signal can be modeled by a <em>stochastic process</em>. In most cases, these processes arise as the solutions of SDEs that describe the underlying deterministic physics of the signal together with a <em>noise term</em> that gives rise to the stochastic nature of the signal trajectories. An example for such a process is the <em>Ornstein-Uhlenbeck process</em> that describes the random motion of a diffusing particle in a harmonic potential well <span class="citation" data-cites="2009:Gardiner">[<a href="#ref-2009:Gardiner" role="doc-biblioref">2</a>]</span>. It represents a combination of a deterministic harmonic oscillator together with fluctuations arising from the diffusion process. For these kinds of stochastic processes that are described by a SDE there exist many numerical methods to generate approximate signals trajectories. A simple, yet effective method to generate stochastic realizations of SDEs is the <em>Euler–Maruyama method</em> that is a generalization of the Euler method for integrating ODEs <strong>???</strong>. With such methods we can in principle use any integrable SDE as the signal-generating process for the computation of the mutual information.</p>
+<p>Generally, any kind of noisy signal can be modeled by a <em>stochastic process</em>. In most cases, these processes arise as the solutions of SDEs that describe the underlying deterministic physics of the signal together with a <em>noise term</em> that gives rise to the stochastic nature of the signal trajectories. An example for such a process is the <em>Ornstein-Uhlenbeck process</em> that describes the random motion of a diffusing particle in a harmonic potential well <span class="citation" data-cites="2009.Gardiner">[<a href="#ref-2009.Gardiner" role="doc-biblioref">2</a>]</span>. It represents a combination of a deterministic harmonic oscillator together with fluctuations arising from the diffusion process. For these kinds of stochastic processes that are described by a SDE there exist many numerical methods to generate approximate signals trajectories. A simple, yet effective method to generate stochastic realizations of SDEs is the <em>Euler–Maruyama method</em> that is a generalization of the Euler method for integrating ODEs <span class="citation" data-cites="1992.Kloeden">[<a href="#ref-1992.Kloeden" role="doc-biblioref">3</a>]</span>. With such methods we can in principle use any integrable SDE as the signal-generating process for the computation of the mutual information.</p>
 <p>If we want to investigate the simple reaction network for gene expression given in TODO we find that the signal dynamics are themselves described by a reaction network. In that case it is possible to generate <em>exact</em> stochastic realizations of signal trajectories using a stochastic simulation algorithm as discussed in TODO.</p>
 </section>
 <section id="generating-responses-for-time-varying-signals" class="level3" data-number="1.3.2">
@@ -541,7 +555,7 @@ P_{\mathbf x_i, N_s}^{w_\text{opt}} = \frac1{N_s}\sum\limits_{j=1}^{N_s} \frac{\
 <figure>
 <img src="sampling2.svg" id="fig:rel_err_opt" alt="" /></img><figcaption>Figure 5: Relative error as a function of the dimensionality <span class="math inline">d</span>. The solid lines show the results using non-optimized sampling while the dashed lines show the results when using a sampling distribution close to the optimal distribution <span class="math inline">\mathrm P(\mathbf s|\mathbf x)</span>. We see that with optimized sampling there is no consistent over-estimation anymore. All estimated were done using <span class="math inline">d = 200</span> dimensional covariance matrices.</figcaption>
 </figure>
-<p>Instead, we can try to obtain a sampling distribution that is as close as possible to <span class="math inline">w_\text{opt}(\mathbf s)</span>. A known approach involves using random samples from <span class="math inline">\mathrm P(\mathbf s | \mathbf x_i)</span> to pick the most optimal sampling distribution from a family of candidate distributions <span class="citation" data-cites="2011:Chan">[<a href="#ref-2011:Chan" role="doc-biblioref">3</a>]</span>. Generating so-called <em>posterior samples</em> from <span class="math inline">\mathrm P(\mathbf s | \mathbf x_i) \sim \mathrm P(\mathbf x_i|\mathbf s) \mathrm P(\mathbf s)</span> is generally possible without knowledge of the normalization factor <span class="math inline">\mathrm P(\mathbf x_i)</span> e.g. by using Metropolis-Sampling <span class="citation" data-cites="1991:Müller 1994:Tierney">[<a href="#ref-1991:Müller" role="doc-biblioref">4</a>,<a href="#ref-1994:Tierney" role="doc-biblioref">5</a>]</span>. To test within the Gaussian framework whether such an approach to importance sampling could work in principle, we generate 400 posterior samples by directly sampling from the analytically known posterior distribution <span class="math inline">\mathrm P(\mathbf s | \mathbf x_i)</span>. We compute the empircial mean <span class="math inline">\bar{\mathbf s}</span> and the empirical covariance <span class="math inline">\bar C_{\mathbf s|\mathbf x_i}</span> of these samples as parameter estimates for a multivariate Gaussian <span class="math inline">\mathcal N(\bar{\mathbf s}, \bar C_{\mathbf s|\mathbf x_i})</span> and use the latter as an optimized sampling distribution.</p>
+<p>Instead, we can try to obtain a sampling distribution that is as close as possible to <span class="math inline">w_\text{opt}(\mathbf s)</span>. A known approach involves using random samples from <span class="math inline">\mathrm P(\mathbf s | \mathbf x_i)</span> to pick the most optimal sampling distribution from a family of candidate distributions <span class="citation" data-cites="2011.Chan">[<a href="#ref-2011.Chan" role="doc-biblioref">4</a>]</span>. Generating so-called <em>posterior samples</em> from <span class="math inline">\mathrm P(\mathbf s | \mathbf x_i) \sim \mathrm P(\mathbf x_i|\mathbf s) \mathrm P(\mathbf s)</span> is generally possible without knowledge of the normalization factor <span class="math inline">\mathrm P(\mathbf x_i)</span> e.g. by using Metropolis-Sampling <span class="citation" data-cites="1991.Müller 1994.Tierney">[<a href="#ref-1991.Müller" role="doc-biblioref">5</a>,<a href="#ref-1994.Tierney" role="doc-biblioref">6</a>]</span>. To test within the Gaussian framework whether such an approach to importance sampling could work in principle, we generate 400 posterior samples by directly sampling from the analytically known posterior distribution <span class="math inline">\mathrm P(\mathbf s | \mathbf x_i)</span>. We compute the empircial mean <span class="math inline">\bar{\mathbf s}</span> and the empirical covariance <span class="math inline">\bar C_{\mathbf s|\mathbf x_i}</span> of these samples as parameter estimates for a multivariate Gaussian <span class="math inline">\mathcal N(\bar{\mathbf s}, \bar C_{\mathbf s|\mathbf x_i})</span> and use the latter as an optimized sampling distribution.</p>
 <p>In fig. <a href="#fig:rel_err_opt">5</a> we show that using optimized sampling we can strongly reduce the systematic bias in marginal entropy estimation. As expected, importance sampling is especially useful when the sparsity is very high, i.e. the trajectories are long. It is clear that for longer trajectories we expect <span class="math inline">\mathrm P(\mathbf s | \mathbf x_i)</span> to be a much more narrow sampling distribution than <span class="math inline">\mathrm P(\mathbf s)</span> whenever the <span class="math inline">\mathcal S</span> and <span class="math inline">\mathcal X</span> are not completely independent. Consequently, it becomes more and more unlikely to obtain a sample <span class="math inline">s^\prime</span> from <span class="math inline">\mathrm P(\mathbf s)</span> such that <span class="math inline">\mathrm P(s^\prime | \mathbf x_i)  \epsilon</span> for any <span class="math inline">\epsilon  0</span> and therefore more difficult to accurately estimate <span class="math inline">\mathrm P(\mathbf x_i)</span> using an unbiased sampling distribution.</p>
 
 </section>
@@ -561,20 +575,23 @@ P_{\mathbf x_i, N_s}^{w_\text{opt}} = \frac1{N_s}\sum\limits_{j=1}^{N_s} \frac{\
 <section id="references" class="level2 unnumbered" data-number="">
 <h2 class="unnumbered" data-number="2">References</h2>
 <div id="refs" class="references" role="doc-bibliography">
-<div id="ref-2019:Cepeda-Humerez">
+<div id="ref-2019.Cepeda-Humerez">
 <p>[1] S.A. Cepeda-Humerez, J. Ruess, G. Tkačik, Estimating information in time-varying signals., PLoS Computational Biology. 15 (2019) e1007290. <a href="https://doi.org/10.1371/journal.pcbi.1007290">https://doi.org/10.1371/journal.pcbi.1007290</a>.</p>
 </div>
-<div id="ref-2009:Gardiner">
+<div id="ref-2009.Gardiner">
 <p>[2] C. Gardiner, Stochastic Methods, 4th ed., Springer-Verlag, Berlin Heidelberg, 2009.</p>
 </div>
-<div id="ref-2011:Chan">
-<p>[3] J.C.C. Chan, D.P. Kroese, Improved cross-entropy method for estimation, Statistics and Computing. 22 (2011) 1031–1040. <a href="https://doi.org/10.1007/s11222-011-9275-7">https://doi.org/10.1007/s11222-011-9275-7</a>.</p>
+<div id="ref-1992.Kloeden">
+<p>[3] P.E. Kloeden, E. Platen, Numerical Solution of Stochastic Differential Equations, 1992.</p>
 </div>
-<div id="ref-1991:Müller">
-<p>[4] P. Müller, A Generic Approach to Posterior Integration and Gibbs Sampling, Purdue University, 1991.</p>
+<div id="ref-2011.Chan">
+<p>[4] J.C.C. Chan, D.P. Kroese, Improved cross-entropy method for estimation, Statistics and Computing. 22 (2011) 1031–1040. <a href="https://doi.org/10.1007/s11222-011-9275-7">https://doi.org/10.1007/s11222-011-9275-7</a>.</p>
 </div>
-<div id="ref-1994:Tierney">
-<p>[5] L. Tierney, Markov Chains for Exploring Posterior Distributions, The Annals of Statistics. 22 (1994) 1701–1728. <a href="https://doi.org/10.1214/aos/1176325750">https://doi.org/10.1214/aos/1176325750</a>.</p>
+<div id="ref-1991.Müller">
+<p>[5] P. Müller, A Generic Approach to Posterior Integration and Gibbs Sampling, Purdue University, 1991.</p>
+</div>
+<div id="ref-1994.Tierney">
+<p>[6] L. Tierney, Markov Chains for Exploring Posterior Distributions, The Annals of Statistics. 22 (1994) 1701–1728. <a href="https://doi.org/10.1214/aos/1176325750">https://doi.org/10.1214/aos/1176325750</a>.</p>
 </div>
 </div>
 </section>
