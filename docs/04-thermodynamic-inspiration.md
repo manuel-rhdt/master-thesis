@@ -12,9 +12,9 @@ cref: true
 lang: en-US
 ---
 
-# Estimating Marginal Probabilities for Trajectories
+# Efficient Biased Sampling in Trajectory Space
 
-In the previous chapters we established a technique to compute the mutual information between time-variable signals and responses using Monte-Carlo integration together with stochastic simulations. In practice we found that this method often severly over-estimates the mutual information. In the previous chapter we came to the conclusion that the root of the biased estimates is the computation of the marginal probability density $\mathrm P(\mathbf x)$.
+In the previous chapters we established a technique to compute the mutual information between time-variable signals and responses using Monte-Carlo integration together with stochastic simulations. In practice we found that this method often severely over-estimates the mutual information. In the previous chapter we came to the conclusion that the root of the biased estimates is the computation of the marginal probability density $\mathrm P(\mathbf x)$.
 
 The fundamental identity for the prediction of model parameters $\mathbf s$ given some data or response $\mathbf x$ is Bayes' theorem
 $$
@@ -32,7 +32,7 @@ Written as
 $$
 \mathrm P(\mathbf x) = \langle \mathrm P(\mathbf x|\mathbf s) \rangle_{\mathrm P(\mathbf s)}
 $$
-the marginal density is an example of an expectation value with respect to a potentially complex distribution. For simple distributions, expecations can be approximated by a simple Monte-Carlo approach, taking the sample average $1/N \sum^N_{i=1} \mathrm P(\mathbf x|\mathbf s_i)$ of $N$ independent random samples $\mathbf s_1,\ldots,\mathbf s_N$ generated from $\mathrm P(\mathbf s)$. That is, we estimate the marginal density using samples from the _prior_ and averaging over their likelihoods. As demonstrated in the previous chapters, this method is not very efficient when the individual signals $\mathbf s_i$ are actually trajectories. Once the space of possible signals is sufficiently large it becomes extremely unlikely to sample a $\mathbf s^\prime$ such that $\mathrm P(\mathbf x|\mathbf s^\prime)$ presents a strong contribution to the mean. A well-known approach to circumvent this problem is _importance sampling_.
+the marginal density is an example of an expectation value with respect to a potentially complex distribution. For simple distributions, expectations can be approximated by a simple Monte-Carlo approach, taking the sample average $1/N \sum^N_{i=1} \mathrm P(\mathbf x|\mathbf s_i)$ of $N$ independent random samples $\mathbf s_1,\ldots,\mathbf s_N$ generated from $\mathrm P(\mathbf s)$. That is, we estimate the marginal density using samples from the _prior_ and averaging over their likelihoods. As demonstrated in the previous chapters, this method is not very efficient when the individual signals $\mathbf s_i$ are actually trajectories. Once the space of possible signals is sufficiently large it becomes extremely unlikely to sample a $\mathbf s^\prime$ such that $\mathrm P(\mathbf x|\mathbf s^\prime)$ presents a strong contribution to the mean. A well-known approach to circumvent this problem is _importance sampling_.
 
 ### Importance Sampling
 
@@ -84,7 +84,7 @@ In the framework employed by statistical physics, Bayes' theorem corresponds to 
 $$
 \mathrm P(\mathbf s | \mathbf x) = \frac{1}{Z(\mathbf x)}\exp\left[-E(\mathbf s, \mathbf x)\right]
 $$
-where the _partition function_ is defined by $Z(\mathbf x) = \int \mathrm d\mathbf s\ \exp\left[-E(\mathbf s, \mathbf x)\right]$ and $E(\mathbf s, \mathbf x)$ denotes the total energy of the system at state $\mathbf s$. In this context $\mathbf x$ is considered a parameter vector for the specific model used to compute the energy. In classical problems of statistical physics (such as e.g. the _Ising model_) the state space spans the single particle states $\mathbf{s} = (\sigma_1,\ldots,\sigma_n)\in\Omega^n$ for all particles and the energy is given by the _Hamiltonian_ $\mathcal H(\sigma_1,\ldots,\sigma_n;\mathbf x)$ where $\mathbf x$ could contain parameters describing e.g. the interaction strength between neighbouring spins. In our case however we define our energy function by comparison with @eq:bayes_thm as
+where the _partition function_ is defined by $Z(\mathbf x) = \int \mathrm d\mathbf s\ \exp\left[-E(\mathbf s, \mathbf x)\right]$ and $E(\mathbf s, \mathbf x)$ denotes the total energy of the system at state $\mathbf s$. In this context $\mathbf x$ is considered a parameter vector for the specific model used to compute the energy. In classical problems of statistical physics (such as e.g. the _Ising model_) the state space spans the single particle states $\mathbf{s} = (\sigma_1,\ldots,\sigma_n)\in\Omega^n$ for all particles and the energy is given by the _Hamiltonian_ $\mathcal H(\sigma_1,\ldots,\sigma_n;\mathbf x)$ where $\mathbf x$ could contain parameters describing e.g. the interaction strength between neighboring spins. In our case however we define our energy function by comparison with @eq:bayes_thm as
 $$E(\mathbf s, \mathbf x) = -\ln\mathrm P(\mathbf x|\mathbf s)-\ln\mathrm P(\mathbf s)\,.$$ 
 From this point of view the marginal density $\mathrm P(\mathbf x) = Z(\mathbf x)$ _is_ the partition function of the canonical ensemble. In statistical physics the partition function is of central importance since its partial derivatives include all thermodynamic properties of a physical system. The free energy of the canonical ensemble is defined by $\mathcal F(\mathbf x) = -\ln Z(\mathbf x)$ (for $\beta=1$) such that using this terminology we can write the marginal entropy $\mathrm H(\mathcal X)$ as an average over the _"free energies of response trajectories"_
 $$
@@ -101,7 +101,7 @@ In the following sections we will give a quick summary of TI followed by an expl
 
 ### Summary of the Technique
 
-Let $q_0$ and $q_1$ be the unnormalized distribution functions and $z_0, z_1$ the corrsponding normalization constants such that $z_i=\int\mathrm d\mathbf s\ q_i(\mathbf s)$. Next we construct a path between $q_0$ and $q_1$, parametrized by $\theta\in[0,1]$ such that $q_\theta$ smoothly connects the end points. We similarly define $z(\theta)$ as the normalization constant of $q_\theta$. A smooth path that can be constructed for any pair of distributions $(q_0, q_1)$ is the _geometric path_ given by $q_\theta=q^{1-\theta}_0\ q^\theta_1$. Note however that variance of the estimate depends on the chosen path and that the geometric path is not the optimal path in general. 
+Let $q_0$ and $q_1$ be the unnormalized distribution functions and $z_0, z_1$ the corresponding normalization constants such that $z_i=\int\mathrm d\mathbf s\ q_i(\mathbf s)$. Next we construct a path between $q_0$ and $q_1$, parametrized by $\theta\in[0,1]$ such that $q_\theta$ smoothly connects the end points. We similarly define $z(\theta)$ as the normalization constant of $q_\theta$. A smooth path that can be constructed for any pair of distributions $(q_0, q_1)$ is the _geometric path_ given by $q_\theta=q^{1-\theta}_0\ q^\theta_1$. Note however that variance of the estimate depends on the chosen path and that the geometric path is not the optimal path in general. 
 
 For the estimation of free energy differences we are interested in the ratio $r=z(1)/z(0)$. To find an estimate we differentiate the logarithm of $z(\theta)$ with respect to $\theta$ to arrive at
 $$
@@ -132,7 +132,7 @@ $$
 $$ {#eq:lambda_ni}
 where each average over the potential is performed using a Monte Carlo simulation.
 
-To use these estimators for the computation of the marginal density $\mathrm P(\mathbf x)$ at a given $\mathbf x$ we need to construct a path between the densities $q_0(\mathbf s) = \mathrm P(\mathbf s)$ and $q_1(\mathbf s) = \mathrm P(\mathbf s)\mathrm P(\mathbf x|\mathbf s)$. For simplicity and convenience we choose the geometric path $q_\theta(\mathbf s) = \mathrm P(\mathbf s)\ [\mathrm P(\mathbf x|\mathbf s)]^\theta$. Taking the logarithm of this density we get $\ln q_\theta(\mathbf s) = \ln P(\mathbf s) + \theta \ln \mathrm P(\mathbf x|\mathbf s)$ which prompts us to define the "energy" of a signal trajecory with respect to $\theta$ as
+To use these estimators for the computation of the marginal density $\mathrm P(\mathbf x)$ at a given $\mathbf x$ we need to construct a path between the densities $q_0(\mathbf s) = \mathrm P(\mathbf s)$ and $q_1(\mathbf s) = \mathrm P(\mathbf s)\mathrm P(\mathbf x|\mathbf s)$. For simplicity and convenience we choose the geometric path $q_\theta(\mathbf s) = \mathrm P(\mathbf s)\ [\mathrm P(\mathbf x|\mathbf s)]^\theta$. Taking the logarithm of this density we get $\ln q_\theta(\mathbf s) = \ln P(\mathbf s) + \theta \ln \mathrm P(\mathbf x|\mathbf s)$ which prompts us to define the "energy" of a signal trajectory with respect to $\theta$ as
 $$
 E(\mathbf s, \theta) = -\ln q_\theta(\mathbf s) = -\ln P(\mathbf s) - \theta \ln \mathrm P(\mathbf x|\mathbf s)\,.
 $$
@@ -235,7 +235,7 @@ $$ {#eq:modified_int}
 
 #### Modified Wang-Landau algorithm
 
-We have to slightly adapt the Wang-Landau procedure described above so that it produces an estimate of the modified DOS. To account for the density $\mathrm P(\mathbf s)$ in @eq:modified_dos we need ensure we propose configurations, asymptotically distributed according to $\mathrm P(\mathbf s)$, which we then—in a second step—accept or reject using the inverse DOS. However we can combine both of these steps into a single one by combining a Metropolis acceptance step with the usual Wang-Landau procedure. Our algorithm therefore consists of the follwing steps:
+We have to slightly adapt the Wang-Landau procedure described above so that it produces an estimate of the modified DOS. To account for the density $\mathrm P(\mathbf s)$ in @eq:modified_dos we need ensure we propose configurations, asymptotically distributed according to $\mathrm P(\mathbf s)$, which we then—in a second step—accept or reject using the inverse DOS. However we can combine both of these steps into a single one by combining a Metropolis acceptance step with the usual Wang-Landau procedure. Our algorithm therefore consists of the following steps:
 
 1. Set all entries of the modified DOS to 1, $\rho(U_i)=1, i=1,\ldots,n$.
 1. Set all entries of the histogram to 0, $H(U_i)=0, i=1,\ldots,n$.
@@ -253,7 +253,7 @@ The proposal distribution $T$ can in principle be arbitrary. The definition of t
 
 #### Comparison to usual Wang-Landau algorithm
 
-Usually the Wang-Landau algorithm is used to estimate the regular DOS $g(E)=\int\mathrm d\mathbf s\ \delta(E(\mathbf s, \mathbf x) - E)$ where $E(\mathbf s, \mathbf x)=-\ln\mathrm P(\mathbf s, \mathbf x)$. We can easily verify that algebraicly this definition of $E(\mathbf s, \mathbf x)$ satisfies equation @eq:partition_fn_from_dos such that
+Usually the Wang-Landau algorithm is used to estimate the regular DOS $g(E)=\int\mathrm d\mathbf s\ \delta(E(\mathbf s, \mathbf x) - E)$ where $E(\mathbf s, \mathbf x)=-\ln\mathrm P(\mathbf s, \mathbf x)$. We can easily verify that algebraically this definition of $E(\mathbf s, \mathbf x)$ satisfies equation @eq:partition_fn_from_dos such that
 $$
 Z = \mathrm P(\mathbf x) = \int\mathrm dE\ g(E)e^{-E}\,.
 $$
@@ -262,7 +262,7 @@ $$
 \tilde A(\mathbf s^\prime, \mathbf s) =  \min\left[1,\frac{\rho(U_i)}{\rho(U_j)} \frac{T(\mathbf s^\prime\rightarrow \mathbf s)}{T(\mathbf s\rightarrow \mathbf s^\prime)} \right]\,.
 $$ {#eq:acceptance_probability}
 The difference between @eq:modified_acceptance_probability and @eq:acceptance_probability precisely reflects the fact that $\rho(E)$ and $g(E)$ are defined using different integration measures ($\rho(E)$ includes $\mathrm P(\mathbf s)$ in its integral in @eq:modified_dos while $g(E)$ does not).
-However the regular version of the Wang-Landau algorithm can't be used in practice to compute the marginal density in the multivariate normal system that we are using since the regular DOS grows without bound as $E\rightarrow\infty$: In our case the joint distribution $\mathrm P(\mathbf s, \mathbf x)$ is a multivariate normal distribution in $2d$ dimensions such that for any number $\epsilon>0$ there exists a $2d$-dimensional ellipsoid that contains all points such that $E(\mathbf s, \mathbf x)\leq\epsilon$. The DOS $g(\epsilon)$ is precisely the volume of the $2d-1$ dimensional surface of this ellipsoid. As we increase $\epsilon$ the size of the ellipsoid also keeps increasing such that $\lim_{\epsilon\rightarrow\infty} g(\epsilon)=\infty$. This behaviour of the regular DOS makes it impossible to use the Wang-Landau algorithm to compute $g(E)$ since by its design the algorithm merely estimates the unnormalized DOS. For this reason we have to modify the DOS as is done in @eq:modified_dos which ensures that we can normalize the result of the Wang-Landau algorithm.
+However the regular version of the Wang-Landau algorithm can't be used in practice to compute the marginal density in the multivariate normal system that we are using since the regular DOS grows without bound as $E\rightarrow\infty$: In our case the joint distribution $\mathrm P(\mathbf s, \mathbf x)$ is a multivariate normal distribution in $2d$ dimensions such that for any number $\epsilon>0$ there exists a $2d$-dimensional ellipsoid that contains all points such that $E(\mathbf s, \mathbf x)\leq\epsilon$. The DOS $g(\epsilon)$ is precisely the volume of the $2d-1$ dimensional surface of this ellipsoid. As we increase $\epsilon$ the size of the ellipsoid also keeps increasing such that $\lim_{\epsilon\rightarrow\infty} g(\epsilon)=\infty$. This behavior of the regular DOS makes it impossible to use the Wang-Landau algorithm to compute $g(E)$ since by its design the algorithm merely estimates the unnormalized DOS. For this reason we have to modify the DOS as is done in @eq:modified_dos which ensures that we can normalize the result of the Wang-Landau algorithm.
 
 #### Connection to Standard Monte-Carlo Sampling
 
@@ -283,15 +283,26 @@ For the purpose of comparing estimates we can therefore associate the standard M
 
 @Fig:normalized_densities makes it clear why we expect Wang-Landau sampling to lead to a better estimate of the marginal density than the brute-force Monte-Carlo computation, especially in high-dimensional state spaces. For $d=50$ and $d=200$ most of the weight of the integral is in regions where $\rho(E)\approx 0$. In these low density regions we usually get a very inaccurate estimation of the (modified) DOS by normal MC simulations since we only very occasionally sample a relevant state. The Wang-Landau algorithm ensures that for every energy there is a consistent sampling density and we get a good estimate of the DOS even in low-density regimes.
 
-From @fig:normalized_densities we can also estimate for which range of potentials we must compute the DOS. Since the Boltzmann weight $e^{-U}$ strongly favours low-potential configurations it is important to compute the DOS for very low potentials even if it nearly vanishes there (i.e. in regions where the blue line vanishes but the green line has relevant weight).
+From @fig:normalized_densities we can also estimate for which range of potentials we must compute the DOS. Since the Boltzmann weight $e^{-U}$ strongly favors low-potential configurations it is important to compute the DOS for very low potentials even if it nearly vanishes there (i.e. in regions where the blue line vanishes but the green line has relevant weight).
 
 ![Plots of estimates of the modified DOS from @eq:modified_dos compared on both linear and log scales. The blue line shows the Wang-Landau estimate while the orange line is a histogram estimate using unbiased sampling according to $\mathrm P(\mathbf s)$. We see that especially in the low-potential regime the Wang-Landau estimate is much more accurate.](figures/wl_dos.svg){#fig:wl_dos}
 
 In @fig:wl_dos we display the estimated DOS using the Wang-Landau algorithm compared with a histogram estimate of the DOS using unbiased sampling. We see that in the highly relevant regime of low potential the Wang-Landau procedure allows us to get an accurate estimate of the DOS even though its density is as low as $e^{-45}\approx 10^{-20}$. Using @eq:modified_int we compute the marginal density to be $-664.01$ whereas the "correct" value computed analytically is $-664.24$. We thus find a relative error of $0.03\%$ in this estimate.
 
-## Generating Proposal Trajectories from Stochastic Dynamics
+We have found two methods, Thermodynamic Integration and Wang-Landau sampling to show very promising results for the estimation of the marginal density. So far however, we have only tested these methods using the Gaussian approximation where it is especially easy to generate trial moves to be used in the MCMC schemes. Since in the Gaussian approximation a trajectory is described by a $d$-dimensional vector $\mathbf s = (s^1,\ldots,s^d)^T\in\mathbb{R}^d$ we can simply generate a small _displacement vector_ $\xi\in\mathbb{R}^d$ from an appropriate multivariate normal with sufficiently small covariance such that we have a proposal $\mathbf s^\prime = (s^1 + \xi^1,\ldots,s^d + \xi^d)$. Given a symmetric distribution of displacements, the proposal is naturally also symmetric. With all that said, using the Gaussian approximation we can only describe a fairly limited range of stochastic processes. Since the signal dynamics are fully characterized by their first- and second-order statistics it fails to describe non-Markovian or discrete signals. Going beyond the Gaussian approximation, we are interested in signals that are described by a general stochastic differential equation (SDE). We have already discussed how to generate trajectories from SDEs in TODO. In the next section we will therefore explore some ideas for the generation of appropriate trial moves for such general stochastic trajectories.
 
-We have found two methods, Thermodynamic Integration and Wang-Landau sampling to show very promising results for the estimation of the marginal density. So far we have only tested these methods using the Gaussian approximation where it is especially easy to generate trial moves to be used in the MCMC schemes. Since in the Gaussian approximation a trajectory is described by a $d$-dimensional vector $\mathbf s = (s^1,\ldots,s^d)^T\in\mathbb{R}^d$ we can simply generate a small _displacement vector_ $\xi\in\mathbb{R}^d$ from an appropriate multivariate normal with sufficiently small covariance such that we have a proposal $\mathbf s^\prime = (s^1 + \xi^1,\ldots,s^d + \xi^d)$. Given a symmetric distribution of displacements, the proposal is naturally also symmatric. 
+## Generating Proposal Trajectories from General Stochastic Dynamics
+
+- Our goal is, given an initial trajectory $\mathbf s$, to generate a correlated trajectory $\mathbf s^\prime$, distributed according to $e^{-E(\mathbf s)}$ where $E(\mathbf s) = -\ln \mathrm P(\mathbf s) + U(\mathbf s)$
+- Generate trials from P(s), then accept/reject
+
+
+
+- Other interesting approaches: Guided proposals
+
+## Marginalizing Out Individual Components of the Biochemical Network
+
+So far, the computation of the mutual information is limited to the case where the signal directly interacts with the response...
 
 ## Conclusion
 
@@ -305,8 +316,27 @@ With that said, we do expect the Wang-Landau procedure to perform especially wel
 
 Even if we can compute the mutual information more efficiently by using TI without estimating the DOS for individual responses it is worth noting that the intuitive picture behind the DOS shows very clearly why the brute-force Monte-Carlo estimates of the marginal density can converge very slowly. Particularly [@fig:normalized_densities;@fig:wl_dos] illustrate why more advanced simulation methods are unavoidable for the computation of marginal densities in high-dimensional state spaces. Looking at plots of the DOS can help to understand structural properties about the system at hand and is much easier to visualize than the high-dimensional state space.
 
-## References
+# Conclusion
 
-# Summary
+- We are developing a new method, a novel approach to estimate mutual information, taking into account the full, time-dependent stochastic dynamics 
+- promising results, very useful connection between statistical physics and estimation of distributions
+- work is not yet completed
+
+## Summary of Main Results
+
+1. To quantify the fidelity of biochemical networks, we want to compute the information rate between an environmental signal and a cellular response. The information rate describes the (asymptotic) increase of mutual information with trajectory length
+2. We can derive a Monte Carlo procedure for the computation of the Mutual information
+3. Using that scheme and comparing it to analytical results, we find a consistent statistical bias: we consistently over-estimate the Mutual Information
+4. The main issue is to find a correct estimate for the marginal probability density. We can make use of very powerful methods, that originated in statistical physics.
+5. Using the Gaussian Approximation we found promising results, suggesting that we will be able to estimate the mutual information without statistical biases.
+
+This thesis is an important step towards a general algorithm to compute mutual information for arbitrary stochastic biological systems
+
+## Outlook
+
+- areas still to explore
+  - test on "real systems"
+  - efficient generation of proposal trajectories
+  - look beyond biochemical networks, described by a master equation?
 
 # References {.unnumbered}
