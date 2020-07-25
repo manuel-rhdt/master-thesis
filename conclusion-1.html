@@ -98,7 +98,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="expanded"><a href="index.html" class="active"><span class="header-section-number">1</span> Introduction
+                <ol class="chapter"><li class="expanded"><a href="index.html" class=""><span class="header-section-number">1</span> Introduction
                     </a>
                     </li><li class="expanded"><a href="acknowledgments.html" class="">Acknowledgments
                     </a>
@@ -262,7 +262,7 @@
                     </a>
                     </li>
                     </ol>
-                    </li><li class="expanded"><a href="conclusion-1.html" class=""><span class="header-section-number">5</span> Conclusion
+                    </li><li class="expanded"><a href="conclusion-1.html" class="active"><span class="header-section-number">5</span> Conclusion
                     </a>
                     </li><li class="expanded">
                     <ol class="section">
@@ -329,19 +329,48 @@
 
                 <div id="content" class="content">
                     <main>
-                        <section id="index" class="level1" data-number="1">
-<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
-<p><strong>Note:</strong> <em>This is only a draft of my master’s thesis.</em></p>
-<p>When we consider the point of view of a signal-processing device (e.g. a cell) we might be interested in cases where both the quantity <span class="math inline">\mathcal S</span> and the data <span class="math inline">\mathcal X</span> change over time. We then consider the values of the random variables <span class="math inline">\mathcal S, \mathcal X</span> to be trajectories or sequences of states over time. Trajectories are usually represented as high-dimensional vectors (e.g. as a sequence of states and transition times). Our motivation is to compute the mutual information between such trajectories. To do this we intend to generate trajectories using a fully stochastic model of a biochemical network based on its master equation to compute the likelihoods of individual trajectories. In these notes however we only consider a very simple multi-dimensional Gaussian system because it allows us to test and understand the pitfalls of information estimation for high-dimensional systems with relatively low amounts of computing power. Additionally for a multivariate Gaussian system there exists a simple analytical expressions for the mutual information that we use to verify our estimates.</p>
+                        <section id="conclusion-1" class="level1" data-number="2">
+<h1 data-number="5"><span class="header-section-number">5</span> Conclusion</h1>
+<ul>
+<li>We are developing a new method, a novel approach to estimate mutual information, taking into account the full, time-dependent stochastic dynamics</li>
+<li>promising results, very useful connection between statistical physics and estimation of distributions</li>
+<li>work is not yet completed</li>
+</ul>
+<section id="summary-of-main-results" class="level2" data-number="2.1">
+<h2 data-number="5.1"><span class="header-section-number">5.1</span> Summary of Main Results</h2>
+<ol type="1">
+<li>To quantify the fidelity of biochemical networks, we want to compute the information rate between an environmental signal and a cellular response. The information rate describes the (asymptotic) increase of mutual information with trajectory length</li>
+<li>We can derive a Monte Carlo procedure for the computation of the Mutual information</li>
+<li>Using that scheme and comparing it to analytical results, we find a consistent statistical bias: we consistently over-estimate the Mutual Information</li>
+<li>The main issue is to find a correct estimate for the marginal probability density. We can make use of very powerful methods, that originated in statistical physics.</li>
+<li>Using the Gaussian Approximation we found promising results, suggesting that we will be able to estimate the mutual information without statistical biases.</li>
+</ol>
+<p>This thesis is an important step towards a general algorithm to compute mutual information for arbitrary stochastic biological systems</p>
+</section>
+<section id="outlook" class="level2" data-number="2.2">
+<h2 data-number="5.2"><span class="header-section-number">5.2</span> Outlook</h2>
+<ul>
+<li>areas still to explore
+<ul>
+<li>test on “real systems”</li>
+<li>efficient generation of proposal trajectories</li>
+<li>look beyond biochemical networks, described by a master equation?</li>
+</ul></li>
+</ul>
+</section>
 </section>
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
                         
+                            <a rel="prev" href="efficient-biased-sampling-in-trajectory-space.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                        
 
                         
-                            <a rel="next" href="acknowledgments.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next" href="references.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
                         
@@ -353,9 +382,13 @@
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
                 
+                    <a rel="prev" href="efficient-biased-sampling-in-trajectory-space.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
 
                 
-                    <a rel="next" href="acknowledgments.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next" href="references.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
                 
