@@ -8,7 +8,20 @@ cref: true
 
 # Acknowledgments {.unnumbered}
 
-I would like to thank...
+This thesis would not be in your hands (or your screen) if it weren't for the help and support of many people. I would like to mention a few of them.
+
+Pieter Rein, thank you for being my supervisor. I have learnt so much from our conversations and discussions. And I always felt I could come to you with simple or hard questions and good—or bad—results. I also think you have a very funny and uplifting personality and it is always a joy to work with you. Of course, I also want to thank the other members of the group individually.
+Tom, for always having a good joke ready. And I enjoyed our technical discussions about operating systems and programming languages.
+Mareike, you are an inspiration for any aspiring researcher and I want to thank you for your selfless support in good and in bad times. You always motivate me to keep going.
+Yao, for letting me enjoy your wonderful singing voice.
+Alex, really for our distinctly non-shallow conversations about any topic. Harmen for being someone whose opinion I always value greatly and for being so kind to me and everyone else around you.
+Lotte, you are the ideal office-mate and we had so much fun together. My first year at AMOLF would not have been the same without you.
+
+I also want to thank all of my other colleagues at AMOLF, especially from the other theory group, Bela, Ramon, Tom, Marco and Faan. We had wonderful coffee breaks together, of the real and also the virtual kind.
+
+Thank you, Gašper Tkačik for giving valuable feedback and for sharing your idea of using Wang-Landau sampling. I also thank Chase Broedersz, my official master thesis supervisor for supporting my master's project abroad and for your suggestion to ask Pieter Rein for an internship.
+
+Thank you to my Mother, Manuela, for without you I would not have come so far. You have made the suggestion to go to the Netherlands for a year (even though it now turns out it will be more). And thank you to my girlfriend, Victoria. Your love, support, understanding, compassion, cheerfulness and kindness are almost infinite. Thank you so much.
 
 # Introduction
 
@@ -26,21 +39,13 @@ This thesis presents an overview over the work performed throughout a master's p
 
 ## Structure of the Thesis
 
-- the second chapter starts by giving a general introduction into stochastic description of biological systems
-- introduce the main concepts and mathematical identities used throughout the later chapters
-- give an overview over existing work
-- the goal is mostly to summarize existing knowledge rather than showcase new work
+We begin the second chapter by giving a general introduction into stochastic description of biochemical systems and the core concepts of information theory that we will make use of. From basic identities of probability theory we heuristically derive the chemical master equation and other important mathematical identities that will be used throughout the later chapters. Crucially, the last section of chapter 2 contains a detailed analysis of a simple biochemical network that will be the main object of study throughout the rest of the thesis. Therefore, the goal of the second chapter is to provide a useful overview of existing knowledge and setting the stage for the remaining chapters rather than providing novel results itself.
 
-- the third chapter shows how to apply the knowledge from chapter 2 to develop a computational estimate of the information transmission capabilities for a given biochemical system
-- we will find serious problems for long time intervals
-- we track down the root cause of the problems
+In the third chapter we then apply the main results from chapter 2 to develop a computational estimate of the information transmission performance for a large class of biochemical systems. We compare estimates done using this novel method with analytical results and find large discrepancies. After performing a detailed analysis we argue that the main issue is the computation of a high-dimensional integral in trajectory space.
 
-- the fourth chapter then fully focuses on the estimation of marginal probability densities
-- this is the main problem that needs to be solved
-- give an overview over existing work in the field
-- present two well-known techniques, applied in a novel way to stochastic trajectories
+Therefore, the fourth chapter completely focuses on efficient methods of computing such a high-dimensional integral. We will review different approaches found in the literature to numerically perform integrals. The most convincing methods originate from statistical physics. To be able to make use of these, we demonstrate that our integral can be re-cast in terms of the canonical ensemble such that we can make use of algorithms originally designed for statistical ensembles. While this work is not done yet, we will give some useful ideas that need to be explored to complete this work.
 
-- the thesis ends with a summary of the main results and a conclusion focusing on future work
+The thesis ends with a summary of the main results and a conclusion focusing on future work.
 
 
 # Modeling Cell Signaling Networks as Information Processing Devices
@@ -53,11 +58,11 @@ The chemical master equation is a description of a subset of stochastic processe
 
 In most cases however, chemical master equations cannot be solved analytically and instead require computing averages for ensembles of _stochastic trajectories_. For instance, in Shannon's information theory the amount of communicated information is not a function of individual signal-response pairs but an averaged quantity that depends on the probability of seeing _any_ random signal-response-pair. Hence, computationally efficient generation of stochastic realizations for a given master equation is a central requirement for the exact computation of information processing in chemical networks. A very well known algorithm for the _exact_ generation of trajectories from a given initial condition is the _stochastic simulation algorithm_ (SSA) also known by the name of its inventor as the _Gillespie algorithm_ @1976.Gillespie. The most widely used variant is the _direct Gillespie method_ which works by alternatingly a) computing the time during which no reactions happen and b) choosing which of the available reactions to perform next. As a result we generate a list of times when some reaction happens and a corresponding list of reactions that specifies the exact trajectory that was generated. This algorithm works quite well in practice and is also used for the work presented in this thesis. It is still worth mentioning that for systems that evolve at different time scales simultaneously, the direct Gillespie method can be computationally inefficient since by its design it always operates at the smallest time scale. Therefore, there have been developed further trajectory-generation algorithms that can generate _approximately_ correct trajectories by accumulating various reactions into a single time step such as the $\tau$-leap method @2001.Gillespie.
 
-The paragraphs above provide an introductory overview of techniques and issues related to information processing in biological contexts. In this thesis we aim to present computational advances that allow the efficient estimation of the amount of information that a cell can use from its environment. In the following sections of this chapter we explain in more detail how we can model biochemical signaling networks in cells and how to understand information transmission in that context. The following chapters...
+In summary, there has been considerable effort to understand how cells receive, process and make use of information that their environments provide. A key aspect in this endeavor is the stochastic modeling of biological processes that take into account the natural fluctuations in these systems. In the following sections of this chapter we explain in more detail how we specifically model biochemical signaling networks in cells and how to understand information transmission in that context.
 
 ## Information Theory in the context of cellular signaling networks
 
-In this section we motivate the use of information theoretic quantities known as the _mutual information_ and the _information rate_ as relevant properties to understand optimality criteria for biochemical signaling networks.
+We begin by introducing information theoretic quantities like the _mutual information_ and the _information rate_ as relevant properties to understand optimality criteria for biochemical signaling networks.
 
 ### Mutual Information as an Efficiency Measure in Cell signaling
 
@@ -341,7 +346,7 @@ $$ {#eq:corr_z}
 with matrices $C_{\alpha\beta}\in\mathbb R^{d\times d}$. The correlation functions in @eq:correlation_functions then give us the elements of the matrix blocks
 $$
 (C_{\alpha\beta})_{ij} = C_{\alpha\beta}(t_j - t_i)\,.
-$$
+$$ {#eq:covariance_from_corr}
 For the joint distribution in @eq:joint_multivariate there exists a simple analytical expression to compute the mutual information between $\mathcal S$ and $\mathcal X$ [@2010.Tostevin;@1948.Shannon]
 $$
 \mathrm I(\mathcal S, \mathcal X) = \frac 12 \ln\left( \frac{\det C_{ss} \det C_{xx}}{\det Z} \right)

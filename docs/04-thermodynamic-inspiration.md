@@ -12,7 +12,7 @@ cref: true
 lang: en-US
 ---
 
-# Efficient Biased Sampling in Trajectory Space
+# Directed Sampling in Trajectory Space
 
 In the previous chapters we established a technique to compute the mutual information between time-variable signals and responses using Monte-Carlo integration together with stochastic simulations. In practice we found that this method often severely over-estimates the mutual information. In the previous chapter we came to the conclusion that the root of the biased estimates is the computation of the marginal probability density $\mathrm P(\mathbf x)$.
 
@@ -22,58 +22,60 @@ $$
 $$ {#eq:bayes_thm}
 which describes how the observation of $\mathbf x$ changes the probability distribution for the signals from $\mathrm P(\mathbf s)$ to $\mathrm P(\mathbf s | \mathbf x)$. In statistics, one usually denotes $\mathrm P(\mathbf s)$ as the _prior_, $\mathrm P(\mathbf x|\mathbf s)$ as the _likelihood_, $\mathrm P(\mathbf x)$ as the _evidence_ (or _marginal likelihood_) and $\mathrm P(\mathbf s | \mathbf x)$ as the _posterior_ distribution. It is no accident that for the description of statistical inference we reuse the same letters $\mathbf x$ and $\mathbf s$ as in the previous chapters. Indeed, at its core, the biochemical network performs statistical inference of the signal from the data given by its response. Thus, for now, we are going to change the perspective and look at the problem through the eyes of a Bayesian statistician. 
 
-From the statistician's point of view, we have a _model_ with a set of parameters $\mathbf s = (s_1, s_2,\ldots)^T$ that we want to fit to the observations or data $\mathbf x$. The Bayesian approach involves choosing a reasonable _prior_, i.e. making an educated guess for the distribution $\mathrm P(\mathbf s)$ using justifiable assumptions about the underlying system. Using @eq:bayes_thm, the statistician can compute the _posterior_ probability distribution of the model parameters $\mathrm P(\mathbf s | \mathbf x)$ from the observations $\mathbf x$. This involves computing the _likelihood_ $\mathrm P(\mathbf x|\mathbf s)$ and the _evidence_ $\mathrm P(\mathbf x)$ of the acquired data $\mathbf x$ for the given model. Usually, models are chosen that make it easy to compute the likelihood of some data given the model parameters. It is the computation of the _evidence_ $\mathrm P(\mathbf x)$ which usually requires more sophisticated computational methods @2014.Held. In the following section we show the evolution of methods in statistical science.
+From the statistician's point of view, we have a _model_ with a set of parameters $\mathbf s = (s_1, s_2,\ldots)^T$ that we want to fit to the observations or data $\mathbf x$. The Bayesian approach involves choosing a reasonable _prior_, i.e. making an educated guess for the distribution $\mathrm P(\mathbf s)$ using justifiable assumptions about the underlying system. Using @eq:bayes_thm, the statistician can compute the _posterior_ probability distribution of the model parameters $\mathrm P(\mathbf s | \mathbf x)$ from the observations $\mathbf x$. This involves computing the _likelihood_ $\mathrm P(\mathbf x|\mathbf s)$ and the _evidence_ $\mathrm P(\mathbf x)$ of the acquired data $\mathbf x$ for the given model. Usually, models are chosen that make it easy to compute the likelihood of some data given the model parameters. It is the computation of the _evidence_ $\mathrm P(\mathbf x)$ which usually requires more sophisticated computational methods @2014.Held. In most cases, the evidence is estimated using the identity $\mathrm P(\mathbf x)=\int\mathrm d\mathbf s\ \mathrm P(\mathbf s, \mathbf x)$ which has motivated the use of the term _marginal likelihood_. In the following section we show the evolution of methods to compute such integrals in statistical science.
 
-## Previous Work on the Computation of Normalization Constants
+## Previous Work on the Computation of the Marginal Likelihood
 
-The estimation of the marginal density $\mathrm P(\mathbf x)=\int\mathrm d\mathbf s\ \mathrm P(\mathbf s, \mathbf x)$ is an important ingredient for Bayesian statistics as it is used in the computation of so-called _Bayes factors_ for hypothesis testing. 
+The estimation of the marginal density $\mathrm P(\mathbf x)=\int\mathrm d\mathbf s\ \mathrm P(\mathbf s, \mathbf x)$ is an important ingredient for Bayesian statistics, and is used for example in the computation of so-called _Bayes factors_ for hypothesis testing. 
 
 Written as
 $$
 \mathrm P(\mathbf x) = \langle \mathrm P(\mathbf x|\mathbf s) \rangle_{\mathrm P(\mathbf s)}
-$$
+$$ {#eq:marginal_as_mean}
 the marginal density is an example of an expectation value with respect to a potentially complex distribution. For simple distributions, expectations can be approximated by a simple Monte-Carlo approach, taking the sample average $1/N \sum^N_{i=1} \mathrm P(\mathbf x|\mathbf s_i)$ of $N$ independent random samples $\mathbf s_1,\ldots,\mathbf s_N$ generated from $\mathrm P(\mathbf s)$. That is, we estimate the marginal density using samples from the _prior_ and averaging over their likelihoods. As demonstrated in the previous chapters, this method is not very efficient when the individual signals $\mathbf s_i$ are actually trajectories. Once the space of possible signals is sufficiently large it becomes extremely unlikely to sample a $\mathbf s^\prime$ such that $\mathrm P(\mathbf x|\mathbf s^\prime)$ presents a strong contribution to the mean. A well-known approach to circumvent this problem is _importance sampling_.
 
 ### Importance Sampling
 
-In importance sampling, we try to choose a different distribution than the prior from which to generate samples. 
+In importance sampling, we choose a different distribution than the prior from which to generate samples. Let $\hat{\mathbf s}_1, \ldots,\hat{\mathbf s}_N$ be samples drawn from a distribution with a known density function $\hat q$. Then we can estimate @eq:marginal_as_mean as
+$$
+\hat{\mathrm P}^{(q)}(\mathbf x) = \frac{1}{N} \sum^N_{i=1} \frac{\mathrm P(\hat{\mathbf s}_i)\,\mathrm P(\mathbf x | \hat{\mathbf s}_i)}{\hat q(\hat{\mathbf s}_i)} \equiv 
+\frac{1}{N} \sum^N_{i=1} \frac{q(\hat{\mathbf s}_i)}{\hat q(\hat{\mathbf s}_i)}
+$$ {#eq:importance_sampling}
+where by $q(\mathbf s)=\mathrm P(\mathbf s)\,\mathrm P(\mathbf x|\mathbf s)$ we denote the unnormalized posterior distribution (note that the posterior is $\mathrm P(\mathbf s|\mathbf x) = q(\mathbf s)/C$ with $C=\mathrm P(\mathbf x)$).
+This is precisely the approach that was described in @sec:umbrella using the term _umbrella sampling_. For this section we will continue to use the statisticians' terminology of _importance sampling_. The choice of $\hat q$ requires crucial consideration for @eq:importance_sampling to yield a good estimate. To reduce the variance of the ratio $q(\hat{\mathbf s}_i) / \hat q(\hat{\mathbf s}_i)$, the sampling distribution $\hat q$ should be similar to the posterior and have tails no thinner than $q$ @1997.Diciccio. In practice it is often very difficult to find an adequate choice for $\hat q$, especially in high-dimensional spaces. Therefore, it has been suggested to choose an approproate sampling function using one or more _posterior samples_ i.e. random samples taken from the posterior distribution $\mathrm P(\mathbf s|\mathbf x)$ [@1997.Diciccio;@2011.Chan;@2014.Chan;@2014.Perrakis]. Even if it is possible to acquire a sufficient amount of posterior samples, these methods usually require the choice of an appropriate family of distributions from which the sampling distribution is picked. Since in our case, the individual $\mathbf s$ are entire trajectories it is unclear what a useful family of distributions would be.
 
-Some authors have instead proposed methods to compute the marginal density directly from _posterior samples_ i.e. random samples taken from the posterior distribution $\mathrm P(\mathbf s|\mathbf x)$. This promises to be more efficient than using prior samples since we don't face the problem of generating mostly irrelevant signals for a given response.
+Some authors have instead proposed methods to compute the marginal density _directly_ from the posterior samples without the need to pick a separate sampling distribution $\hat q$. This promises to be more efficient than using prior samples since we don't face the problem of generating mostly irrelevant signals for a given response.
 However, the generation of random samples from $\mathrm P(\mathbf s|\mathbf x)$ is often a non-trivial problem. Thus, there have been proposed a variety of Markov chain Monte Carlo methods to generate approximately independent samples from the posterior distribution [@1994.Tierney;@1990.Gelfand;@1987.Tanner;@2001.Neal;@2018.Warne]. We will leave the discussion of efficient posterior sampling for later and assume for now to have a set of corresponding samples available.
 
 ### Estimating the Marginal Density from Posterior Samples
 
-Let $\tilde{\mathbf s}_1,\ldots,\tilde{\mathbf s}_N$ be independent posterior draws
-
-The marginal density is the normalization constant of the posterior distribution, i.e. rewriting @eq:bayes_thm we see
+Let $\tilde{\mathbf s}_1,\ldots,\tilde{\mathbf s}_N$ be independent posterior draws. Newton, et. al. @1994.Newton propose the harmonic mean estimator
 $$
-\mathrm P(\mathbf s|\mathbf x) = \frac{\mathrm P(\mathbf s, \mathbf x)}{\int\mathrm d\mathbf s\ \mathrm P(\mathbf s, \mathbf x)} \,.
+\hat{\mathrm P}^{(\text{harm.})}(\mathbf x) = \left[ \frac{1}{N} \sum^N_{i=1} \mathrm P(\mathbf x|\tilde{\mathbf s}_i)^{-1} \right]^{-1}\,,
+$$ {#eq:harmonic_rule}
+i.e. the marginal likelihood is estimated by the harmonic mean of the likelihoods of a sample from the posterior distribution. It has been noted that this estimate is rather unstable because of the occasional occurence of a value $\tilde{\mathbf s}_i$ with a small likelihood and hence a large effect on the final result @1994.Newton. The estimate in @eq:harmonic_rule can therefore be improved using an arbitrary probability density $f$ as proposed by Gelfand, et. al. @1994.Gelfand
 $$
+\hat{\mathrm P}^{(\text{reciprocal})}(\mathbf x) = \left[ \frac{1}{N} \sum^N_{i=1} \frac{f(\tilde{\mathbf s}_i)}{q(\tilde{\mathbf s}_i)} \right]^{-1}\,.
+$$ {#eq:reciprocal_importance}
+If we choose $f(\mathbf s)=\mathrm P(\mathbf s)$ we recover the harmonic rule in @eq:harmonic_rule. If instead, we choose $f$ with tails thinner than $q$ this estimator is well-behaved @1997.Diciccio. This requirement for $f$ is the opposite as for importance sampling which lead to the estimate in @eq:reciprocal_importance being called _reciprocal importance sampling_. However, similarly as before it is often difficult to find a density $f$ that has sufficiently thin tails in all dimensions. Both, importance sampling and reciprocal importance sampling are special cases of a more general identity.
 
+### Bridge Sampling and Beyond
 
+The idea of bridge sampling was first given by Bennet @1976.Bennett for the simulation of free energy differences. Given two unnormalized probability densities, $q_1$ and $q_2$, Meng and Wong @1996.Meng state the central identity of bridge sampling as
+$$
+\frac{c_1}{c_2} = \frac{\langle q_1(\mathbf s)\,\alpha(\mathbf s) \rangle_2}{\langle q_2(\mathbf s)\,\alpha(\mathbf s) \rangle_1}
+$$ {#eq:bridge_sampling}
+where $c_1, c_2$ are the normalization constants corresponding to $q_1, q_2$, and $\alpha$ is an arbitrary function. $\langle\,\rangle_i$ denotes the expectation with respect to the distribution corresponding to $q_i$. If we choose $q_1(\mathbf s)=q(\mathbf s)$ and $q_2(\mathbf s)=\hat q(\mathbf s)$ then for $\alpha(\mathbf s)=1/\hat q(\mathbf s)$ we get importance sampling as defined in @eq:importance_sampling. If we choose $\alpha(\mathbf s) = [q_1(\mathbf s)\,q_2(\mathbf s)]^{-1}$ we get
+$$
+\frac{c_1}{c_2} = \frac{\langle q^{-1}_2(\mathbf s) \rangle_2}{\langle q^{-1}_1(\mathbf s) \rangle_1}
+$$
+which is a generalization of the harmonic rule in @eq:harmonic_rule.
 
- and further needed to compute _Bayes factors_ which quantify the odds for different models to be true.
+For bridge sampling, Bennet, Meng and Wong [@1976.Bennett;@1996.Meng] discuss optimal choices for $\alpha$ such that the mean square error of the estimate is minimized. It turns out that a good choice of $\alpha$ acts as a _bridge_ between the densities $q_1$ and $q_2$, such that both the numerator and the denominator of @eq:bridge_sampling can be reliably computed. Hence, the name: bridge sampling.
 
-- It is universally acknowledged that naïve Monte-Carlo estimate of the integral $\mathrm P(\mathbf x)=\int\mathrm d\mathbf s\ \mathrm P(\mathbf s)\mathrm P(\mathbf x|\mathbf s)$ is very inefficient for high-dimensional signal spaces.
+It did not go unnoticed that techniques originally developed for the computation of free energy differences might be useful in Bayesian computation. Gelman and Weng @1998.Gelman introduce _path sampling_ which is a generalized form of _thermodynamic integration_. It takes the idea of bridge sampling one step further: instead of using one bridge to join two distributions $q_1$ and $q_2$ and compute the ratio of their normalization constants, thermodynamic integration constructs a continuous _path in distribution space_ between $q_1$ and $q_2$ to further increase the efficiency. Another related method is _annealed importance sampling_, proposed by Neal @2001.Neal. It is based on simulated annealing, another technique originating in statistical physics.
 
-- Importance Sampling
-  - choose an approximate posterior, should have tails no thinner than posterior
-  - Gelfand and Smith @1990.Gelfand show simple approaches to estimate marginal densities from samples of the posterior distribution
-- Harmonic rule
-  - poor convergence
-  - can be improved by choosing an approximate posterior, should have tails thinner than posterior
-  - Newton and Raftery @1994.Newton introduce the weighted Likelihood bootstrap
-  - Improved Harmonic Rule Chib @1995.Chib
-- Bridge sampling @1976.Bennett, @1996.Weng, @1997.Diciccio
-- Path Sampling @1998.Gelman
-- Annealed importance sampling @2001.Neal
-
-- Monte-Carlo methods for marginal likelihood
-
-- Gelfand and Key @1994.Gelfand
-
-- We have seen that many methods draw inspiration from statistical physics. In the next subsection we will thus introduce notation and terminology reminiscent of Statistical physics to describe our problem. Using that description we show Thermodynamic Integration and the Wang-Landau algorithm.
-
+We have seen that many methods to compute the marginal likelihood draw inspiration from statistical physics. Specifically we can map the computation of the normalization constant of a probability distribution to the simulation of free energy differences. In the next subsection we will introduce notation and terminology reminiscent of Statistical physics to describe our problem. In this way we can understand why those methods are so helpful for Bayesian computation. Using that description we show that both, Thermodynamic Integration and the Wang-Landau algorithm are very promising candidates for the computation of $\mathrm P(\mathbf x)$.
 
 
 ## Borrowing Terminology from Statistical Physics
@@ -204,7 +206,7 @@ and thus the free energy. In the following we will discuss the Wang and Landau a
 
 <!-- There are also good algorithms available to estimate the DOS of a system such that it appears a viable option to compute the marginal density of trajectories using these estimates. -->
 
-## Wang and Landau Algorithm
+### Wang and Landau Algorithm
 
 Since the state spaces $\Omega$ are usually very large, one typically resorts to Monte-Carlo methods to estimate the density of states. There one generates a sequence of states $\mathbf{n}_i$ that are approximately independent and distributed according to $\mathrm{P}(\mathcal{N})$, e.g. by using the Metropolis-Hastings algorithm. For every sampled state $\mathbf{n}_i$ we can compute the Energy $\mathcal H(\mathbf{n}_i)$ and then approximate the density of states by a histogram of the energy values as in @eq:dos_histogram. To get an accurate estimate of the density of states for energy values $E$ where $g(E)$ is very small we need a lot of iterations since we will on average pick very few samples with low probability. 
 
@@ -304,11 +306,11 @@ We have found two methods, Thermodynamic Integration and Wang-Landau sampling to
 
 So far, the computation of the mutual information is limited to the case where the signal directly interacts with the response...
 
-## Conclusion
+## Discussion
 
 We have shown that methods originally developed for computing ensemble averages in statistical physics can be very successfully applied to the computation of marginal densities from a known joint density. Computing the marginal densities forms the basis for many Bayesian computations (including the computation of information theoretic quantities like the mutual information) and is therefore also relevant to a wide variety of researchers in fields outside of statistical physics. Before we can make use the algorithms from statistical physics we have to map quantities like _energy_ and the _partition function_ to the corresponding probability densities. Once these terms are properly defined we suddenly have access to a wide variety of literature on statistical physics to aid us with efficient computation of the marginal entropy. Specifically we evaluated the usefulness of thermodynamic integration and the Wang-Landau algorithm for multivariate normal distributions. 
 
-Using Markov Chain Monte Carlo sampling together with thermodynamic integration we were able to achieve very good accuracy in estimates of $\mathrm P(\mathbf x)$ with a reasonable amount of computation time. We do not find any inherent bias in the estimates as we did for the brute-force Monte-Carlo estimate. The drawback of TI is that we need to produce samples using MCMC sampling. In practice to efficiently generate samples we need to find a good proposal distribution $\mathrm T(\mathbf s \rightarrow \mathbf s^\prime)$ that yields proposals $\mathbf s^\prime$ that are _nearby_ the previous signal $\mathbf s$ such that there is on average a good chance that the proposal will be accepted according to @eq:metropolis_acceptance. On the other hand it is necessary for fast convergence that $\mathbf s^\prime$ is not _too close_ to $\mathbf s$ such that the sample chain explores a sufficiently large portion of the state space. While for our toy model it is relatively easy to come up with reasonable proposals, for stochastic trajectories this is less clear and will be described in a later chapter. Even though TI seems to be a promising method for the computation of marginal densities, we also tested another technique that was originally developed in physics of condensed matter, the _Wang-Landau algorithm_.
+Using Markov Chain Monte Carlo sampling together with thermodynamic integration we were able to achieve very good accuracy in estimates of $\mathrm P(\mathbf x)$ with a reasonable amount of computation time. We do not find any inherent bias in the estimates as we did for the brute-force Monte-Carlo estimate. The drawback of TI is that we need to produce samples using MCMC sampling. In practice to efficiently generate samples we need to find a good proposal distribution $\mathrm T(\mathbf s \rightarrow \mathbf s^\prime)$ that yields proposals $\mathbf s^\prime$ that are _nearby_ the previous signal $\mathbf s$ such that there is on average a good chance that the proposal will be accepted according to @eq:metropolis_acceptance. On the other hand it is necessary for fast convergence that $\mathbf s^\prime$ is not _too close_ to $\mathbf s$ such that the sample chain explores a sufficiently large portion of the state space. While for our toy model it is relatively easy to come up with reasonable proposals, for stochastic trajectories this is less clear. Therefore we have proposed some ideas for possible trial moves in the space of trajectories. Even though TI seems to be a promising method for the computation of marginal densities, we also tested another technique that was originally developed in physics of condensed matter, the _Wang-Landau algorithm_.
 
 While we can achieve a very precise estimate for the marginal density $\mathrm P(\mathbf x)$ using the estimated DOS from the Wang-Landau algorithm there remain some practical difficulties. For maximum efficiency and accuracy the different parameters affecting the procedure such as the required histogram flatness, the updating scheme of the $f$ parameter, and the choice of potential bins have to be tuned for a given problem. After some tuning of these parameters for the Gaussian system for a fixed set of covariance matrices we still find the estimation to be at least one order of magnitude slower in CPU time compared to thermodynamic integration. Therefore, at least for the Gaussian system thermodynamic integration seems to be better suited to compute the marginal density.
 
@@ -318,19 +320,19 @@ Even if we can compute the mutual information more efficiently by using TI witho
 
 # Conclusion
 
-- We are developing a new method, a novel approach to estimate mutual information, taking into account the full, time-dependent stochastic dynamics 
-- promising results, very useful connection between statistical physics and estimation of distributions
-- work is not yet completed
+We are developing a novel approach to estimate the mutual information between a environmental signal and a cellular response, fully taking into account the time-dependent stochastic dynamics. In principle, this approach is applicable to any biochemical signaling network that can be described by a master equation. One main issue that we found is the computation of accurate estimates of the marginal density which is defined by the integral $\mathrm P(\mathbf x) = \int \mathrm d\mathbf s\,\mathrm P(\mathbf s)\,\mathrm P(\mathbf x|\mathbf s)$. By understanding the close relationship between that integral and the estimation of free energy differences, we were able to employ powerful computational methods originating in statistical physics. In that regard we have produced some promising results, yet it is clear that the work is not completed until we can demonstrate an accurate estimate for the mutual information for a simple biochemical network.
 
 ## Summary of Main Results
 
-1. To quantify the fidelity of biochemical networks, we want to compute the information rate between an environmental signal and a cellular response. The information rate describes the (asymptotic) increase of mutual information with trajectory length
-2. We can derive a Monte Carlo procedure for the computation of the Mutual information
-3. Using that scheme and comparing it to analytical results, we find a consistent statistical bias: we consistently over-estimate the Mutual Information
-4. The main issue is to find a correct estimate for the marginal probability density. We can make use of very powerful methods, that originated in statistical physics.
-5. Using the Gaussian Approximation we found promising results, suggesting that we will be able to estimate the mutual information without statistical biases.
+To quantify the fidelity of biochemical networks, we motivated the computation of the _information rate_ between a time-varying environmental signal and a cellular response. The information rate describes the (asymptotic) increase of mutual information (MI) with the duration of the signal. Using the very mild assumptions that a) the signal can be described by a stochastic differential equation, and b) the biochemical information processing network can be modeled by a master equation, we derived a general Monte Carlo procedure to compute the MI between signals and responses of arbitrary duration. It is based on our ability to generate independent sample signals and—for any given signal—the ability to generate an appropriate response. Crucially, we have shown, how for a given signal $\mathbf s$ and response $\mathbf x$ we can compute the so-called log-likelihood $\ln\mathrm P(\mathbf x|\mathbf s)$ using only terms from the master equation. One part of the Monte Carlo procedure consists in averaging these log-likelihoods for independently generated signals and responses. The second part of the computation is much harder since it consists in computing the average over the logarithm of the integrated likelihood $\ln\int \mathrm d\mathbf s\,\mathrm P(\mathbf s)\,\mathrm P(\mathbf x|\mathbf s)$ for different responses. 
 
-This thesis is an important step towards a general algorithm to compute mutual information for arbitrary stochastic biological systems
+An important contribution of this thesis is the careful analysis of the issues that can arise while numerically computing integrals of that form. If we merely use a standard Monte Carlo computation to evaluate the integrated likelihood we find that we consistently over-estimate the overall information rate. By approximating the signals and responses as Gaussian processes we were able to understand where this problem comes from. When randomly generating signals, as the duration grows it becomes increasingly unlikely to occasionally stumble upon a signal that contributes to the integral $\int \mathrm d\mathbf s\,\mathrm P(\mathbf s)\,\mathrm P(\mathbf x|\mathbf s)$. It is easy to imagine that a given, time-varying response $\mathbf x$ could only have arisen from a very narrow set of similar signals with the only difference between them being some small, insignificant fluctuations. In principle however, we have a huge variety of possible signal realizations that could have happened. We can understand that combing through the vast set of possible signals in search of that narrow subset of signals which contribute to the integral is very inefficient if done by brute force. It is not unlike searching for a needle in the haystack.
+
+By having understood the problem we were able to infer what changes would lead to an improved estimate. The solution lies in the modification of the sampling strategy for the signals in such a way that we are more likely to find the strongly contributing ones. Pictorially speaking, this is perhaps comparable to the use of a metal proximity detector to help with the search of the needle. In the literature, there have been suggested multiple different but related ideas to modify sampling strategies in order to get more accurate results. While reviewing a few of the common methods we realized that many of these were inspired by techniques that originated in statistical physics for the estimation of free energy differences.
+
+Thus, by changing the mathematical formulation of our problem we are able to see the computation of the marginal entropy akin to the computation of a free energy. Using this insight we have shown that using either of two well-known methods, _thermodynamic integration_ and _Wang-Landau sampling_ we are able to estimate the marginal likelihood much more efficiently for trajectories in the Gaussian approximation. While these ideas have not yet been tested on real stochastic trajectories, the results so far are very promising.
+
+We propose that this thesis is an important step towards a general algorithmic framework to compute mutual information for arbitrary stochastic biological systems.
 
 ## Outlook
 
