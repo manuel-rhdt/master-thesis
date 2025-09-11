@@ -1,3 +1,9 @@
+# This repository is archived
+
+Note that the final submitted master thesis can be found on Zenodo (DOI: [10.5281/zenodo.17090775](https://doi.org/10.5281/zenodo.17090775)).
+
+---
+
 # Master Thesis
 
 This is a package of code used to research information processing inside of cells. In
