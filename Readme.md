@@ -1,10 +1,21 @@
-# This repository is archived
+# Estimating the Mutual Information for Time-Varying Signals in Cellular Signaling Networks
+_Manuel Reinhardt (AMOLF Amsterdam)_
 
-Note that the final submitted master thesis can be found on Zenodo (DOI: [10.5281/zenodo.17090775](https://doi.org/10.5281/zenodo.17090775)).
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17090776.svg)](https://doi.org/10.5281/zenodo.17090776)
 
 ---
 
-# Master Thesis
+**THIS REPOSITORY IS ARCHIVED**
+
+Note that the final submitted master thesis can be found on Zenodo (DOI: [10.5281/zenodo.17090775](https://doi.org/10.5281/zenodo.17090775)).
+
+Below is the original Readme file of this repo.
+
+**THIS REPOSITORY IS ARCHIVED**
+
+---
+
+## Master Thesis
 
 This is a package of code used to research information processing inside of cells. In
 the `docs` directory there are some notes about the research background.
@@ -13,7 +24,7 @@ the `docs` directory there are some notes about the research background.
 - [Rendered Thesis](https://manuel-rhdt.github.io/master-thesis/).
 - Short presentation. [Slides](https://manuel-rhdt.github.io/biomeeting-03-2020/)
 
-## What this is for
+### What this is for
 
 The idea is to calculate the *mutual information* between entire trajectories of
 events. The mutual information between two random variables describes how much the
